@@ -1,67 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { MdRestaurant } from 'react-icons/md';
-
-const clickSound = typeof Audio !== 'undefined' ? new Audio('/sounds/click.mp3') : null;
+import axios from 'axios';
 
 function TableCard({ table, onClick }) {
     const [isPressed, setIsPressed] = useState(false);
-
-    const handleClick = () => {
-        if (clickSound) {
-            clickSound.currentTime = 0;
-            clickSound.play().catch(error => console.error("Error playing sound:", error));
-        }
-        onClick(table.id);
-    };
 
     return (
         <div
             style={{
                 ...styles.tableCard,
-                backgroundColor: table.isAvailable ? '#499cae' : '#FF6B6B',
+                backgroundColor: table.tableFree === 1 && table.status === 'Y' ? '#499cae' : '#FF6B6B', // สีเขียวถ้าว่างและสถานะเปิด, สีแดงถ้าไม่ว่าง
                 transform: isPressed ? 'scale(0.95)' : 'scale(1)',
             }}
-            onClick={handleClick}
-            onMouseEnter={(event) => {
-                event.currentTarget.style.transform = 'scale(1.05)';
-                event.currentTarget.style.boxShadow = '0px 6px 16px rgba(0, 0, 0, 0.35)';
-            }}
-            onMouseLeave={(event) => {
-                event.currentTarget.style.transform = '';
-                event.currentTarget.style.boxShadow = '0px 4px 12px rgba(0, 0, 0, 0.25)';
-            }}
+            onClick={() => onClick(table.id)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onMouseDown={() => setIsPressed(true)}
             onMouseUp={() => setIsPressed(false)}
         >
             <MdRestaurant style={styles.icon} />
-            <p style={styles.tableName}>{table.name}</p>
+            <p style={styles.tableName}>{table.table_code}</p>
             <p style={styles.details}>จำนวนที่นั่ง: {table.seats}</p>
-            <p style={styles.status}>สถานะ: {table.isAvailable ? 'ว่าง' : 'ไม่ว่าง'}</p>
+            <p style={styles.status}>สถานะ: {table.tableFree === 1 && table.status === 'Y' ? 'ว่าง' : 'ไม่ว่าง'}</p>
         </div>
     );
 }
 
 export default function MainTablePage() {
     const router = useRouter();
-    const [tables, setTables] = useState([
-        { id: 1, name: "T001", seats: 4, isAvailable: true },
-        { id: 2, name: "T002", seats: 4, isAvailable: true },
-        { id: 3, name: "T003", seats: 10, isAvailable: true },
-        { id: 4, name: "T004", seats: 10, isAvailable: true },
-        { id: 5, name: "T005", seats: 3, isAvailable: true },
-        { id: 6, name: "T006", seats: 4, isAvailable: true },
-        { id: 7, name: "T007", seats: 4, isAvailable: true },
-        { id: 8, name: "T008", seats: 10, isAvailable: true },
-        { id: 9, name: "T009", seats: 10, isAvailable: true },
-        { id: 10, name: "T010", seats: 3, isAvailable: true },
-    ]);
+    const [tables, setTables] = useState([]);
+
+    const fetchTables = async () => {
+        try {
+            const response = await axios.get('https://easyapp.clinic/pos-api/api/table_codes', {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                },
+            });
+            setTables(response.data);
+        } catch (error) {
+            console.error('Error fetching tables:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchTables();
+        const interval = setInterval(fetchTables, 5000); // อัปเดตทุก 5 วินาที
+        return () => clearInterval(interval);
+    }, []);
+
 
     const handleTableClick = (tableId) => {
-        setTables(tables.map(table =>
-            table.id === tableId ? { ...table, isAvailable: false } : table
-        ));
-
         router.push({
             pathname: '/products',
             query: { tableId }
@@ -73,13 +64,17 @@ export default function MainTablePage() {
             <div style={styles.content}>
                 <h1 style={styles.title}>เลือกโต๊ะ</h1>
                 <div style={styles.tablesContainer}>
-                    {tables.map((table) => (
-                        <TableCard
-                            key={table.id}
-                            table={table}
-                            onClick={handleTableClick}
-                        />
-                    ))}
+                    {tables.length > 0 ? (
+                        tables.map((table) => (
+                            <TableCard
+                                key={table.id}
+                                table={table}
+                                onClick={handleTableClick}
+                            />
+                        ))
+                    ) : (
+                        <p>ไม่พบข้อมูลโต๊ะ</p>
+                    )}
                 </div>
             </div>
         </div>
@@ -127,7 +122,6 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: '12px',
-        backgroundColor: '#499cae',
         boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.20)',
         transition: 'transform 0.1s ease-in-out, box-shadow 0.2s ease',
         cursor: 'pointer',
@@ -156,3 +150,13 @@ const styles = {
         fontWeight: 'bold',
     },
 };
+
+function handleMouseEnter(event) {
+    event.currentTarget.style.transform = 'scale(1.05)';
+    event.currentTarget.style.boxShadow = '0px 6px 16px rgba(0, 0, 0, 0.35)';
+}
+
+function handleMouseLeave(event) {
+    event.currentTarget.style.transform = '';
+    event.currentTarget.style.boxShadow = '0px 4px 12px rgba(0, 0, 0, 0.25)';
+}
