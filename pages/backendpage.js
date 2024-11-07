@@ -71,7 +71,7 @@ export default function BackendPage() {
     formData.append('p_name', itemName); // เพิ่มชื่ออาหาร
     formData.append('price', itemPrice || 0); // เพิ่มราคาอาหาร
     formData.append('category_id', itemCategory); // เพิ่มรหัสหมวดหมู่อาหาร
-    formData.append('isAvailable', itemStatus ? 'Y' : 'N'); // แปลงสถานะเป็น 'Y' หรือ 'N'
+    formData.append('status', itemStatus ? 'Y' : 'N'); // แปลงสถานะเป็น 'Y' หรือ 'N'
     if (itemImage instanceof File) formData.append('image', itemImage); // เพิ่มรูปภาพถ้ามี
 
     try {
@@ -189,7 +189,7 @@ export default function BackendPage() {
       setItemCategory(itemToEdit.category_id);
       setItemPrice(itemToEdit.price);
       setItemImage(itemToEdit.image ? `https://easyapp.clinic/pos-api/storage/app/public/product/${itemToEdit.image}` : null);
-      setItemStatus(itemToEdit.isAvailable === 'Y'); // ตั้งค่าสถานะจากรายการที่เลือก
+      setItemStatus(itemToEdit.status === 'Y'); // ตั้งค่าสถานะจากรายการที่เลือก
       setEditMode(true);
       setEditIndex(id);
     } else {
@@ -204,7 +204,7 @@ export default function BackendPage() {
     return nameMatch && categoryMatch; // ส่งคืนรายการที่ตรงตามเงื่อนไข
   });
 
-  const availableItemsForSale = filteredItems.filter(item => item.isAvailable === 'Y'); // รายการที่มีสถานะเปิด
+  const availableItemsForSale = filteredItems.filter(item => item.status === 'Y'); // รายการที่มีสถานะเปิด
 
   return (
     <div style={styles.container}>
@@ -269,7 +269,7 @@ export default function BackendPage() {
                       <td style={styles.td}>{item.p_name || item.name}</td>
                       <td style={styles.td}>{item.price.toFixed(2)}</td>
                       <td style={styles.td}>{categories.find(cat => cat.id === item.category_id)?.c_name}</td>
-                      <td style={styles.td}>{item.isAvailable === 'Y' ? "เปิด" : "ปิด"}</td> {/* แสดงสถานะ */}
+                      <td style={styles.td}>{item.status === 'Y' ? "เปิด" : "ปิด"}</td> {/* แสดงสถานะ */}
                       <td style={styles.td}>
                         <button onClick={() => handleEditItem(item.id)} style={styles.editButton}>แก้ไข</button>
                         <button onClick={() => handleDeleteItem(item.id)} style={styles.deleteButton}>ลบ</button>
@@ -297,7 +297,7 @@ export default function BackendPage() {
               <img src={typeof itemImage === 'string' ? itemImage : URL.createObjectURL(itemImage)} alt="Preview" style={styles.imagePreview} />
             ) : (
               <>
-                <FaImage size={40} color="#aaa" />
+                <FaImage size={50} color="#aaa" />
                 <p>ใส่รูปภาพอาหาร</p>
               </>
             )}
