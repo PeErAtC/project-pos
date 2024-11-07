@@ -38,6 +38,7 @@ export default function SalesPage() {
     }, []);
 
     const addToCart = (product) => {
+        if (product.status !== 'Y') return; // ป้องกันการเพิ่มสินค้าถ้าสถานะเป็นปิด
         setCart((prevCart) => {
             const existingItem = prevCart.find(item => item.id === product.id);
             if (existingItem) {
@@ -107,11 +108,6 @@ export default function SalesPage() {
         return calculateTotalWithBillDiscount() * VAT_RATE;
     };
 
-    // const handleOrder = () => {
-    //     setShowReceipt(true);
-    //     setIsBillPaused(false);
-    // };
-
     const handlePayment = () => {
         const totalWithBillDiscount = calculateTotalWithBillDiscount();
         if (receivedAmount < totalWithBillDiscount) {
@@ -134,9 +130,8 @@ export default function SalesPage() {
     };
 
     const closeReceipt = async () => {
-        // เตรียมข้อมูลบิลที่ต้องการบันทึก
         const orderData = {
-            order_number: `RE${Math.floor(100000 + Math.random() * 900000)}`, // ตัวอย่างการสร้าง order_number แบบสุ่ม
+            order_number: `RE${Math.floor(100000 + Math.random() * 900000)}`,
             order_date: new Date().toISOString().split('T')[0],
             total_amount: calculateTotalAfterItemDiscounts(),
             discount: billDiscountType === "THB" ? billDiscount : 0,
@@ -152,9 +147,8 @@ export default function SalesPage() {
                 total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity
             })),
         };
-    
+
         try {
-            // ส่งข้อมูลบิลไปยัง API
             await axios.post('https://easyapp.clinic/pos-api/api/orders', orderData, {
                 headers: {
                     'Accept': 'application/json',
@@ -180,6 +174,7 @@ export default function SalesPage() {
             Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกบิลได้: ${error.response?.data?.message || error.message}`, 'error');
         }
     };
+
     const handlePauseBill = () => {
         setShowReceipt(false);
         setIsBillPaused(true);
@@ -220,7 +215,33 @@ export default function SalesPage() {
                     </div>
                     <div style={styles.products}>
                         {filteredProducts.map((product) => (
-                            <div key={product.id} style={styles.productCard} onClick={() => addToCart(product)}>
+                            <div
+                                key={product.id}
+                                style={{
+                                    ...styles.productCard,
+                                    position: 'relative',
+                                    cursor: product.status === 'Y' ? 'pointer' : 'not-allowed',
+                                }}
+                                onClick={() => addToCart(product)}
+                            >
+                                {product.status === 'N' && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff',
+                                        fontSize: '1.5em',
+                                        fontWeight: 'bold',
+                                    }}>
+                                        หมด
+                                    </div>
+                                )}
                                 {product.image ? (
                                     <Image
                                         src={`https://easyapp.clinic/pos-api/storage/app/public/product/${product.image}`}
