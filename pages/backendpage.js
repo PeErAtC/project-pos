@@ -5,24 +5,25 @@ import { FaCheckCircle, FaExclamationCircle, FaImage } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
 export default function BackendPage() {
-  const [items, setItems] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [itemName, setItemName] = useState('');
-  const [itemCategory, setItemCategory] = useState('');
-  const [itemPrice, setItemPrice] = useState('');
-  const [itemImage, setItemImage] = useState(null);
-  const [itemStatus, setItemStatus] = useState(true); 
-  const [filterCategory, setFilterCategory] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [editMode, setEditMode] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
-  const [notification, setNotification] = useState(null);
+  const [items, setItems] = useState([]); // สถานะเก็บรายการอาหาร
+  const [categories, setCategories] = useState([]); // สถานะเก็บหมวดหมู่อาหาร
+  const [itemName, setItemName] = useState(''); // สถานะเก็บชื่ออาหาร
+  const [itemCategory, setItemCategory] = useState(''); // สถานะเก็บหมวดหมู่อาหารที่เลือก
+  const [itemPrice, setItemPrice] = useState(''); // สถานะเก็บราคาอาหาร
+  const [itemImage, setItemImage] = useState(null); // สถานะเก็บรูปภาพอาหาร
+  const [itemStatus, setItemStatus] = useState(true); // สถานะเก็บสถานะการเปิด/ปิดอาหาร
+  const [filterCategory, setFilterCategory] = useState(''); // สถานะเก็บหมวดหมู่ที่ใช้ในการกรอง
+  const [searchQuery, setSearchQuery] = useState(''); // สถานะเก็บคำค้นหา
+  const [editMode, setEditMode] = useState(false); // สถานะเก็บว่ากำลังแก้ไขหรือไม่
+  const [editIndex, setEditIndex] = useState(null); // สถานะเก็บรหัสรายการที่แก้ไข
+  const [notification, setNotification] = useState(null); // สถานะเก็บการแจ้งเตือน
 
   useEffect(() => {
-    fetchItems();
-    fetchCategories();
+    fetchItems(); // เรียกใช้ฟังก์ชันเพื่อดึงรายการอาหาร
+    fetchCategories(); // เรียกใช้ฟังก์ชันเพื่อดึงหมวดหมู่อาหาร
   }, []);
 
+  // ฟังก์ชันดึงรายการอาหารจาก API
   const fetchItems = async () => {
     try {
       const response = await axios.get('https://easyapp.clinic/pos-api/api/products', {
@@ -31,12 +32,13 @@ export default function BackendPage() {
           'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
         },
       });
-      setItems(response.data);
+      setItems(response.data); // เก็บข้อมูลรายการอาหารในสถานะ
     } catch (error) {
-      console.error('Error fetching items:', error);
+      console.error('Error fetching items:', error); // แสดงข้อผิดพลาดหากมี
     }
   };
 
+  // ฟังก์ชันดึงหมวดหมู่อาหารจาก API
   const fetchCategories = async () => {
     try {
       const response = await axios.get('https://easyapp.clinic/pos-api/api/category', {
@@ -45,30 +47,32 @@ export default function BackendPage() {
           'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
         },
       });
-      setCategories(response.data);
+      setCategories(response.data); // เก็บข้อมูลหมวดหมู่อาหารในสถานะ
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('Error fetching categories:', error); // แสดงข้อผิดพลาดหากมี
     }
   };
 
+  // ฟังก์ชันแสดงการแจ้งเตือน
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), 3000); // ตั้งเวลาให้การแจ้งเตือนหายไปอัตโนมัติ
   };
 
+  // ฟังก์ชันเพิ่มหรือแก้ไขรายการอาหาร
   const handleAddOrUpdateItem = async () => {
     // ตรวจสอบข้อมูลที่กรอก
     if (!itemName || !itemCategory || !itemPrice) {
-      showNotification("กรุณากรอกข้อมูลให้ครบถ้วน!", 'error');
+      showNotification("กรุณากรอกข้อมูลให้ครบถ้วน!", 'error'); // แจ้งเตือนถ้าข้อมูลไม่ครบ
       return; // ไม่ทำอะไรต่อหากข้อมูลไม่ครบ
     }
 
     const formData = new FormData();
-    formData.append('p_name', itemName);
-    formData.append('price', itemPrice || 0);
-    formData.append('category_id', itemCategory);
+    formData.append('p_name', itemName); // เพิ่มชื่ออาหาร
+    formData.append('price', itemPrice || 0); // เพิ่มราคาอาหาร
+    formData.append('category_id', itemCategory); // เพิ่มรหัสหมวดหมู่อาหาร
     formData.append('isAvailable', itemStatus ? 'Y' : 'N'); // แปลงสถานะเป็น 'Y' หรือ 'N'
-    if (itemImage instanceof File) formData.append('image', itemImage);
+    if (itemImage instanceof File) formData.append('image', itemImage); // เพิ่มรูปภาพถ้ามี
 
     try {
       const config = {
@@ -95,7 +99,7 @@ export default function BackendPage() {
 
         if (result.isConfirmed) {
           response = await axios.put(`https://easyapp.clinic/pos-api/api/products/${editIndex}`, formData, config);
-          showNotification("อัพเดทข้อมูลเรียบร้อยแล้ว!", 'success');
+          showNotification("อัพเดทข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่ออัปเดตสำเร็จ
         } else {
           return; // ถ้ายกเลิกไม่ต้องทำอะไรต่อ
         }
@@ -114,30 +118,32 @@ export default function BackendPage() {
 
         if (result.isConfirmed) {
           response = await axios.post('https://easyapp.clinic/pos-api/api/products', formData, config);
-          showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", 'success');
+          showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่อเพิ่มสำเร็จ
         } else {
           return; // ถ้ายกเลิกไม่ต้องทำอะไรต่อ
         }
       }
 
-      await fetchItems();
-      resetForm();
+      await fetchItems(); // ดึงข้อมูลรายการอาหารใหม่
+      resetForm(); // รีเซ็ตฟอร์ม
     } catch (error) {
-      console.error("Error while adding/updating item:", error);
-      showNotification("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองอีกครั้ง", 'error');
+      console.error("Error while adding/updating item:", error); // แสดงข้อผิดพลาดหากมี
+      showNotification("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองอีกครั้ง", 'error'); // แจ้งเตือนข้อผิดพลาด
     }
   };
 
+  // ฟังก์ชันรีเซ็ตฟอร์ม
   const resetForm = () => {
     setItemName('');
     setItemCategory('');
     setItemPrice('');
     setItemImage(null);
-    setItemStatus(true); 
+    setItemStatus(true); // ตั้งค่าสถานะเป็นเปิด
     setEditMode(false);
     setEditIndex(null);
   };
 
+  // ฟังก์ชันจัดการการเปลี่ยนแปลงรูปภาพ
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -145,6 +151,7 @@ export default function BackendPage() {
     }
   };
 
+  // ฟังก์ชันจัดการการลบรายการอาหาร
   const handleDeleteItem = async (id) => {
     Swal.fire({
       title: 'คุณแน่ใจหรือไม่?',
@@ -164,16 +171,17 @@ export default function BackendPage() {
               'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
             },
           });
-          showNotification("ลบข้อมูลเรียบร้อยแล้ว!", 'success');
-          fetchItems();
+          showNotification("ลบข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่อถูกลบสำเร็จ
+          fetchItems(); // ดึงข้อมูลรายการอาหารใหม่
         } catch (error) {
-          console.error("Error:", error);
-          showNotification(`เกิดข้อผิดพลาด: ${JSON.stringify(error.response?.data || 'Unknown error')}`, 'error');
+          console.error("Error:", error); // แสดงข้อผิดพลาดหากมี
+          showNotification(`เกิดข้อผิดพลาด: ${JSON.stringify(error.response?.data || 'Unknown error')}`, 'error'); // แจ้งเตือนข้อผิดพลาด
         }
       }
     });
   };
 
+  // ฟังก์ชันจัดการการแก้ไขรายการอาหาร
   const handleEditItem = (id) => {
     const itemToEdit = items.find((item) => item.id === id);
     if (itemToEdit) {
@@ -185,14 +193,15 @@ export default function BackendPage() {
       setEditMode(true);
       setEditIndex(id);
     } else {
-      console.error('ไม่พบรายการที่ต้องการแก้ไข');
+      console.error('ไม่พบรายการที่ต้องการแก้ไข'); // แจ้งเตือนถ้าไม่พบรายการ
     }
   };
 
+  // ฟังก์ชันกรองรายการอาหารตามคำค้นหาและหมวดหมู่
   const filteredItems = items.filter((item) => {
-    const nameMatch = item.p_name?.toString().includes(searchQuery);
-    const categoryMatch = filterCategory === '' || item.category_id === parseInt(filterCategory);
-    return nameMatch && categoryMatch;
+    const nameMatch = item.p_name?.toString().includes(searchQuery); // ค้นหาชื่ออาหาร
+    const categoryMatch = filterCategory === '' || item.category_id === parseInt(filterCategory); // ค้นหาหมวดหมู่
+    return nameMatch && categoryMatch; // ส่งคืนรายการที่ตรงตามเงื่อนไข
   });
 
   const availableItemsForSale = filteredItems.filter(item => item.isAvailable === 'Y'); // รายการที่มีสถานะเปิด
@@ -297,8 +306,9 @@ export default function BackendPage() {
 
           <input type="number" placeholder="ราคา" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} style={styles.input} />
 
-          {/* ใช้ปุ่มเพื่อสลับสถานะ */}
+          {/* แสดงหัวข้อสำหรับการเปิดปิดสถานะ */}
           <h3 style={{ margin: '10px 0' }}>สถานะอาหาร</h3>
+          {/* ใช้ปุ่มเพื่อสลับสถานะ */}
           <div style={styles.statusToggle}>
             <button 
               onClick={() => setItemStatus(true)} 
