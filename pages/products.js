@@ -6,9 +6,13 @@ import Sidebar from './components/sidebar';
 import Image from 'next/image';
 import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import { useRouter } from 'next/router'; // เพิ่ม useRouter สำหรับการรับ tableId
+
 
 export default function SalesPage() {
     const [products, setProducts] = useState([]);
+    const router = useRouter(); // ประกาศ useRouter
+    const { tableCode  } = router.query; // ดึง tableId จาก query parameters
     const [cart, setCart] = useState([]);
     const [receivedAmount, setReceivedAmount] = useState(0);
     const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -200,7 +204,11 @@ export default function SalesPage() {
             </div>
             <div style={styles.mainContent}>
                 <div style={styles.productListContainer}>
+                <div style={styles.headerContainer}>
                     <h1 style={styles.pageTitle}>รวมเมนูอาหาร</h1>
+                    <h5 style={styles.tableCode}>โต๊ะ: {tableCode}</h5> 
+                </div>
+
                     <div style={styles.searchBar}>
                         <input 
                             type="text" 
@@ -420,7 +428,29 @@ const styles = {
     sidebarContainer: { flex: '0 0 100px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '10px' },
     productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', flexDirection: 'column' },
-    pageTitle: { fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', color: '#333', position: 'sticky', top: '0', backgroundColor: '#f5f5f5', zIndex: 1, padding: '10px 0' },
+    headerContainer: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '0px',
+        position: 'sticky',
+        top: '0',
+        backgroundColor: '#f5f5f5',
+        zIndex: 2,
+        
+    },
+    pageTitle: {
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    tableCode: {
+        fontSize: '18px',
+        color: '#333',
+        fontWeight: 'bold',
+        paddingRight: '20px', // เพิ่ม padding ขวาเพื่อเว้นช่องว่าง
+        
+    },
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, padding: '10px 0' },
     searchInput: { width: '96%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '20px', paddingTop: '20px' },
