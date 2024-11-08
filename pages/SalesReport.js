@@ -18,6 +18,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                 },
             });
             setReportData(response.data);
+            console.log('Fetched report data:', response.data); // ตรวจสอบข้อมูลที่ได้รับ
             setError(null);
         } catch (err) {
             setError("ไม่สามารถเชื่อมต่อกับ API ได้");
@@ -42,7 +43,7 @@ export default function SalesReport({ initialReportData, initialError }) {
         const totalAmount = orders.reduce((total, order) => total + parseFloat(order.total_amount || 0), 0).toFixed(2);
         const totalDiscount = orders.reduce((total, order) => total + parseFloat(order.discount || 0), 0).toFixed(2);
         const totalVat = orders.reduce((total, order) => total + parseFloat(order.vat_amt || 0), 0).toFixed(2);
-        const totalNet = (totalAmount - totalDiscount).toFixed(2); // เปลี่ยนที่นี่
+        const totalNet = (totalAmount - totalDiscount).toFixed(2);
         return { totalAmount, totalDiscount, totalVat, totalNet };
     };
 
@@ -113,7 +114,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                             {pendingOrders.map((order, index) => (
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td>
+                                    <td style={styles.td}>{order.table_code || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
                                     <td style={styles.td}>
                                         {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} /> 
                                         {new Date(order.created_at).toLocaleTimeString('th-TH', {
@@ -167,7 +168,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                             {paidOrders.map((order, index) => (
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td>
+                                    <td style={styles.td}>{order.table_code || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
                                     <td style={styles.td}>
                                         {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} /> 
                                         {new Date(order.created_at).toLocaleTimeString('th-TH', {
