@@ -269,7 +269,7 @@ export default function BackendPage() {
                       <td style={styles.td}>{item.p_name || item.name}</td>
                       <td style={styles.td}>{item.price.toFixed(2)}</td>
                       <td style={styles.td}>{categories.find(cat => cat.id === item.category_id)?.c_name}</td>
-                      <td style={styles.td}>{item.status === 'Y' ? "เปิด" : "ปิด"}</td> {/* แสดงสถานะ */}
+                      <td style={{ ...styles.td, color: item.status === 'Y' ? 'black' : 'red' }}>{item.status === 'Y' ? "เปิด" : "ปิด"}</td> {/* แสดงสถานะและสี */}
                       <td style={styles.td}>
                         <button onClick={() => handleEditItem(item.id)} style={styles.editButton}>แก้ไข</button>
                         <button onClick={() => handleDeleteItem(item.id)} style={styles.deleteButton}>ลบ</button>
@@ -343,7 +343,7 @@ const styles = {
   tableContainer: { overflowY: 'auto', overflowX: 'hidden', height: '480px', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)', width:'1000px' },
   table: { width: '100%', borderCollapse: 'collapse', borderSpacing: '0', fontSize:'14px' },
   th: { padding: '10px 15px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', position: 'sticky', top: 0, zIndex: 1, color: '#fff' },
-  td: { padding: '10px 15px', borderTop: '1px solid #e0e0e0',width: '305px', },
+  td: { padding: '10px 15px', borderTop: '1px solid #e0e0e0', width: '305px' },
   row: (index) => ({ backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0', transition: 'background-color 0.2s' }),
   input: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', width: '280px', marginBottom: '15px' },
   fileInput: { display: 'none' },
@@ -355,5 +355,5 @@ const styles = {
   imageUpload: { border: '2px dashed #aaa', borderRadius: '10px', width: '280px', height: '150px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888', marginBottom: '15px', textAlign: 'center' },
   imagePreview: { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' },
   statusToggle: { display: 'flex', gap: '10px', marginBottom: '15px' },
-  statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px', }
+  statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' }
 };
