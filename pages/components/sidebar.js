@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
+import { useRouter } from 'next/router';
 
 export default function Sidebar({ onCategorySelect }) {
   const [categories, setCategories] = useState([]);
   const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
+  const [isSettingsPopupOpen, setIsSettingsPopupOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     axios.get('https://easyapp.clinic/pos-api/api/category', {
@@ -19,6 +22,14 @@ export default function Sidebar({ onCategorySelect }) {
 
   const toggleCategoryPopup = () => {
     setIsCategoryPopupOpen(!isCategoryPopupOpen);
+  };
+
+  const toggleSettingsPopup = () => {
+    setIsSettingsPopupOpen(!isSettingsPopupOpen);
+  };
+
+  const handleBackToTablePage = () => {
+    router.push('/TablePage'); 
   };
 
   return (
@@ -90,9 +101,24 @@ export default function Sidebar({ onCategorySelect }) {
             </div>
           </div>
         )}
-        <div style={styles.icon} className="icon">
+        <div style={styles.icon} onClick={toggleSettingsPopup} className="icon">
           <Image src="/images/settings.png" alt="Settings" width={40} height={40} style={styles.iconImage} />
         </div>
+        {isSettingsPopupOpen && (
+          <div style={styles.menuPopup} onClick={toggleSettingsPopup}>
+            <div style={styles.menuContainer} onClick={(e) => e.stopPropagation()}>
+              <h2 style={styles.popupTitle}>ตั้งค่า</h2>
+              <div
+                className="menu-item"
+                onClick={handleBackToTablePage}
+                style={{ ...styles.circleItem, backgroundColor: '#3498db' }}
+              >
+                <span style={styles.iconText}>🔙</span>
+                <span style={styles.labelText}>ไปที่หน้าโต๊ะ</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <style jsx>{`
