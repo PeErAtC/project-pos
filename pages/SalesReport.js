@@ -48,7 +48,7 @@ export default function SalesReport({ initialReportData, initialError }) {
     };
 
     const showOrderDetails = (items) => {
-        const details = items.map((item, i) => `
+        const details = items.map((item, ) => `
             <p><strong>สินค้า:</strong> ${item.p_name}</p>
             <p><strong>จำนวน:</strong> ${item.quantity}</p>
             <p><strong>ราคา:</strong> ${item.price.toFixed(2)}</p>
@@ -114,7 +114,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                             {pendingOrders.map((order, index) => (
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.table_code || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
+                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
                                     <td style={styles.td}>
                                         {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} /> 
                                         {new Date(order.created_at).toLocaleTimeString('th-TH', {
@@ -168,7 +168,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                             {paidOrders.map((order, index) => (
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.table_code || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
+                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
                                     <td style={styles.td}>
                                         {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} /> 
                                         {new Date(order.created_at).toLocaleTimeString('th-TH', {
