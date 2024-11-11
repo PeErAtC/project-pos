@@ -486,52 +486,11 @@ const styles = {
     sidebarContainer: { flex: '0 0 100px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '10px' },
     productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', flexDirection: 'column' },
-    headerContainer: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0px',
-        position: 'sticky',
-        top: '0',
-        backgroundColor: '#f5f5f5',
-        zIndex: 2,
-    },
-    pageTitle: {
-        fontSize: '24px',
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    tableCode: {
-        fontSize: '18px',
-        color: '#333',
-        fontWeight: 'bold',
-        paddingRight: '20px',
-    },
-    // เพิ่มสไตล์ของปุ่มรับออเดอร์
-receiveOrderButton: {
-    width: '100%',
-    padding: '10px',
-    marginTop: '10px',
-    backgroundColor: '#347cae', // ใช้สีน้ำเงินเข้มกว่าเล็กน้อยสำหรับปุ่มรับออเดอร์
-    color: '#ffffff',
-    border: 'none',
-    cursor: 'pointer',
-    borderRadius: '5px',
-    fontWeight: 'bold',
-},
-paymentButton: {
-    width: '100%',
-    padding: '10px',
-    marginTop: '10px',
-    backgroundColor: '#499cae', // สีของปุ่มชำระเงิน
-    color: '#ffffff',
-    border: 'none',
-    cursor: 'pointer',
-    borderRadius: '5px',
-    fontWeight: 'bold',
-},
-
-    pageContainer: { display: 'flex', padding: '16px', height: '92vh' },
+    headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0px', position: 'sticky', top: '0', backgroundColor: '#f5f5f5', zIndex: 2 },
+    pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
+    tableCode: { fontSize: '18px', color: '#333', fontWeight: 'bold', paddingRight: '20px' },
+    receiveOrderButton: { width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#347cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold' },
+    paymentButton: { width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold' },
     receiptContainer: { backgroundColor: '#fff', padding: '20px', borderRadius: '8px', marginTop: '20px' },
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, padding: '10px 0' },
     searchInput: { width: '96%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' },
@@ -582,6 +541,5 @@ paymentButton: {
     buttonContainer: { display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center' },
     actionButton: { flex: 1, padding: '8px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#333333', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
-    productCount: { fontSize: '14px', color: '#333', marginBottom: '10px', textAlign: 'left' },
-    paymentButton: { width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold' }
+    productCount: { fontSize: '14px', color: '#333', marginBottom: '10px', textAlign: 'left' }
 };
