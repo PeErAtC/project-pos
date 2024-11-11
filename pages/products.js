@@ -6,23 +6,23 @@ import Sidebar from './components/sidebar';
 import Image from 'next/image';
 import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-import { useRouter } from 'next/router'; // เพิ่ม useRouter สำหรับการรับ tableId
-
+import { useRouter } from 'next/router';
 
 export default function SalesPage() {
-    const [products, setProducts] = useState([]);
-    const router = useRouter(); // ประกาศ useRouter
-    const { tableCode  } = router.query; // ดึง tableId จาก query parameters
-    const [cart, setCart] = useState([]);
-    const [receivedAmount, setReceivedAmount] = useState(0);
-    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-    const [billDiscount, setBillDiscount] = useState(0);
-    const [billDiscountType, setBillDiscountType] = useState("THB");
-    const [showReceipt, setShowReceipt] = useState(false);
-    const [orderReceived, setOrderReceived] = useState(false);
-    const [isBillPaused, setIsBillPaused] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
-    const VAT_RATE = 0.07;
+     const [products, setProducts] = useState([]);
+        const router = useRouter();
+        const { tableCode } = router.query;
+        const [cart, setCart] = useState([]);
+        const [receivedAmount, setReceivedAmount] = useState(0);
+        const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+        const [billDiscount, setBillDiscount] = useState(0);
+        const [billDiscountType, setBillDiscountType] = useState("THB");
+        const [showReceipt, setShowReceipt] = useState(false);
+        const [orderReceived, setOrderReceived] = useState(false);
+        const [isBillPaused, setIsBillPaused] = useState(false);
+        const [searchTerm, setSearchTerm] = useState("");
+        const [orderNumber, setOrderNumber] = useState("");
+        const VAT_RATE = 0.07;
 
     const fetchProducts = () => {
         axios.get('https://easyapp.clinic/pos-api/api/products', {
@@ -34,7 +34,6 @@ export default function SalesPage() {
         .then((response) => setProducts(response.data))
         .catch((error) => console.error('Error fetching products:', error));
     };
-
     useEffect(() => {
         fetchProducts();
         const interval = setInterval(fetchProducts, 5000);
@@ -42,7 +41,7 @@ export default function SalesPage() {
     }, []);
 
     const addToCart = (product) => {
-        if (product.status !== 'Y') return; // ป้องกันการเพิ่มสินค้าถ้าสถานะเป็นปิด
+        if (product.status !== 'Y') return;
         setCart((prevCart) => {
             const existingItem = prevCart.find(item => item.id === product.id);
             if (existingItem) {
@@ -88,7 +87,7 @@ export default function SalesPage() {
         });
     };
 
-    const calculateDiscountedPrice = (price, discount, discountType) => {
+   const calculateDiscountedPrice = (price, discount, discountType) => {
         if (discountType === "THB") {
             return Math.max(price - discount, 0);
         } else if (discountType === "%") {
@@ -121,6 +120,65 @@ export default function SalesPage() {
         setShowReceipt(true);
     };
 
+    const filteredProducts = products.filter(product =>
+        (!selectedCategoryId || product.category_id === selectedCategoryId) &&
+        (product.p_name ? product.p_name.toLowerCase().includes(searchTerm.toLowerCase()) : false)
+    );
+     
+    const receiveOrder = async () => {
+        const generatedOrderNumber = `RE${Math.floor(100000 + Math.random() * 900000)}`;
+        setOrderNumber(generatedOrderNumber);
+        
+        const orderData = {
+            order_number: generatedOrderNumber,
+            order_date: new Date().toISOString().split('T')[0],
+            total_amount: calculateTotalAfterItemDiscounts(),
+            discount: billDiscountType === "THB" ? billDiscount : 0,
+            discount_per: billDiscountType === "%" ? billDiscount : 0,
+            vat_per: VAT_RATE * 100,
+            vat_amt: calculateVAT(),
+            net_amount: calculateTotalWithBillDiscount(),
+            status: 'N',
+            tables_id: tableCode,
+            items: cart.map((item) => ({
+                product_id: item.id,
+                p_name: item.p_name,
+                quantity: item.quantity,
+                price: item.price,
+                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity,
+                discount: item.discountType === "THB" ? item.discount : 0,
+                discount_per: item.discountType === "%" ? item.discount : 0,
+            })),
+        };
+        
+        try {
+            await axios.post('https://easyapp.clinic/pos-api/api/orders', orderData, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                },
+            });
+            console.log(orderData);
+            setOrderReceived(true);
+    
+            // Show success alert first, then display the receipt
+            Swal.fire({
+                icon: 'success',
+                title: 'รับออเดอร์สำเร็จ',
+                text: 'ออเดอร์ถูกบันทึกเรียบร้อยแล้ว!',
+                confirmButtonText: 'ตกลง',
+            }).then(() => {
+                setShowReceipt(true);
+            });
+            
+        } catch (error) {
+            Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกออเดอร์ได้: ${error.response?.data?.message || error.message}`, 'error');
+        }
+    };
+    
+
+    
+
     const handleAmountButton = (amount) => {
         setReceivedAmount((prevAmount) => prevAmount + amount);
     };
@@ -133,49 +191,49 @@ export default function SalesPage() {
         setReceivedAmount(calculateTotalWithBillDiscount());
     };
 
-    const closeReceipt = async () => {
-        const orderData = {
-            order_number: `RE${Math.floor(100000 + Math.random() * 900000)}`,
-            order_date: new Date().toISOString().split('T')[0],
-            total_amount: calculateTotalAfterItemDiscounts(),
-            discount: billDiscountType === "THB" ? billDiscount : 0,
-            discount_per: billDiscountType === "%" ? billDiscount : 0,
-            vat_per: VAT_RATE * 100,
-            vat_amt: calculateVAT(),
-            net_amount: calculateTotalWithBillDiscount(),
-            status: 'Y',
-            items: cart.map((item) => ({
-                p_name: item.p_name,
-                quantity: item.quantity,
-                price: item.price,
-                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity
-            })),
-        };
 
+
+    // เปลี่ยนสถานะ order Y N
+    const closeReceipt = async () => {
         try {
-            await axios.post('https://easyapp.clinic/pos-api/api/orders', orderData, {
+            // ตรวจสอบบิลในฐานข้อมูล
+            const response = await axios.get(`https://easyapp.clinic/pos-api/api/orders/${orderNumber}`, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
                 },
             });
             
-            Swal.fire({
-                icon: 'success',
-                title: 'ชำระเงินสำเร็จ',
-                text: 'การชำระเงินดำเนินการเรียบร้อยแล้ว!',
-                confirmButtonText: 'ตกลง',
-            }).then(() => {
-                setShowReceipt(false);
-                setOrderReceived(true);
-                setCart([]);
-                setReceivedAmount(0);
-                setBillDiscount(0);
-                setBillDiscountType("THB");
-                setIsBillPaused(false);
-            });
+            if (response.data && response.data.status === 'N') {
+                // อัปเดตสถานะบิลเป็น 'Y' เพื่อแสดงว่าชำระแล้ว
+                await axios.put(`https://easyapp.clinic/pos-api/api/orders/${orderNumber}`, {
+                    status: 'Y',
+                }, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                    },
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ชำระเงินสำเร็จ',
+                    text: 'การชำระเงินดำเนินการเรียบร้อยแล้ว!',
+                    confirmButtonText: 'ตกลง',
+                }).then(() => {
+                    setShowReceipt(false);
+                    setOrderReceived(true);
+                    setCart([]);
+                    setReceivedAmount(0);
+                    setBillDiscount(0);
+                    setBillDiscountType("THB");
+                    setIsBillPaused(false);
+                });
+            } else {
+                Swal.fire('ผิดพลาด', 'ไม่พบข้อมูลบิล หรือบิลนี้ถูกชำระแล้ว', 'error');
+            }
         } catch (error) {
-            Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกบิลได้: ${error.response?.data?.message || error.message}`, 'error');
+            Swal.fire('ผิดพลาด', `ไม่สามารถอัปเดตบิลได้: ${error.response?.data?.message || error.message}`, 'error');
         }
     };
 
@@ -192,10 +250,6 @@ export default function SalesPage() {
         );
     };
 
-    const filteredProducts = products.filter(product =>
-        (!selectedCategoryId || product.category_id === selectedCategoryId) &&
-        (product.p_name ? product.p_name.toLowerCase().includes(searchTerm.toLowerCase()) : false)
-    );
 
     return (
         <div style={styles.pageContainer}>
@@ -204,10 +258,10 @@ export default function SalesPage() {
             </div>
             <div style={styles.mainContent}>
                 <div style={styles.productListContainer}>
-                <div style={styles.headerContainer}>
-                    <h1 style={styles.pageTitle}>รวมเมนูอาหาร</h1>
-                    <h5 style={styles.tableCode}>โต๊ะ: {tableCode}</h5> 
-                </div>
+                    <div style={styles.headerContainer}>
+                        <h1 style={styles.pageTitle}>รวมเมนูอาหาร</h1>
+                        <h5 style={styles.tableCode}>โต๊ะ: {tableCode}</h5>
+                    </div>
 
                     <div style={styles.searchBar}>
                         <input 
@@ -358,6 +412,9 @@ export default function SalesPage() {
                     <div style={styles.changeDisplay}>
                         เงินทอน: {(receivedAmount ? (receivedAmount - calculateTotalWithBillDiscount()).toFixed(2) : "0.00")} บาท
                     </div>
+                    <button style={styles.receiveOrderButton} onClick={receiveOrder}>
+                        รับออเดอร์
+                    </button>                    
                     <button style={styles.paymentButton} onClick={handlePayment}>
                         ชำระเงิน
                     </button>
@@ -372,7 +429,7 @@ export default function SalesPage() {
                             <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
                         </div>
                         <div style={styles.info}>
-                            <p style={styles.billId}>No: {Math.random().toString(36).substring(7).toUpperCase()}</p>
+                            <p style={styles.billId}>No: {orderNumber}</p>
                             <p style={styles.date}>{new Date().toLocaleString()}</p>
                         </div>
                         <div style={styles.tableHeader}>
@@ -407,6 +464,7 @@ export default function SalesPage() {
                             <p style={styles.itemPrice}><strong>{billDiscountType === 'THB' ? billDiscount.toFixed(2) + ' บาท' : billDiscount + '%'}</strong></p>
                         </div>
                         <div style={styles.receiptSummary}>
+                            <p>โต๊ะ: {tableCode}</p>
                             <p>ยอดบิล: <span style={styles.summaryValue}>{calculateTotalWithBillDiscount().toFixed(2)} บาท</span></p>
                             <p>ยอดภาษีมูลค่าเพิ่ม (VAT) 7%: <span style={styles.summaryValue}>{calculateVAT().toFixed(2)} บาท</span></p>
                             <p>รับเงิน: <span style={styles.summaryValue}>{receivedAmount.toFixed(2)} บาท</span></p>
@@ -437,7 +495,6 @@ const styles = {
         top: '0',
         backgroundColor: '#f5f5f5',
         zIndex: 2,
-        
     },
     pageTitle: {
         fontSize: '24px',
@@ -448,9 +505,34 @@ const styles = {
         fontSize: '18px',
         color: '#333',
         fontWeight: 'bold',
-        paddingRight: '20px', // เพิ่ม padding ขวาเพื่อเว้นช่องว่าง
-        
+        paddingRight: '20px',
     },
+    // เพิ่มสไตล์ของปุ่มรับออเดอร์
+receiveOrderButton: {
+    width: '100%',
+    padding: '10px',
+    marginTop: '10px',
+    backgroundColor: '#347cae', // ใช้สีน้ำเงินเข้มกว่าเล็กน้อยสำหรับปุ่มรับออเดอร์
+    color: '#ffffff',
+    border: 'none',
+    cursor: 'pointer',
+    borderRadius: '5px',
+    fontWeight: 'bold',
+},
+paymentButton: {
+    width: '100%',
+    padding: '10px',
+    marginTop: '10px',
+    backgroundColor: '#499cae', // สีของปุ่มชำระเงิน
+    color: '#ffffff',
+    border: 'none',
+    cursor: 'pointer',
+    borderRadius: '5px',
+    fontWeight: 'bold',
+},
+
+    pageContainer: { display: 'flex', padding: '16px', height: '92vh' },
+    receiptContainer: { backgroundColor: '#fff', padding: '20px', borderRadius: '8px', marginTop: '20px' },
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, padding: '10px 0' },
     searchInput: { width: '96%', padding: '8px', borderRadius: '8px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '20px', paddingTop: '20px' },
