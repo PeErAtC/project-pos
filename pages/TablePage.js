@@ -138,45 +138,13 @@ export default function MainTablePage() {
     );
 }
 
-const styles = {
-    pageContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        backgroundColor: '#f0f2f5',
-        minHeight: '100vh',
-    },
-    header: {
-        padding: '20px',
-        textAlign: 'center',
-        backgroundColor: '#f0f2f5',
-        width: '100%',
-    },
-    tableSelectionContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: '30px',
-    },
-    tableGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '20px',
-        justifyContent: 'center',
-        padding: '20px',
-        width: '100%',
-        maxWidth: '1000px',
-    },
-    errorText: {
-        color: 'red',
-    },
-    noTableText: {
-        color: '#333',
-    },
-};
+const styles = { 
+    pageContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#f0f2f5', minHeight: '100vh' }, 
+    header: { padding: '20px', textAlign: 'center', backgroundColor: '#f0f2f5', width: '100%' }, 
+    tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }, 
+    title: { fontSize: '28px', fontWeight: '600', textAlign: 'center', marginBottom: '30px' }, 
+    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' }, 
+    errorText: { color: 'red' }, 
+    noTableText: { color: '#333' } 
+  };
+  
