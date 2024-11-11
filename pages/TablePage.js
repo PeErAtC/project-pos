@@ -33,7 +33,7 @@ function TableCard({ table, onClick }) {
             }}
             onClick={() => {
                 setIsPressed(false);
-                onClick(table.table_code);
+                onClick(table.id);
             }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
