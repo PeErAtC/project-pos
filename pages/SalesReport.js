@@ -48,14 +48,24 @@ export default function SalesReport({ initialReportData, initialError }) {
     };
 
     const showOrderDetails = (items) => {
-        const details = items.map((item, ) => `
+        if (!items || items.length === 0) {
+            Swal.fire({
+                title: 'รายละเอียดบิล',
+                text: 'ไม่มีข้อมูลสินค้าในบิลนี้',
+                icon: 'info',
+                confirmButtonText: 'ปิด'
+            });
+            return;
+        }
+    
+        const details = items.map((item) => `
             <p><strong>สินค้า:</strong> ${item.p_name}</p>
             <p><strong>จำนวน:</strong> ${item.quantity}</p>
             <p><strong>ราคา:</strong> ${item.price.toFixed(2)}</p>
-            <p><strong>รวม:</strong> ${item.total.toFixed(2)}</p>
+            <p><strong>รวม:</strong> ${(item.price * item.quantity).toFixed(2)}</p>
             <hr />
         `).join('');
-
+    
         Swal.fire({
             title: 'รายละเอียดบิล',
             html: details,
@@ -64,6 +74,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             confirmButtonText: 'ปิด'
         });
     };
+    
 
     const pendingOrders = filterByDate(reportData).filter(order => order.status !== 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
     const paidOrders = filterByDate(reportData).filter(order => order.status === 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
@@ -114,7 +125,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                             {pendingOrders.map((order, index) => (
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
+                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td>
                                     <td style={styles.td}>
                                         {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} /> 
                                         {new Date(order.created_at).toLocaleTimeString('th-TH', {
@@ -168,7 +179,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                             {paidOrders.map((order, index) => (
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td> {/* รอแก้ในฐานข้อมูลให้เป็น Table code */}
+                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td>
                                     <td style={styles.td}>
                                         {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} /> 
                                         {new Date(order.created_at).toLocaleTimeString('th-TH', {
@@ -214,7 +225,7 @@ const styles = {
     dateInput: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px' },
     subTitle: { fontSize: '20px', fontWeight: 'bold', color: '#333' },
     itemCount: { fontSize: '16px', color: '#666', marginLeft: '10px' },
-    tableContainer: { maxHeight: '230px', overflowY: 'auto', backgroundColor: '#ffffff', borderRadius: '8px', padding: '0px', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', marginBottom: '20px' },
+    tableContainer: { backgroundColor: '#ffffff', borderRadius: '8px', padding: '0px', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', marginBottom: '20px', resize: 'vertical', overflowY: 'auto', maxHeight: '320px', height: '220px', minHeight: '220px' },
     table: { width: '100%', borderCollapse: 'collapse' },
     th: { padding: '10px', backgroundColor: '#499cae', color: '#fff', textAlign: 'center', position: 'sticky', top: 0 },
     td: { padding: '10px', borderBottom: '1px solid #ddd', textAlign: 'center', color: '#333', fontSize: '14px' },
@@ -222,5 +233,5 @@ const styles = {
     totalValue: { textAlign: 'center', fontWeight: 'bold' },
     detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' },
     totalContainer: { display: 'flex', justifyContent: 'space-between', marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px' },
-    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fffffe', height: '35px' },
+    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fffffe', height: '35px' }
 };
