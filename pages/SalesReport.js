@@ -4,6 +4,9 @@ import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 import { FaClipboardList, FaTable, FaCalendarAlt, FaDollarSign, FaTag, FaPercentage, FaMoneyBill, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
+const api_url = "https://easyapp.clinic/pos-api/api";
+const slug = "abc";
+
 export default function SalesReport({ initialReportData, initialError }) {
     const [reportData, setReportData] = useState(initialReportData || []);
     const [error, setError] = useState(initialError || null);
@@ -11,14 +14,15 @@ export default function SalesReport({ initialReportData, initialError }) {
 
     const fetchReportData = async () => {
         try {
-            const response = await axios.get('https://easyapp.clinic/pos-api/api/orders', {
+            const url = `${api_url}/${slug}/orders`;
+            const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
                 },
             });
             setReportData(response.data);
-            console.log('Fetched report data:', response.data); // ตรวจสอบข้อมูลที่ได้รับ
+            console.log('Fetched report data:', response.data);
             setError(null);
         } catch (err) {
             setError("ไม่สามารถเชื่อมต่อกับ API ได้");
@@ -75,7 +79,6 @@ export default function SalesReport({ initialReportData, initialError }) {
         });
     };
     
-
     const pendingOrders = filterByDate(reportData).filter(order => order.status !== 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
     const paidOrders = filterByDate(reportData).filter(order => order.status === 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
@@ -111,7 +114,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                         <thead>
                             <tr>
                                 <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
-                                <th style={styles.th}><FaTable /> รหัสโต๊ะ</th>
+                                <th style={styles.th}><FaTable /> โต๊ะ</th>
                                 <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
                                 <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
                                 <th style={styles.th}><FaTag /> ส่วนลด</th>
@@ -165,7 +168,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                         <thead>
                             <tr>
                                 <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
-                                <th style={styles.th}><FaTable /> รหัสโต๊ะ</th>
+                                <th style={styles.th}><FaTable /> โต๊ะ</th>
                                 <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
                                 <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
                                 <th style={styles.th}><FaTag /> ส่วนลด</th>
