@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from 'react';
+
 import axios from 'axios';
+
 import Sidebar from './components/backendsidebar';
+
 import { FaCheckCircle, FaExclamationCircle, FaImage } from 'react-icons/fa';
+
 import Swal from 'sweetalert2';
 
+const api_url = "https://easyapp.clinic/pos-api/api";
+const slug = "abc";
+
 export default function BackendPage() {
+
   const [items, setItems] = useState([]); // สถานะเก็บรายการอาหาร
   const [categories, setCategories] = useState([]); // สถานะเก็บหมวดหมู่อาหาร
   const [itemName, setItemName] = useState(''); // สถานะเก็บชื่ออาหาร
@@ -26,7 +34,8 @@ export default function BackendPage() {
   // ฟังก์ชันดึงรายการอาหารจาก API
   const fetchItems = async () => {
     try {
-      const response = await axios.get('https://easyapp.clinic/pos-api/api/products', {
+      const url = `${api_url}/${slug}/products`;
+      const response = await axios.get(url, {
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
@@ -41,7 +50,8 @@ export default function BackendPage() {
   // ฟังก์ชันดึงหมวดหมู่อาหารจาก API
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('https://easyapp.clinic/pos-api/api/category', {
+      const url = `${api_url}/${slug}/category`;
+      const response = await axios.get(url, {
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
@@ -98,7 +108,8 @@ export default function BackendPage() {
         });
 
         if (result.isConfirmed) {
-          response = await axios.put(`https://easyapp.clinic/pos-api/api/products/${editIndex}`, formData, config);
+          const url = `${api_url}/${slug}/products/${editIndex}`;
+          response = await axios.put(url, formData, config);
           showNotification("อัพเดทข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่ออัปเดตสำเร็จ
         } else {
           return; // ถ้ายกเลิกไม่ต้องทำอะไรต่อ
@@ -117,7 +128,8 @@ export default function BackendPage() {
         });
 
         if (result.isConfirmed) {
-          response = await axios.post('https://easyapp.clinic/pos-api/api/products', formData, config);
+          const url = `${api_url}/${slug}/products`;
+          response = await axios.post(url, formData, config);
           showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่อเพิ่มสำเร็จ
         } else {
           return; // ถ้ายกเลิกไม่ต้องทำอะไรต่อ
@@ -165,7 +177,8 @@ export default function BackendPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await axios.delete(`https://easyapp.clinic/pos-api/api/products/${id}`, {
+          const url = `${api_url}/${slug}/products/${id}`;
+          await axios.delete(url, {
             headers: {
               'Accept': 'application/json',
               'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
@@ -188,7 +201,7 @@ export default function BackendPage() {
       setItemName(itemToEdit.p_name || itemToEdit.name);
       setItemCategory(itemToEdit.category_id);
       setItemPrice(itemToEdit.price);
-      setItemImage(itemToEdit.image ? `https://easyapp.clinic/pos-api/storage/app/public/product/${itemToEdit.image}` : null);
+      setItemImage(itemToEdit.image ? `${api_url}/storage/app/public/product/${itemToEdit.image}` : null);
       setItemStatus(itemToEdit.status === 'Y'); // ตั้งค่าสถานะจากรายการที่เลือก
       setEditMode(true);
       setEditIndex(id);
@@ -357,3 +370,4 @@ const styles = {
   statusToggle: { display: 'flex', gap: '10px', marginBottom: '15px' },
   statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' }
 };
+
