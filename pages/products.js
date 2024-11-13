@@ -8,24 +8,28 @@ import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/router';
 
+const api_url = "https://easyapp.clinic/pos-api/api";
+const slug = "abc";
+
 export default function SalesPage() {
-     const [products, setProducts] = useState([]);
-        const router = useRouter();
-        const { tableCode } = router.query;
-        const [cart, setCart] = useState([]);
-        const [receivedAmount, setReceivedAmount] = useState(0);
-        const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-        const [billDiscount, setBillDiscount] = useState(0);
-        const [billDiscountType, setBillDiscountType] = useState("THB");
-        const [showReceipt, setShowReceipt] = useState(false);
-        const [orderReceived, setOrderReceived] = useState(false);
-        const [isBillPaused, setIsBillPaused] = useState(false);
-        const [searchTerm, setSearchTerm] = useState("");
-        const [orderNumber, setOrderNumber] = useState("");
-        const VAT_RATE = 0.07;
+    const [products, setProducts] = useState([]);
+    const router = useRouter();
+    const { tableCode } = router.query;
+    const [cart, setCart] = useState([]);
+    const [receivedAmount, setReceivedAmount] = useState(0);
+    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+    const [billDiscount, setBillDiscount] = useState(0);
+    const [billDiscountType, setBillDiscountType] = useState("THB");
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [orderReceived, setOrderReceived] = useState(false);
+    const [isBillPaused, setIsBillPaused] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [orderNumber, setOrderNumber] = useState("");
+    const VAT_RATE = 0.07;
 
     const fetchProducts = () => {
-        axios.get('https://easyapp.clinic/pos-api/api/products', {
+        const url = `${api_url}/${slug}/products`;
+        axios.get(url, {
             headers: {
                 'Accept': 'application/json',
                 'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
@@ -34,6 +38,7 @@ export default function SalesPage() {
         .then((response) => setProducts(response.data))
         .catch((error) => console.error('Error fetching products:', error));
     };
+
     useEffect(() => {
         fetchProducts();
         const interval = setInterval(fetchProducts, 5000);
@@ -87,7 +92,7 @@ export default function SalesPage() {
         });
     };
 
-   const calculateDiscountedPrice = (price, discount, discountType) => {
+    const calculateDiscountedPrice = (price, discount, discountType) => {
         if (discountType === "THB") {
             return Math.max(price - discount, 0);
         } else if (discountType === "%") {
@@ -124,7 +129,7 @@ export default function SalesPage() {
         (!selectedCategoryId || product.category_id === selectedCategoryId) &&
         (product.p_name ? product.p_name.toLowerCase().includes(searchTerm.toLowerCase()) : false)
     );
-     
+
     const receiveOrder = async () => {
         const generatedOrderNumber = `RE${Math.floor(100000 + Math.random() * 900000)}`;
         setOrderNumber(generatedOrderNumber);
@@ -152,16 +157,15 @@ export default function SalesPage() {
         };
         
         try {
-            await axios.post('https://easyapp.clinic/pos-api/api/orders', orderData, {
+            const url = `${api_url}/${slug}/orders`;
+            await axios.post(url, orderData, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
                 },
             });
-            console.log(orderData);
             setOrderReceived(true);
     
-            // Show success alert first, then display the receipt
             Swal.fire({
                 icon: 'success',
                 title: 'รับออเดอร์สำเร็จ',
@@ -175,9 +179,6 @@ export default function SalesPage() {
             Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกออเดอร์ได้: ${error.response?.data?.message || error.message}`, 'error');
         }
     };
-    
-
-    
 
     const handleAmountButton = (amount) => {
         setReceivedAmount((prevAmount) => prevAmount + amount);
@@ -191,13 +192,10 @@ export default function SalesPage() {
         setReceivedAmount(calculateTotalWithBillDiscount());
     };
 
-
-
-    // เปลี่ยนสถานะ order Y N
     const closeReceipt = async () => {
         try {
-            // ตรวจสอบบิลในฐานข้อมูล
-            const response = await axios.get(`https://easyapp.clinic/pos-api/api/orders/${orderNumber}`, {
+            const url = `${api_url}/${slug}/orders/${orderNumber}`;
+            const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
@@ -205,8 +203,7 @@ export default function SalesPage() {
             });
             
             if (response.data && response.data.status === 'N') {
-                // อัปเดตสถานะบิลเป็น 'Y' เพื่อแสดงว่าชำระแล้ว
-                await axios.put(`https://easyapp.clinic/pos-api/api/orders/${orderNumber}`, {
+                await axios.put(url, {
                     status: 'Y',
                 }, {
                     headers: {
@@ -249,7 +246,6 @@ export default function SalesPage() {
             )
         );
     };
-
 
     return (
         <div style={styles.pageContainer}>
@@ -306,7 +302,7 @@ export default function SalesPage() {
                                 )}
                                 {product.image ? (
                                     <Image
-                                        src={`https://easyapp.clinic/pos-api/storage/app/public/product/${product.image}`}
+                                        src={`${api_url}/storage/app/public/product/${product.image}`}
                                         alt={product.p_name}
                                         width={240}
                                         height={240}
@@ -337,7 +333,7 @@ export default function SalesPage() {
                         {cart.map((item) => (
                             <div key={item.id} style={styles.cartItem}>
                                 <Image 
-                                    src={`https://easyapp.clinic/pos-api/storage/app/public/product/${item.image}`}
+                                    src={`${api_url}/storage/app/public/product/${item.image}`}
                                     alt={item.p_name}
                                     width={40}
                                     height={40}
@@ -543,3 +539,4 @@ const styles = {
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#333333', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     productCount: { fontSize: '14px', color: '#333', marginBottom: '10px', textAlign: 'left' }
 };
+
