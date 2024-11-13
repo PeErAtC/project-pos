@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Sidebar from './components/backendsidebar';
+import Sidebar from './components/backendsideber';
 import Swal from 'sweetalert2';
 
 const api_url = "https://easyapp.clinic/pos-api/api";
@@ -44,6 +44,7 @@ export default function TableManagement() {
         }
 
         const tableData = { table_code: tableCode, seats, status };
+        console.log("Table data to be sent:", tableData); // Debug ข้อมูลที่จะส่ง
 
         try {
             if (editMode && editTableId) {
@@ -62,6 +63,7 @@ export default function TableManagement() {
                 if (!result.isConfirmed) return;
 
                 const url = `${api_url}/${slug}/table_codes/${editTableId}`;
+                console.log("PUT URL:", url); // Debug URL
                 await axios.put(url, tableData, {
                     headers: {
                         'Accept': 'application/json',
@@ -85,6 +87,7 @@ export default function TableManagement() {
                 if (!result.isConfirmed) return;
 
                 const url = `${api_url}/${slug}/table_codes`;
+                console.log("POST URL:", url); // Debug URL
                 await axios.post(url, tableData, {
                     headers: {
                         'Accept': 'application/json',
@@ -115,6 +118,7 @@ export default function TableManagement() {
             if (result.isConfirmed) {
                 try {
                     const url = `${api_url}/${slug}/table_codes/${id}`;
+                    console.log("DELETE URL:", url); // Debug URL
                     await axios.delete(url, {
                         headers: {
                             'Accept': 'application/json',
@@ -137,6 +141,14 @@ export default function TableManagement() {
         setStatus('Y');
         setEditMode(false);
         setEditTableId(null);
+    };
+
+    const handleEditTable = (table) => {
+        setEditMode(true);
+        setEditTableId(table.id);
+        setTableCode(table.table_code);
+        setSeats(table.seats);
+        setStatus(table.status);
     };
 
     return (
@@ -163,7 +175,7 @@ export default function TableManagement() {
                                         <th style={styles.th}>รหัสโต๊ะ</th>
                                         <th style={styles.th}>จำนวนที่นั่ง</th>
                                         <th style={styles.th}>สถานะ</th>
-                                        <th style={styles.th}>ดำเนินการ</th>
+                                        <th style={styles.thActions}>ดำเนินการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -173,8 +185,8 @@ export default function TableManagement() {
                                             <td style={styles.td}>{table.seats}</td>
                                             <td style={{ ...styles.td, color: table.status === 'Y' ? 'black' : 'red' }}>{table.status === 'Y' ? 'เปิด' : 'ปิด'}</td>
                                             <td style={styles.tdActions}>
-                                            <button onClick={() => handleEditTable(table)} style={styles.editButton}>แก้ไข</button>
-                                            <button onClick={() => handleDeleteTable(table.id)} style={styles.deleteButton}>ลบ</button>
+                                                <button onClick={() => handleEditTable(table)} style={{ ...styles.editButton, marginRight: '10px' }}>แก้ไข</button>
+                                                <button onClick={() => handleDeleteTable(table.id)} style={styles.deleteButton}>ลบ</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -200,9 +212,7 @@ export default function TableManagement() {
                         onChange={(e) => setSeats(Number(e.target.value))}
                         style={styles.input}
                     />
-                    {/* แสดงหัวข้อสำหรับการเปิดปิดสถานะ */}
                     <h3 style={{ margin: '10px 0' }}>สถานะโต๊ะ</h3>
-                    {/* ใช้ปุ่มเพื่อสลับสถานะ */}
                     <div style={styles.statusToggleContainer}>
                         <button
                             onClick={() => setStatus('Y')}
@@ -241,11 +251,12 @@ const styles = {
     tableContainer: { overflowY: 'auto', maxHeight: 'calc(100vh - 150px)', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' },
     table: { width: '100%', borderCollapse: 'collapse',fontSize:'14px' },
     th: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
+    thActions: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'center', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
     tr: { transition: 'background-color 0.2s' },
-    td: { padding: '10px 25px', },
-    tdActions: { display: 'flex', gap: '20px', padding: '10px', justifyContent: 'center' },
-    editButton: { background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '5px', cursor: 'pointer',   },
-    deleteButton: { background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 15px', borderRadius: '5px', cursor: 'pointer', },
+    td: { padding: '10px 25px', textAlign: 'left' },
+    tdActions: { padding: '10px 25px', textAlign: 'center' },
+    editButton: { background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 8px', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' },
+    deleteButton: { background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 15px', borderRadius: '5px', cursor: 'pointer' },
     errorText: { color: 'red', fontWeight: 'bold' },
     statusToggleContainer: { display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '15px' },
     statusButton: { padding: '10px 73px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }
