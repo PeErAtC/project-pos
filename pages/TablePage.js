@@ -3,6 +3,9 @@ import { useRouter } from 'next/router';
 import { MdRestaurant } from 'react-icons/md';
 import axios from 'axios';
 
+const api_url = "https://easyapp.clinic/pos-api/api";
+const slug = "abc";
+
 function TableCard({ table, onClick }) {
     const [isPressed, setIsPressed] = useState(false);
     const isAvailable = table.tableFree === 1 && table.status === 'Y';
@@ -33,7 +36,7 @@ function TableCard({ table, onClick }) {
             }}
             onClick={() => {
                 setIsPressed(false);
-                onClick(table.id);
+                onClick(table.id);  // Handle table click
             }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
@@ -61,10 +64,17 @@ export default function MainTablePage() {
     const { tableCode } = router.query;
     const [displayTable, setDisplayTable] = useState('');
 
+    // Play sound on table click
+    const playClickSound = () => {
+        const audio = new Audio('/sounds/click-151673.mp3'); // Path to your audio file
+        audio.play();
+    };
+
     // Fetch tables data from API
     const fetchTables = async () => {
         try {
-            const response = await axios.get('https://easyapp.clinic/pos-api/api/table_codes', {
+            const url = `${api_url}/${slug}/table_codes`;
+            const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
@@ -80,7 +90,17 @@ export default function MainTablePage() {
             setError(null);
         } catch (error) {
             console.error('Error fetching tables:', error);
-            setError('Failed to load tables. Please try again.');
+            if (error.response) {
+                if (error.response.status === 404) {
+                    setError('ไม่พบเส้นทางของ API (404 Not Found)');
+                } else {
+                    setError(`เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.response.status}`);
+                }
+            } else if (error.request) {
+                setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณ');
+            } else {
+                setError('เกิดข้อผิดพลาด: ' + error.message);
+            }
         }
     };
 
@@ -100,6 +120,7 @@ export default function MainTablePage() {
     }, []);
 
     const handleTableClick = (tableCode) => {
+        playClickSound();  // Play sound when a table is clicked
         router.push({
             pathname: '/products',
             query: { tableCode }
@@ -146,5 +167,4 @@ const styles = {
     tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' }, 
     errorText: { color: 'red' }, 
     noTableText: { color: '#333' } 
-  };
-  
+};
