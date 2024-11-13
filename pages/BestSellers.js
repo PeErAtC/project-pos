@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import BackendSidebar from './components/backendsidebar'; // แก้ไข path นี้ให้ตรงกับตำแหน่งของ BackendSidebar ของคุณ
 
+const api_url = "https://easyapp.clinic/pos-api/api";
+const slug = "abc";
+
 export default function BestSellers() {
     const [bestSellers, setBestSellers] = useState([]);
     const [error, setError] = useState(null);
 
     const fetchBestSellers = async () => {
         try {
-            const response = await axios.get('https://easyapp.clinic/pos-api/api/orders', {
+            const url = `${api_url}/${slug}/orders`;
+            const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
