@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import { Bar } from 'react-chartjs-2';
 import Chart from 'chart.js/auto';
 
@@ -59,20 +59,31 @@ export default function PaymentSummary() {
                 },
             });
             const data = response.data;
-            const itemSales = data.reduce((acc, item) => {
-                if (!acc[item.p_name]) {
-                    acc[item.p_name] = 0;
-                }
-                acc[item.p_name] += item.quantity;
-                return acc;
-            }, {});
-            const sortedItems = Object.entries(itemSales)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3)
-                .map(([name, quantity]) => ({ name, quantity }));
-            setTopSellingItems(sortedItems);
+            
+            if (!data || data.length === 0) {
+                // ถ้าไม่มีข้อมูล ให้ตั้งค่า topSellingItems เป็นค่าว่าง
+                setTopSellingItems([]);
+            } else {
+                // คำนวณสินค้าขายดีหากมีข้อมูล
+                const itemSales = data.reduce((acc, item) => {
+                    if (!acc[item.p_name]) {
+                        acc[item.p_name] = 0;
+                    }
+                    acc[item.p_name] += item.quantity;
+                    return acc;
+                }, {});
+    
+                const sortedItems = Object.entries(itemSales)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3)
+                    .map(([name, quantity]) => ({ name, quantity }));
+    
+                setTopSellingItems(sortedItems);
+            }
         } catch (err) {
-            console.error("ไม่สามารถดึงข้อมูลสินค้าขายดีได้", err);
+            console.error("ไม่สามารถดึงข้อมูลสินค้าขายดีได้", err.response ? err.response.data : err.message);
+            // ในกรณีที่เกิดข้อผิดพลาด ก็ตั้งค่า topSellingItems เป็นค่าว่าง
+            setTopSellingItems([]);
         }
     };
 
@@ -125,8 +136,8 @@ export default function PaymentSummary() {
                 {
                     label: 'ยอดขายรวม',
                     data: salesAmounts,
-                    backgroundColor: '#4A90E2',
-                    borderColor: '#4A90E2',
+                    backgroundColor: '#499cae',
+                    borderColor: '#499cae',
                     borderWidth: 1,
                 },
             ],
@@ -150,7 +161,7 @@ export default function PaymentSummary() {
 
         const backgroundColors = [
             '#FF6666', // 2024
-            '#4A90E2', // 2025
+            '#499cae', // 2025
             '#8A2BE2', // 2026
             '#FFB6C1', // 2027
             '#32CD32'  // 2028
@@ -226,13 +237,13 @@ export default function PaymentSummary() {
                     <div style={styles.circleButtonContainer}>
                         <button 
                             onClick={() => setViewType('daily')} 
-                            style={{ ...styles.circleButton, backgroundColor: viewType === 'daily' ? '#4A90E2' : '#ccc' }}
+                            style={{ ...styles.circleButton, backgroundColor: viewType === 'daily' ? '#499cae' : '#ccc' }}
                         >
                             รายวัน
                         </button>
                         <button 
                             onClick={() => setViewType('monthly')} 
-                            style={{ ...styles.circleButton, backgroundColor: viewType === 'monthly' ? '#4A90E2' : '#ccc' }}
+                            style={{ ...styles.circleButton, backgroundColor: viewType === 'monthly' ? '#499cae' : '#ccc' }}
                         >
                             รายเดือน
                         </button>
@@ -260,7 +271,7 @@ export default function PaymentSummary() {
                                     <p style={styles.totalSalesValue}>{totalSales.toLocaleString()} บาท</p>
                                 </div>
                                 <div style={styles.salesCountBox}>
-                                    <h3 style={styles.summaryTitle}>จำนวนการขาย</h3>
+                                    <h3 style={styles.salesCountValue}>จำนวนการขาย</h3>
                                     <p style={styles.salesCountValue}>{totalTransactions}</p>
                                 </div>
                                 <div style={styles.topSellingBox}>
@@ -297,23 +308,23 @@ export default function PaymentSummary() {
 
 const styles = {
     pageContainer: { display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8', overflowY: 'auto' },
-    content: { flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-    titleWithHighlight: { fontSize: '36px', fontWeight: 'bold', color: '#ff6347', marginBottom: '20px', textShadow: '2px 2px #ffe6e6' }, // เพิ่ม textShadow และเปลี่ยนสีเพื่อให้หัวเรื่องเด่นขึ้น
+    content: { flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft:'65px' },
+    titleWithHighlight: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textShadow: '2px 2px #ffe6e6' ,marginRight:'1150px' },
     filterContainer: { display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '20px' },
     label: { fontSize: '20px', color: '#4a4a4a' },
     select: { padding: '12px', border: '1px solid #ccc', borderRadius: '8px' },
     loadingText: { fontSize: '24px', color: '#888' },
     error: { color: 'red', marginBottom: '10px' },
-    summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', maxWidth: '1400px', gap: '20px', marginBottom: '20px', justifyContent: 'center' }, // ลดความกว้างของ summaryChartContainer เพื่อลดการทับกับ sidebar
-    summaryContainer: { display: 'flex', flexDirection: 'column', gap: '20px', width: '25%' }, // ลดขนาดความกว้างของ summaryContainer เพื่อให้ไม่ทับกับ sidebar
+    summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', maxWidth: '1400px', gap: '20px', marginBottom: '20px', justifyContent: 'center' },
+    summaryContainer: { display: 'flex', flexDirection: 'column', gap: '20px', width: '25%' },
     summaryBox: { backgroundColor: '#ffffff', padding: '15px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' },
     totalSalesValue: { fontSize: '32px', fontWeight: 'bold', color: '#ff6347' },
-    salesCountBox: { backgroundColor: '#9effca', padding: '15px', borderRadius: '15px', textAlign: 'center' },
-    salesCountValue: { fontSize: '24px', fontWeight: 'bold', color: '#4A4A4A' },
-    topSellingBox: { backgroundColor: '#ffffff', padding: '15px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' }, // กล่องสำหรับสินค้าขายดี
+    salesCountBox: { backgroundColor: '#499cae', padding: '15px', borderRadius: '15px', textAlign: 'center' },
+    salesCountValue: { fontSize: '20px', fontWeight: 'bold', color: '#fff' },
+    topSellingBox: { backgroundColor: '#ffffff', padding: '15px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' },
     topSellingList: { listStyleType: 'none', padding: 0, margin: 0 },
     topSellingItem: { fontSize: '20px', fontWeight: 'bold', color: '#4A4A4A', marginBottom: '10px' },
-    chartBox: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', minHeight: '300px', maxHeight: '400px', maxWidth: '65%' }, // เพิ่มความสูงของ chartBox ให้มากขึ้นตามคำขอ
+    chartBox: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', minHeight: '300px', maxHeight: '400px', maxWidth: '65%' },
     chartTitle: { fontSize: '24px', color: '#4A4A4A', marginBottom: '15px', fontWeight: 'bold' },
     monthlyChartContainer: { width: '100%', maxWidth: '1200px', marginTop: '30px' },
     circleButtonContainer: { display: 'flex', gap: '20px' },
