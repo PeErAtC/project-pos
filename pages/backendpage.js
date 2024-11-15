@@ -8,8 +8,9 @@ import { FaCheckCircle, FaExclamationCircle, FaImage } from 'react-icons/fa';
 
 import Swal from 'sweetalert2';
 
-const api_url = "https://easyapp.clinic/pos-api/api";
+const api_url = "https://easyapp.clinic/pos-api";
 const slug = "abc";
+const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 export default function BackendPage() {
 
@@ -34,27 +35,29 @@ export default function BackendPage() {
   // ฟังก์ชันดึงรายการอาหารจาก API
   const fetchItems = async () => {
     try {
-      const url = `${api_url}/${slug}/products`;
+      const url = `${api_url}/api/${slug}/products`;
       const response = await axios.get(url, {
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+          'Authorization': 'Bearer '+ authToken,
         },
       });
+      console.log(response.data); // ตรวจสอบข้อมูลที่ได้จาก API
       setItems(response.data); // เก็บข้อมูลรายการอาหารในสถานะ
     } catch (error) {
-      console.error('Error fetching items:', error); // แสดงข้อผิดพลาดหากมี
+      console.error('Error fetching items:', error);
     }
   };
+  
 
   // ฟังก์ชันดึงหมวดหมู่อาหารจาก API
   const fetchCategories = async () => {
     try {
-      const url = `${api_url}/${slug}/category`;
+      const url = `${api_url}/api/${slug}/category`;
       const response = await axios.get(url, {
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+          'Authorization': 'Bearer '+ authToken,
         },
       });
       setCategories(response.data); // เก็บข้อมูลหมวดหมู่อาหารในสถานะ
@@ -78,17 +81,17 @@ export default function BackendPage() {
     }
 
     const formData = new FormData();
-    formData.append('p_name', itemName); // เพิ่มชื่ออาหาร
-    formData.append('price', itemPrice || 0); // เพิ่มราคาอาหาร
-    formData.append('category_id', itemCategory); // เพิ่มรหัสหมวดหมู่อาหาร
-    formData.append('status', itemStatus ? 'Y' : 'N'); // แปลงสถานะเป็น 'Y' หรือ 'N'
-    if (itemImage instanceof File) formData.append('image', itemImage); // เพิ่มรูปภาพถ้ามี
+    formData.append('p_name', itemName); 
+    formData.append('price', itemPrice || 0); 
+    formData.append('category_id', itemCategory); 
+    formData.append('status', itemStatus ? 'Y' : 'N'); 
+    if (itemImage instanceof File) formData.append('image', itemImage); // เพิ่มรูปภาพถ้ามี    
 
     try {
       const config = {
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+          'Authorization': 'Bearer '+ authToken,
           'Content-Type': itemImage instanceof File ? 'multipart/form-data' : 'application/json',
         },
       };
@@ -108,7 +111,7 @@ export default function BackendPage() {
         });
 
         if (result.isConfirmed) {
-          const url = `${api_url}/${slug}/products/${editIndex}`;
+          const url = `${api_url}/api/${slug}/products/${editIndex}`;
           response = await axios.put(url, formData, config);
           showNotification("อัพเดทข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่ออัปเดตสำเร็จ
         } else {
@@ -128,7 +131,7 @@ export default function BackendPage() {
         });
 
         if (result.isConfirmed) {
-          const url = `${api_url}/${slug}/products`;
+          const url = `${api_url}/api/${slug}/products`;
           response = await axios.post(url, formData, config);
           showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่อเพิ่มสำเร็จ
         } else {
@@ -177,11 +180,11 @@ export default function BackendPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const url = `${api_url}/${slug}/products/${id}`;
+          const url = `${api_url}/api/${slug}/products/${id}`;
           await axios.delete(url, {
             headers: {
               'Accept': 'application/json',
-              'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+              'Authorization': 'Bearer '+ authToken,
             },
           });
           showNotification("ลบข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่อถูกลบสำเร็จ
@@ -193,6 +196,7 @@ export default function BackendPage() {
       }
     });
   };
+  
 
   // ฟังก์ชันจัดการการแก้ไขรายการอาหาร
   const handleEditItem = (id) => {
@@ -201,14 +205,19 @@ export default function BackendPage() {
       setItemName(itemToEdit.p_name || itemToEdit.name);
       setItemCategory(itemToEdit.category_id);
       setItemPrice(itemToEdit.price);
-      setItemImage(itemToEdit.image ? `${api_url}/storage/app/public/product/${itemToEdit.image}` : null);
-      setItemStatus(itemToEdit.status === 'Y'); // ตั้งค่าสถานะจากรายการที่เลือก
+      // สร้าง URL เต็มสำหรับรูปภาพ
+      const img = `${api_url}/storage/app/public/product/${slug}/${itemToEdit.image}`;
+      setItemImage(itemToEdit.image ? img : null);
+      setItemStatus(itemToEdit.status === 'Y');
       setEditMode(true);
       setEditIndex(id);
     } else {
-      console.error('ไม่พบรายการที่ต้องการแก้ไข'); // แจ้งเตือนถ้าไม่พบรายการ
+      console.error('ไม่พบรายการที่ต้องการแก้ไข');
     }
   };
+
+
+
 
   // ฟังก์ชันกรองรายการอาหารตามคำค้นหาและหมวดหมู่
   const filteredItems = items.filter((item) => {
