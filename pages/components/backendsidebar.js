@@ -25,6 +25,9 @@ export default function BackendSidebar() {
         <div style={{ ...styles.icon, ...styles.iconWithBackground }} className="icon">
           <Image src="/images/folder.png" alt="Store" width={40} height={40} style={styles.iconImage} />
         </div>
+        <div style={styles.icon} onClick={() => router.push('/backendpage')} className="icon">
+          <Image src="/images/food.png" alt="Food" width={40} height={40} style={styles.iconImage} />
+        </div>
         <div style={styles.icon} onClick={toggleReportPopup} className="icon">
           <Image src="/images/report-icon.png" alt="report-icon" width={40} height={40} priority loading="eager" />
         </div>
