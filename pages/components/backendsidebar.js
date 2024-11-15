@@ -25,9 +25,6 @@ export default function BackendSidebar() {
         <div style={{ ...styles.icon, ...styles.iconWithBackground }} className="icon">
           <Image src="/images/folder.png" alt="Store" width={40} height={40} style={styles.iconImage} />
         </div>
-        <div style={styles.icon} onClick={() => router.push('/backendpage')} className="icon">
-          <Image src="/images/food.png" alt="Food" width={40} height={40} style={styles.iconImage} />
-        </div>
         <div style={styles.icon} onClick={toggleReportPopup} className="icon">
           <Image src="/images/report-icon.png" alt="report-icon" width={40} height={40} priority loading="eager" />
         </div>
@@ -43,19 +40,11 @@ export default function BackendSidebar() {
             <ul className="menu">
               <li className="menu-item" onClick={() => router.push('/SalesReport')} style={{ backgroundColor: '#1abc9c' }}>
                 <span style={styles.iconText}>💰</span>
-                <span style={styles.labelText}>ยอดขาย</span>
-              </li>
-              <li className="menu-item" onClick={() => router.push('/ProductSales')} style={{ backgroundColor: '#e74c3c' }}>
-                <span style={styles.iconText}>🛒</span>
-                <span style={styles.labelText}>รายการขายสินค้า</span>
+                <span style={styles.labelText}>การชำระ</span>
               </li>
               <li className="menu-item" onClick={() => router.push('/PaymentSummary')} style={{ backgroundColor: '#3498db' }}>
                 <span style={styles.iconText}>💳</span>
-                <span style={styles.labelText}>สรุปการชำระ</span>
-              </li>
-              <li className="menu-item" onClick={() => router.push('/BestSellers')} style={{ backgroundColor: '#9b59b6' }}>
-                <span style={styles.iconText}>🔥</span>
-                <span style={styles.labelText}>สินค้าขายดี</span>
+                <span style={styles.labelText}>ยอดขาย</span>
               </li>
               <li className="menu-item" onClick={() => router.push('/EmployeeSales')} style={{ backgroundColor: '#e67e22' }}>
                 <span style={styles.iconText}>👤</span>
