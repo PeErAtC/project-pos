@@ -51,34 +51,76 @@ export default function SalesReport({ initialReportData, initialError }) {
         return { totalAmount, totalDiscount, totalVat, totalNet };
     };
 
-    const showOrderDetails = (items) => {
-        if (!items || items.length === 0) {
+    // ฟังก์ชันดึงรายละเอียดคำสั่งซื้อพร้อมสินค้า
+    const fetchOrderDetails = async (orderId) => {
+        try {
+            const orderResponse = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                },
+            });
+
+            if (orderResponse.status !== 200) {
+                throw new Error(`Unexpected response code: ${orderResponse.status}`);
+            }
+
+            const itemsResponse = await axios.get(`${api_url}/${slug}/order_items?order_id=${orderId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                },
+            });
+
+            if (itemsResponse.status !== 200) {
+                throw new Error(`Unexpected response code: ${itemsResponse.status}`);
+            }
+
+            return { ...orderResponse.data, items: itemsResponse.data };
+        } catch (error) {
+            console.error('Error fetching order details:', error);
             Swal.fire({
-                title: 'รายละเอียดบิล',
+                title: 'เกิดข้อผิดพลาด',
+                text: 'ไม่สามารถดึงข้อมูลสินค้าได้ กรุณาลองอีกครั้ง หรือแจ้งผู้ดูแลระบบ',
+                icon: 'error',
+                confirmButtonText: 'ปิด',
+            });
+            return null;
+        }
+    };
+
+    // ฟังก์ชันแสดงรายละเอียดคำสั่งซื้อ
+    const showOrderDetails = async (orderId) => {
+        const order = await fetchOrderDetails(orderId);
+        if (!order || !order.items || order.items.length === 0) {
+            Swal.fire({
+                title: 'ไม่มีรายละเอียด',
                 text: 'ไม่มีข้อมูลสินค้าในบิลนี้',
-                icon: 'info',
+                icon: 'warning',
                 confirmButtonText: 'ปิด'
             });
             return;
         }
-    
-        const details = items.map((item) => `
-            <p><strong>สินค้า:</strong> ${item.p_name}</p>
-            <p><strong>จำนวน:</strong> ${item.quantity}</p>
-            <p><strong>ราคา:</strong> ${item.price.toFixed(2)}</p>
-            <p><strong>รวม:</strong> ${(item.price * item.quantity).toFixed(2)}</p>
-            <hr />
-        `).join('');
-    
+
+        const details = order.items
+            .map(item => `
+                <p><strong>สินค้า:</strong> ${item.p_name}</p>
+                <p><strong>จำนวน:</strong> ${item.quantity}</p>
+                <p><strong>ราคา:</strong> ${parseFloat(item.price).toFixed(2)}</p>
+                <p><strong>รวม:</strong> ${(item.quantity * parseFloat(item.price)).toFixed(2)}</p>
+                <hr />
+            `)
+            .join('');
+
         Swal.fire({
-            title: 'รายละเอียดบิล',
+            title: `รายละเอียดบิล: ${order.order_number}`,
             html: details,
             width: 600,
             padding: '3em',
             confirmButtonText: 'ปิด'
         });
     };
-    
+
     const pendingOrders = filterByDate(reportData).filter(order => order.status !== 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
     const paidOrders = filterByDate(reportData).filter(order => order.status === 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
@@ -142,7 +184,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     <td style={styles.td}>{order.net_amount}</td>
                                     <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>ยังไม่ชำระ</td>
                                     <td style={styles.td}>
-                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.items)}>ดูรายละเอียด</button>
+                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
                                     </td>
                                 </tr>
                             ))}
@@ -196,7 +238,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     <td style={styles.td}>{order.net_amount}</td>
                                     <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
                                     <td style={styles.td}>
-                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.items)}>ดูรายละเอียด</button>
+                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
                                     </td>
                                 </tr>
                             ))}
