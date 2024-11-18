@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Sidebar from './components/backendsideber';
+import Sidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
+import { Snackbar, Alert } from '@mui/material';
 
 const api_url = "https://easyapp.clinic/pos-api/api";
 const slug = "abc";
@@ -15,6 +16,9 @@ export default function TableManagement() {
     const [editTableId, setEditTableId] = useState(null);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
     useEffect(() => {
         fetchTables();
@@ -44,11 +48,9 @@ export default function TableManagement() {
         }
 
         const tableData = { table_code: tableCode, seats, status };
-        console.log("Table data to be sent:", tableData); // Debug ข้อมูลที่จะส่ง
-
+        
         try {
             if (editMode && editTableId) {
-                // Confirm before saving the edit
                 const result = await Swal.fire({
                     title: 'ยืนยันการแก้ไข',
                     text: "คุณต้องการบันทึกการแก้ไขนี้หรือไม่?",
@@ -63,16 +65,14 @@ export default function TableManagement() {
                 if (!result.isConfirmed) return;
 
                 const url = `${api_url}/${slug}/table_codes/${editTableId}`;
-                console.log("PUT URL:", url); // Debug URL
                 await axios.put(url, tableData, {
                     headers: {
                         'Accept': 'application/json',
                         'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
                     },
                 });
-                Swal.fire('แก้ไขข้อมูลเรียบร้อยแล้ว');
+                setSnackbarMessage('แก้ไขข้อมูลเรียบร้อยแล้ว');
             } else {
-                // Confirm before adding new table
                 const result = await Swal.fire({
                     title: 'ยืนยันการเพิ่มโต๊ะ',
                     text: "คุณต้องการเพิ่มโต๊ะนี้หรือไม่?",
@@ -87,20 +87,23 @@ export default function TableManagement() {
                 if (!result.isConfirmed) return;
 
                 const url = `${api_url}/${slug}/table_codes`;
-                console.log("POST URL:", url); // Debug URL
                 await axios.post(url, tableData, {
                     headers: {
                         'Accept': 'application/json',
                         'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
                     },
                 });
-                Swal.fire('เพิ่มโต๊ะเรียบร้อยแล้ว');
+                setSnackbarMessage('เพิ่มโต๊ะเรียบร้อยแล้ว');
             }
+            setSnackbarSeverity('success');
+            setSnackbarOpen(true);
             fetchTables();
             resetForm();
         } catch (error) {
             console.error('Error adding/updating table:', error);
-            Swal.fire('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            setSnackbarMessage('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
         }
     };
 
@@ -118,18 +121,21 @@ export default function TableManagement() {
             if (result.isConfirmed) {
                 try {
                     const url = `${api_url}/${slug}/table_codes/${id}`;
-                    console.log("DELETE URL:", url); // Debug URL
                     await axios.delete(url, {
                         headers: {
                             'Accept': 'application/json',
                             'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
                         },
                     });
-                    Swal.fire('ลบโต๊ะเรียบร้อยแล้ว');
+                    setSnackbarMessage('ลบโต๊ะเรียบร้อยแล้ว');
+                    setSnackbarSeverity('success');
+                    setSnackbarOpen(true);
                     fetchTables();
                 } catch (error) {
                     console.error('Error deleting table:', error);
-                    Swal.fire('เกิดข้อผิดพลาดในการลบข้อมูล');
+                    setSnackbarMessage('เกิดข้อผิดพลาดในการลบข้อมูล');
+                    setSnackbarSeverity('error');
+                    setSnackbarOpen(true);
                 }
             }
         });
@@ -164,7 +170,7 @@ export default function TableManagement() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={styles.searchInput}
                     />
-                    <p style={styles.itemCount}>{tables.filter((table) => table.table_code.includes(searchQuery)).length} รายการ </p>
+                    <p style={styles.itemCount}>{tables.filter((table) => table.table_code.toLowerCase().includes(searchQuery.toLowerCase())).length} รายการ </p>
                     {error ? (
                         <p style={styles.errorText}>{error}</p>
                     ) : (
@@ -179,7 +185,7 @@ export default function TableManagement() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tables.filter((table) => table.table_code.includes(searchQuery)).map((table, index) => (
+                                    {tables.filter((table) => table.table_code.toLowerCase().includes(searchQuery.toLowerCase())).map((table, index) => (
                                         <tr key={table.id} style={{ ...styles.tr, backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0' }}>
                                             <td style={styles.td}>{table.table_code}</td>
                                             <td style={styles.td}>{table.seats}</td>
@@ -231,6 +237,17 @@ export default function TableManagement() {
                     {editMode && <button onClick={resetForm} style={styles.cancelButton}>ยกเลิก</button>}
                 </div>
             </div>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </div>
     );
 }
@@ -246,10 +263,10 @@ const styles = {
     itemCount: { fontSize: '16px', marginBottom: '15px', color: '#000' },
     select: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
     button: { width: '340px', padding: '12px', borderRadius: '5px', backgroundColor: '#499cae', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginBottom: '15px' },
-    cancelButton: { width: '320px', padding: '12px', borderRadius: '5px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
-    listTitle: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'center', marginRight:'750px' ,},
+    cancelButton: { width: '340px', padding: '12px', borderRadius: '5px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+    listTitle: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'center', marginRight: '750px' },
     tableContainer: { overflowY: 'auto', maxHeight: 'calc(100vh - 150px)', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' },
-    table: { width: '100%', borderCollapse: 'collapse',fontSize:'14px' },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
     th: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
     thActions: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'center', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
     tr: { transition: 'background-color 0.2s' },
