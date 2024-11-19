@@ -206,7 +206,7 @@ export default function PaymentSummary() {
                 ticks: {
                     color: '#888',
                     font: {
-                        size: 20,
+                        size: 15,
                     },
                 },
             },
@@ -217,7 +217,7 @@ export default function PaymentSummary() {
                 ticks: {
                     color: '#888',
                     font: {
-                        size: 20,
+                        size: 15,
                     },
                     beginAtZero: true,
                 },
@@ -254,7 +254,7 @@ export default function PaymentSummary() {
                         type="month" 
                         value={startDate} 
                         onChange={(e) => setStartDate(e.target.value)} 
-                        style={{ ...styles.select, fontSize: '20px', padding: '16px', cursor: 'pointer' }}
+                        style={{ ...styles.select, fontSize: '14px', padding: '16px', cursor: 'pointer' }}
                     />
                 </div>
 
@@ -318,14 +318,14 @@ const styles = {
     summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', maxWidth: '1400px', gap: '20px', marginBottom: '20px', justifyContent: 'center' },
     summaryContainer: { display: 'flex', flexDirection: 'column', gap: '20px', width: '25%' },
     summaryBox: { backgroundColor: '#ffffff', padding: '15px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' },
-    totalSalesValue: { fontSize: '32px', fontWeight: 'bold', color: '#ff6347' },
+    totalSalesValue: { fontSize: '32px', fontWeight: 'bold', color: '#d33' },
     salesCountBox: { backgroundColor: '#499cae', padding: '15px', borderRadius: '15px', textAlign: 'center' },
     salesCountValue: { fontSize: '20px', fontWeight: 'bold', color: '#fff' },
     topSellingBox: { backgroundColor: '#ffffff', padding: '15px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center' },
     topSellingList: { listStyleType: 'none', padding: 0, margin: 0 },
     topSellingItem: { fontSize: '20px', fontWeight: 'bold', color: '#4A4A4A', marginBottom: '10px' },
     chartBox: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', minHeight: '300px', maxHeight: '400px', maxWidth: '65%' },
-    chartTitle: { fontSize: '24px', color: '#4A4A4A', marginBottom: '15px', fontWeight: 'bold' },
+    chartTitle: { fontSize: '14px', color: '#4A4A4A', marginBottom: '15px', fontWeight: 'bold' },
     monthlyChartContainer: { width: '100%', maxWidth: '1200px', marginTop: '30px' },
     circleButtonContainer: { display: 'flex', gap: '20px' },
     circleButton: {
