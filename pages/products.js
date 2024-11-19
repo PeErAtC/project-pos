@@ -174,21 +174,19 @@ export default function SalesPage() {
     
             // Debug response
             console.log('API Response from sendOrder:', response.data);
-            // return response.data; // Return ข้อมูล response ที่ได้จาก API
-
-            // ตรวจสอบว่ามี order_id ใน response หรือไม่
-            if (response.data && response.data.id) { // ปรับให้ตรงกับโครงสร้างจริง
-                return response.data.id; // Return order_id
+    
+            // ตรวจสอบว่าโครงสร้าง JSON มี "order.id"
+            if (response.data && response.data.order && response.data.order.id) {
+                return response.data.order.id; // ดึง order_id จาก response
             } else {
-                throw new Error('order_id is not present in the API response');
+                throw new Error(`Invalid response format: ${JSON.stringify(response.data)}`);
             }
-            
         } catch (error) {
             console.error('Error while creating order:', error.response?.data || error.message);
             throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
         }
-        
     };
+    
     
     
     const sendOrderItems = async (itemsData) => {
