@@ -162,85 +162,153 @@ export default function SalesPage() {
 
 
     
+    // ฟังก์ชันสำหรับสร้างคำสั่งซื้อใหม่และรับ order_id กลับมา
+    const sendOrder = async (orderData) => {
+        try {
+            const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            // Debug response
+            console.log('API Response from sendOrder:', response.data);
+            // return response.data; // Return ข้อมูล response ที่ได้จาก API
+
+            // ตรวจสอบว่ามี order_id ใน response หรือไม่
+            if (response.data && response.data.id) { // ปรับให้ตรงกับโครงสร้างจริง
+                return response.data.id; // Return order_id
+            } else {
+                throw new Error('order_id is not present in the API response');
+            }
+            
+        } catch (error) {
+            console.error('Error while creating order:', error.response?.data || error.message);
+            throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
+        }
+        
+    };
+    
+    
+    const sendOrderItems = async (itemsData) => {
+        if (!orderId) {
+            throw new Error('Failed to get a valid order_id');
+          }
+        try {
+            const url = `${api_url}/api/${slug}/order_items`;
+            console.log('POST URL for order items:', url);
+    
+            const response = await axios.post(url, itemsData, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+            console.log('Order items created successfully:', response.data);
+
+            console.log('Order items successfully saved:', response.data);
+        } catch (error) {
+            console.error('Error while creating order items:', error.response?.data || error.message);
+    
+            // เพิ่มข้อความแจ้งเตือนที่ชัดเจนขึ้น
+            if (error.response?.status === 404) {
+                throw new Error('API endpoint for creating order items not found (404). Please check the URL.');
+            } else {
+                throw new Error(`Failed to create order items: ${error.response?.data?.message || error.message}`);
+            }
+        }
+    };
+    
+    
+    
+    
+    // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
+            // สร้างหมายเลขคำสั่งซื้อแบบสุ่ม
             const generatedOrderNumber = `RE${Math.floor(100000 + Math.random() * 900000)}`;
             setOrderNumber(generatedOrderNumber);
     
-            // ใช้ ID ผู้ใช้งานจริงแทน user_id_placeholder
-            const userId = 1; // เปลี่ยนเป็น ID ผู้ใช้งานที่แท้จริง
-    
-            // สร้างคำสั่งซื้อหลัก (orders)
+            const userId = 1; // รหัสผู้ใช้ (ปรับให้เหมาะสมกับระบบของคุณ)
+            
+            // ข้อมูลคำสั่งซื้อ (Order)
             const orderData = {
-                order_number: generatedOrderNumber,
-                order_date: new Date().toISOString().split('T')[0],
-                total_amount: calculateTotalAfterItemDiscounts(),
-                discount: billDiscountType === "THB" ? billDiscount : 0,
-                discount_per: billDiscountType === "%" ? billDiscount : 0,
-                vat_per: VAT_RATE * 100,
-                vat_amt: calculateVAT(),
-                net_amount: calculateTotalWithBillDiscount(),
-                status: 'N',
-                tables_id: tableCode,
-                created_by: userId, // ใช้ตัวเลขแทนข้อความ
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
+                // order_number: generatedOrderNumber, // หมายเลขคำสั่งซื้อ
+                // order_date: new Date().toISOString().split('T')[0], // วันที่ของคำสั่งซื้อ
+                total_amount: calculateTotalAfterItemDiscounts(), // ราคารวมก่อนส่วนลด
+                discount: billDiscountType === "THB" ? billDiscount : 0, // ส่วนลดแบบบาท
+                discount_per: billDiscountType === "%" ? billDiscount : 0, // ส่วนลดแบบเปอร์เซ็นต์
+                vat_per: VAT_RATE * 100, // อัตราภาษีมูลค่าเพิ่ม (VAT)
+                vat_amt: calculateVAT(), // จำนวนภาษีที่ต้องชำระ
+                net_amount: calculateTotalWithBillDiscount(), // ราคารวมสุทธิ
+                status: 'N', // สถานะคำสั่งซื้อ ('N' = ยังไม่ชำระเงิน)
+                tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
+                created_by: userId,
+                items: cart.map((item) => ({
+                    product_id: item.id || 0, // รหัสสินค้า
+                    p_name: item.p_name || 'ไม่มีชื่อสินค้า', // ชื่อสินค้า
+                    quantity: item.quantity || 1, // จำนวนที่สั่งซื้อ
+                    price: item.price || 0, // ราคาต่อหน่วย
+                    total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // รวมราคา
+                    discount: item.discountType === "THB" ? item.discount || 0 : 0, // ส่วนลดแบบบาท
+                    discount_per: item.discountType === "%" ? item.discount || 0 : 0, // ส่วนลดแบบเปอร์เซ็นต์
+                    net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // ราคาสุทธิหลังส่วนลด
+                    status: 'Y', // สถานะ ('Y' = ใช้งานได้)
+                    created_at: new Date().toISOString(), // เวลาที่สร้าง
+                // created_at: new Date().toISOString(), // เวลาที่สร้าง
+                // updated_at: new Date().toISOString(), // เวลาที่อัปเดตล่าสุด
+            }))
             };
     
-            // บันทึกคำสั่งซื้อไปยัง API `/orders`
-            const orderResponse = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
+            console.log('Order Data:', orderData); // Debugging: แสดงข้อมูล Order
+            await sendOrder(orderData);
+            // Step 1: สร้าง Order และรับ order_id กลับมา
+            // const orderId = await sendOrder(orderData);
     
-            const orderId = orderResponse.data.order_id; // รับ order_id จาก response
+            // if (!orderId) {
+            //     throw new Error('Failed to get order_id from the order creation response.');
+            // }
     
-            // สร้างรายการสินค้า (order_items)
-            const itemsData = cart.map((item) => ({
-                order_id: orderId,
-                product_id: item.id,
-                p_name: item.p_name || 'ไม่มีชื่อสินค้า', // กำหนดค่าเริ่มต้น
-                quantity: item.quantity || 0, // ป้องกัน NULL
-                price: item.price || 0,
-                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
-                discount: item.discountType === "THB" ? item.discount || 0 : 0,
-                discount_per: item.discountType === "%" ? item.discount || 0 : 0,
-                net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
-                status: 'Y', // ค่าเริ่มต้น
-                created_by: userId || 1, // ใช้ `1` เป็นค่าพื้นฐานหากไม่มีค่า
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            }));
-            
-            
+            // Step 2: เตรียมข้อมูลรายการสินค้า (Order Items)
+            // const itemsData = cart.map((item) => ({
+            //     order_id: orderId, // ใช้ order_id จาก Order ที่สร้างขึ้น
+            //     product_id: item.id || 0, // รหัสสินค้า
+            //     p_name: item.p_name || 'ไม่มีชื่อสินค้า', // ชื่อสินค้า
+            //     quantity: item.quantity || 1, // จำนวนที่สั่งซื้อ
+            //     price: item.price || 0, // ราคาต่อหน่วย
+            //     total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // รวมราคา
+            //     discount: item.discountType === "THB" ? item.discount || 0 : 0, // ส่วนลดแบบบาท
+            //     discount_per: item.discountType === "%" ? item.discount || 0 : 0, // ส่วนลดแบบเปอร์เซ็นต์
+            //     net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // ราคาสุทธิหลังส่วนลด
+            //     status: 'Y', // สถานะ ('Y' = ใช้งานได้)
+            //     created_by: userId, // ผู้สร้าง
+            //     created_at: new Date().toISOString(), // เวลาที่สร้าง
+            //     updated_at: new Date().toISOString(), // เวลาที่อัปเดตล่าสุด
+            // }));
     
-            // บันทึก `order_items` ไปยัง API `/order_items`
-            await axios.post(`${api_url}/api/${slug}/order_items`, itemsData, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
+            // console.log('Order Items Data to be sent:', itemsData); // Debugging: แสดงข้อมูล Order Items
+    
+            // Step 3: บันทึกข้อมูล Order Items
+            //await sendOrderItems(itemsData);
     
             // แสดงข้อความสำเร็จ
-            setOrderReceived(true);
             Swal.fire({
                 icon: 'success',
                 title: 'รับออเดอร์สำเร็จ',
                 text: 'คำสั่งซื้อและรายการสินค้าถูกบันทึกเรียบร้อยแล้ว!',
                 confirmButtonText: 'ตกลง',
             }).then(() => {
-                setShowReceipt(true);
+                setShowReceipt(true); // แสดงใบเสร็จ
             });
-    
         } catch (error) {
-            // จัดการข้อผิดพลาด
-            console.error('Error while saving order or items:', error.response?.data || error.message);
-            Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกข้อมูลได้: ${error.response?.data?.message || error.message}`, 'error');
+            // แสดงข้อความ error หากเกิดข้อผิดพลาด
+            console.error('Error while processing order:', error.message);
+            Swal.fire('ผิดพลาด', error.message, 'error');
         }
     };
+    
+    
     
 
     const handleAmountButton = (amount) => {
