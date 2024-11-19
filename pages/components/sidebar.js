@@ -44,63 +44,6 @@ export default function Sidebar({ onCategorySelect }) {
         <div style={styles.icon} onClick={toggleCategoryPopup} className="icon">
           <Image src="/images/list.png" alt="List" width={40} height={40} style={styles.iconImage} />
         </div>
-        {isCategoryPopupOpen && (
-          <div style={styles.menuPopup} onClick={toggleCategoryPopup}>
-            <div style={styles.menuContainer} onClick={(e) => e.stopPropagation()}>
-              <h2 style={styles.popupTitle}>หมวดหมู่อาหาร</h2>
-              <ul className="menu">
-                <li
-                  className="menu-item"
-                  onClick={() => { onCategorySelect(null); setIsCategoryPopupOpen(false); }}
-                  style={{ ...styles.circleItem, backgroundColor: '#27ae60' }}
-                >
-                  <span style={styles.iconText}>🍽️</span>
-                  <span style={styles.labelText}>ทั้งหมด</span>
-                </li>
-                <li
-                  className="menu-item"
-                  onClick={() => { onCategorySelect(1); setIsCategoryPopupOpen(false); }}
-                  style={{ ...styles.circleItem, backgroundColor: '#e74c3c' }}
-                >
-                  <span style={styles.iconText}>🍛</span>
-                  <span style={styles.labelText}>เมนูผัด</span>
-                </li>
-                <li
-                  className="menu-item"
-                  onClick={() => { onCategorySelect(2); setIsCategoryPopupOpen(false); }}
-                  style={{ ...styles.circleItem, backgroundColor: '#f1c40f' }}
-                >
-                  <span style={styles.iconText}>🍚</span>
-                  <span style={styles.labelText}>ข้าวผัด</span>
-                </li>
-                <li
-                  className="menu-item"
-                  onClick={() => { onCategorySelect(3); setIsCategoryPopupOpen(false); }}
-                  style={{ ...styles.circleItem, backgroundColor: '#2980b9' }}
-                >
-                  <span style={styles.iconText}>🥗</span>
-                  <span style={styles.labelText}>เมนูยำ</span>
-                </li>
-                <li
-                  className="menu-item"
-                  onClick={() => { onCategorySelect(4); setIsCategoryPopupOpen(false); }}
-                  style={{ ...styles.circleItem, backgroundColor: '#1abc9c' }}
-                >
-                  <span style={styles.iconText}>🍲</span>
-                  <span style={styles.labelText}>ข้าวต้ม</span>
-                </li>
-                <li
-                  className="menu-item"
-                  onClick={() => { onCategorySelect(5); setIsCategoryPopupOpen(false); }}
-                  style={{ ...styles.circleItem, backgroundColor: '#8e44ad' }}
-                >
-                  <span style={styles.iconText}>🍹</span>
-                  <span style={styles.labelText}>เครื่องดื่ม</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        )}
         <div style={styles.icon} onClick={toggleSettingsPopup} className="icon">
           <Image src="/images/settings.png" alt="Settings" width={40} height={40} style={styles.iconImage} />
         </div>
