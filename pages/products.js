@@ -410,7 +410,7 @@ export default function SalesPage() {
             </div>
             <div style={styles.cart}>
                 <div style={styles.cartHeader}>
-                    <div style={{ display: 'flex', alignItems: 'center' ,fontSize:'11px',color:'#333' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' ,fontSize:'11px',color:'#d33' }}>
                         <Image src="/images/shopping.png" alt="รายการสั่งซื้อ" width={24} height={24} />
                         <h2 style={{ marginLeft: '10px' }}>({cart.reduce((acc, item) => acc + item.quantity, 0)})</h2>
                     </div>
@@ -427,6 +427,7 @@ export default function SalesPage() {
                                         alt={item.p_name}
                                         width={40}
                                         height={40}
+                                        quality={100}
                                         style={styles.cartItemImage}
                                     />
                                 ) : (
