@@ -199,17 +199,22 @@ export default function SalesPage() {
     
             // สร้างรายการสินค้า (order_items)
             const itemsData = cart.map((item) => ({
-                order_id: orderId, // ใช้ order_id จากคำสั่งซื้อ
+                order_id: orderId,
                 product_id: item.id,
-                p_name: item.p_name,
-                quantity: item.quantity,
-                price: item.price,
-                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity,
-                discount: item.discountType === "THB" ? item.discount : 0,
-                discount_per: item.discountType === "%" ? item.discount : 0,
+                p_name: item.p_name || 'ไม่มีชื่อสินค้า', // กำหนดค่าเริ่มต้น
+                quantity: item.quantity || 0, // ป้องกัน NULL
+                price: item.price || 0,
+                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
+                discount: item.discountType === "THB" ? item.discount || 0 : 0,
+                discount_per: item.discountType === "%" ? item.discount || 0 : 0,
+                net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
+                status: 'Y', // ค่าเริ่มต้น
+                created_by: userId || 1, // ใช้ `1` เป็นค่าพื้นฐานหากไม่มีค่า
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             }));
+            
+            
     
             // บันทึก `order_items` ไปยัง API `/order_items`
             await axios.post(`${api_url}/api/${slug}/order_items`, itemsData, {
@@ -389,8 +394,8 @@ export default function SalesPage() {
                                     <Image
                                         src={`${api_url}/storage/app/public/product/${slug}/${product.image}`}
                                         alt={product.p_name}
-                                        width={240}
-                                        height={240}
+                                        width={100}
+                                        height={100}
                                         quality={100}
                                         style={styles.productImage}
                                     />
@@ -401,7 +406,7 @@ export default function SalesPage() {
                                 )}
                                 <div style={styles.productDetails}>
                                     <p style={styles.productName}>{product.p_name}</p>
-                                    <p style={styles.productPrice}>ราคา {product.price.toFixed(2)}</p>
+                                    <p style={styles.productPrice}> {product.price.toFixed(2)}</p>
                                 </div>
                             </div>
                         ))}
@@ -608,13 +613,13 @@ const styles = {
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, marginLeft: '100px' },
     searchInput: { width: 'calc(890px - 150px)', padding: '9px', borderRadius: '5px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', paddingTop: '5px', marginTop: '0px' },
-    productCard: { width: '180px', height: '180px', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', backgroundColor: '#ffffff', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '15px', transition: 'transform 0.2s ease', overflow: 'hidden' },
-    productImage: { width: '100%', height: '120px', objectFit: 'cover', borderRadius: '5px', marginBottom: '8px' },
-    noImage: { width: '100%', height: '120px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: '5px', marginBottom: '8px' },
+    productCard: { width: '100px', height: '100px', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', backgroundColor: '#ffffff', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '15px', transition: 'transform 0.2s ease', overflow: 'hidden' },
+    productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
+    noImage: { width: '100%', height: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: '5px', marginBottom: '8px' },
     noImageText: { fontSize: '14px', color: '#aaa' },
     productDetails: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center', padding: '0 5px' },
-    productName: { fontSize: '14px', fontWeight: 'bold', textAlign: 'left', color: '#333', flex: 1 },
-    productPrice: { fontSize: '14px', color: '#333', whiteSpace: 'nowrap' },
+    productName: { fontSize: '11px', fontWeight: 'bold', textAlign: 'left', color: '#333', flex: 1 },
+    productPrice: { fontSize: '11px', color: '#333', whiteSpace: 'nowrap' },
     discountInput: { flex: '1', padding: '4px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '10px' },
     discountSelect: { width: '70px', padding: '4px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', backgroundColor: '#f0f0f0' },
     discountContainer: { display: 'flex', alignItems: 'center', gap: '2px', flexDirection: 'row' },
