@@ -6,6 +6,7 @@ import Chart from 'chart.js/auto';
 
 const api_url = "https://easyapp.clinic/pos-api/api";
 const slug = "abc";
+const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 export default function PaymentSummary() {
     const [salesData, setSalesData] = useState([]);
@@ -25,7 +26,7 @@ export default function PaymentSummary() {
                 const response = await axios.get(`${api_url}/${slug}/orders`, {
                     headers: {
                         'Accept': 'application/json',
-                        'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                        'Authorization': `Bearer ${authToken}`,
                     },
                     params: {
                         viewType,
@@ -55,7 +56,7 @@ export default function PaymentSummary() {
             const response = await axios.get(`${api_url}/${slug}/order_items`, {
                 headers: {
                     'Accept': 'application/json',
-                    'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                    'Authorization': `Bearer ${authToken}`,
                 },
             });
             const data = response.data;
@@ -136,8 +137,8 @@ export default function PaymentSummary() {
                 {
                     label: 'ยอดขายรวม',
                     data: salesAmounts,
-                    backgroundColor: '#499cae',
-                    borderColor: '#499cae',
+                    backgroundColor: '#FF6666',
+                    borderColor: '#000',
                     borderWidth: 1,
                 },
             ],
@@ -254,7 +255,7 @@ export default function PaymentSummary() {
                         type="month" 
                         value={startDate} 
                         onChange={(e) => setStartDate(e.target.value)} 
-                        style={{ ...styles.select, fontSize: '14px', padding: '16px', cursor: 'pointer' }}
+                        style={{ ...styles.select, fontSize: '14px', padding: '16px', cursor: 'pointer',fontWeight: 'bold' }}
                     />
                 </div>
 
@@ -325,21 +326,8 @@ const styles = {
     topSellingList: { listStyleType: 'none', padding: 0, margin: 0 },
     topSellingItem: { fontSize: '20px', fontWeight: 'bold', color: '#4A4A4A', marginBottom: '10px' },
     chartBox: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', minHeight: '300px', maxHeight: '400px', maxWidth: '65%' },
-    chartTitle: { fontSize: '14px', color: '#4A4A4A', marginBottom: '15px', fontWeight: 'bold' },
+    chartTitle: { fontSize: '16px', color: '#000', marginBottom: '15px', fontWeight: 'bold' },
     monthlyChartContainer: { width: '100%', maxWidth: '1200px', marginTop: '30px' },
     circleButtonContainer: { display: 'flex', gap: '20px' },
-    circleButton: {
-        width: '80px',
-        height: '80px',
-        borderRadius: '50%',
-        border: 'none',
-        color: '#fff',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+    circleButton: {width: '80px',height: '80px',borderRadius: '50%',border: 'none',color: '#fff',fontSize: '16px',fontWeight: 'bold',cursor: 'pointer',transition: 'background-color 0.3s',display: 'flex',alignItems: 'center',justifyContent: 'center',},
 };
