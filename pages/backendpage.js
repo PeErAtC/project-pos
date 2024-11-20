@@ -35,7 +35,7 @@ export default function BackendPage() {
       const response = await axios.get(url, {
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Bearer '+ authToken,
+          'Authorization': `Bearer ${authToken}`,
         },
       });
       console.log(response.data); // ตรวจสอบข้อมูลที่ได้จาก API
@@ -53,7 +53,7 @@ export default function BackendPage() {
       const response = await axios.get(url, {
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Bearer '+ authToken,
+          'Authorization': `Bearer ${authToken}`,
         },
       });
       setCategories(response.data); // เก็บข้อมูลหมวดหมู่อาหารในสถานะ
@@ -87,7 +87,7 @@ export default function BackendPage() {
       const config = {
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Bearer '+ authToken,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': itemImage instanceof File ? 'multipart/form-data' : 'application/json',
         },
       };
@@ -180,7 +180,7 @@ export default function BackendPage() {
           await axios.delete(url, {
             headers: {
               'Accept': 'application/json',
-              'Authorization': 'Bearer '+ authToken,
+              'Authorization': `Bearer ${authToken}`,
             },
           });
           showNotification("ลบข้อมูลเรียบร้อยแล้ว!", 'success'); // แจ้งเตือนเมื่อถูกลบสำเร็จ
