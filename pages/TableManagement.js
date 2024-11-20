@@ -6,6 +6,7 @@ import { Snackbar, Alert } from '@mui/material';
 
 const api_url = "https://easyapp.clinic/pos-api/api";
 const slug = "abc";
+const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 export default function TableManagement() {
     const [tables, setTables] = useState([]);
@@ -30,7 +31,7 @@ export default function TableManagement() {
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
-                    'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                    'Authorization': `Bearer ${authToken}`,
                 },
             });
             setTables(response.data);
@@ -68,7 +69,7 @@ export default function TableManagement() {
                 await axios.put(url, tableData, {
                     headers: {
                         'Accept': 'application/json',
-                        'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                        'Authorization': `Bearer ${authToken}`,
                     },
                 });
                 setSnackbarMessage('แก้ไขข้อมูลเรียบร้อยแล้ว');
@@ -90,7 +91,7 @@ export default function TableManagement() {
                 await axios.post(url, tableData, {
                     headers: {
                         'Accept': 'application/json',
-                        'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                        'Authorization': `Bearer ${authToken}`,
                     },
                 });
                 setSnackbarMessage('เพิ่มโต๊ะเรียบร้อยแล้ว');
@@ -124,7 +125,7 @@ export default function TableManagement() {
                     await axios.delete(url, {
                         headers: {
                             'Accept': 'application/json',
-                            'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                            'Authorization': `Bearer ${authToken}`,
                         },
                     });
                     setSnackbarMessage('ลบโต๊ะเรียบร้อยแล้ว');
