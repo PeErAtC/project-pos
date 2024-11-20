@@ -5,6 +5,7 @@ import axios from 'axios';
 
 const api_url = "https://easyapp.clinic/pos-api/api";
 const slug = "abc";
+const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 function TableCard({ table, onClick }) {
     const [isPressed, setIsPressed] = useState(false);
@@ -77,7 +78,7 @@ export default function MainTablePage() {
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
-                    'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                    'Authorization': `Bearer ${authToken}`,
                 },
             });
             
