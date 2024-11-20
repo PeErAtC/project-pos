@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
-
 import axios from 'axios';
-
 import Sidebar from './components/backendsidebar';
-
 import { FaCheckCircle, FaExclamationCircle, FaImage } from 'react-icons/fa';
-
 import Swal from 'sweetalert2';
 
 const api_url = "https://easyapp.clinic/pos-api";
@@ -255,6 +251,7 @@ export default function BackendPage() {
 
         <div style={styles.listContainer}>
           <h1 style={styles.title}>รายการอาหาร</h1>
+          
           <div style={styles.searchContainer}>
             <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} style={styles.dropdown}>
               <option value="">หมวดหมู่ (ทั้งหมด)</option>
@@ -306,7 +303,18 @@ export default function BackendPage() {
 
         <div style={styles.formContainer}>
           <h1 style={styles.title}>{editMode ? 'แก้ไขอาหาร' : 'เพิ่มอาหาร'}</h1>
-          <input type="text" placeholder="ชื่อสินค้า" value={itemName} onChange={(e) => setItemName(e.target.value)} style={styles.input} />
+          <input
+            type="text"
+            placeholder="ชื่อสินค้า"
+            value={itemName}
+            onChange={(e) => {
+              if (e.target.value.length <= 18) {
+                setItemName(e.target.value); 
+              }
+            }}
+            maxLength={18} 
+            style={styles.input}
+          />
           <select value={itemCategory} onChange={(e) => setItemCategory(e.target.value)} style={styles.dropdown}>
             <option>กรุณาเลือกหมวดหมู่</option>
             {categories.map(category => (
