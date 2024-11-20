@@ -40,7 +40,7 @@ export default function SalesPage() {
         axios.get(url, {
             headers: {
                 'Accept': 'application/json',
-                'Authorization': 'Bearer ' + authToken,
+                'Authorization': `Bearer ${authToken}`,
             },
         })
         .then((response) => setProducts(response.data))
@@ -53,7 +53,7 @@ export default function SalesPage() {
         axios.get(url, {
             headers: {
                 'Accept': 'application/json',
-                'Authorization': 'Bearer ' + authToken,
+                'Authorization': `Bearer ${authToken}`,
             },
         })
         .then(response => setCategories(response.data.categories))
@@ -303,6 +303,7 @@ export default function SalesPage() {
             // แสดงข้อความ error หากเกิดข้อผิดพลาด
             console.error('Error while processing order:', error.message);
             Swal.fire('ผิดพลาด', error.message, 'error');
+            console.log(orderData);
         }
     };
     
@@ -327,7 +328,7 @@ export default function SalesPage() {
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
-                    'Authorization': 'Bearer ' + authToken,
+                    'Authorization': `Bearer ${authToken}`,
                 },
             });
             
@@ -337,7 +338,7 @@ export default function SalesPage() {
                 }, {
                     headers: {
                         'Accept': 'application/json',
-                        'Authorization': 'Bearer ' + authToken,
+                        'Authorization': `Bearer ${authToken}`,
                     },
                 });
 
