@@ -29,6 +29,8 @@ export default function SalesPage() {
     const [orderNumber, setOrderNumber] = useState("");
     const [categories, setCategories] = useState([]);
     const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
+    const [orderId, setOrderId] = useState(null);
+
     
     const VAT_RATE = 0.07;
     
@@ -162,154 +164,82 @@ export default function SalesPage() {
 
 
     
-    // ฟังก์ชันสำหรับสร้างคำสั่งซื้อใหม่และรับ order_id กลับมา
     const sendOrder = async (orderData) => {
-        try {
-            const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-    
-            // Debug response
-            console.log('API Response from sendOrder:', response.data);
-    
-            // ตรวจสอบว่าโครงสร้าง JSON มี "order.id"
-            if (response.data && response.data.order && response.data.order.id) {
-                return response.data.order.id; // ดึง order_id จาก response
-            } else {
-                throw new Error(`Invalid response format: ${JSON.stringify(response.data)}`);
-            }
-        } catch (error) {
-            console.error('Error while creating order:', error.response?.data || error.message);
-            throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
-        }
-    };
-    
-    
-    
-    const sendOrderItems = async (itemsData) => {
-        if (!orderId) {
-            throw new Error('Failed to get a valid order_id');
-          }
-        try {
-            const url = `${api_url}/api/${slug}/order_items`;
-            console.log('POST URL for order items:', url);
-    
-            const response = await axios.post(url, itemsData, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-            console.log('Order items created successfully:', response.data);
+    try {
+        const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+        });
+        console.log('Response from GET Order API:', response.data);
 
-            console.log('Order items successfully saved:', response.data);
-        } catch (error) {
-            console.error('Error while creating order items:', error.response?.data || error.message);
-    
-            // เพิ่มข้อความแจ้งเตือนที่ชัดเจนขึ้น
-            if (error.response?.status === 404) {
-                throw new Error('API endpoint for creating order items not found (404). Please check the URL.');
-            } else {
-                throw new Error(`Failed to create order items: ${error.response?.data?.message || error.message}`);
-            }
+        console.log('Response from sendOrder:', response.data);
+
+        if (response.data && response.data.order && response.data.order.id) {
+            return response.data.order.id;
+        } else {
+            throw new Error(`Invalid response format: ${JSON.stringify(response.data)}`);
         }
-    };
-    
-    
-    
+    } catch (error) {
+        console.error('Error while creating order:', error.response?.data || error.message);
+        throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
+    }
+};
+
     
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
-            // สร้างหมายเลขคำสั่งซื้อแบบสุ่ม
             const generatedOrderNumber = `RE${Math.floor(100000 + Math.random() * 900000)}`;
             setOrderNumber(generatedOrderNumber);
     
-            const userId = 1; // รหัสผู้ใช้ (ปรับให้เหมาะสมกับระบบของคุณ)
-            
-            // ข้อมูลคำสั่งซื้อ (Order)
+            const userId = 1;
             const orderData = {
-                // order_number: generatedOrderNumber, // หมายเลขคำสั่งซื้อ
-                // order_date: new Date().toISOString().split('T')[0], // วันที่ของคำสั่งซื้อ
-                total_amount: calculateTotalAfterItemDiscounts(), // ราคารวมก่อนส่วนลด
-                discount: billDiscountType === "THB" ? billDiscount : 0, // ส่วนลดแบบบาท
-                discount_per: billDiscountType === "%" ? billDiscount : 0, // ส่วนลดแบบเปอร์เซ็นต์
-                vat_per: VAT_RATE * 100, // อัตราภาษีมูลค่าเพิ่ม (VAT)
-                vat_amt: calculateVAT(), // จำนวนภาษีที่ต้องชำระ
-                net_amount: calculateTotalWithBillDiscount(), // ราคารวมสุทธิ
-                status: 'N', // สถานะคำสั่งซื้อ ('N' = ยังไม่ชำระเงิน)
-                tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
+                total_amount: calculateTotalAfterItemDiscounts(),
+                discount: billDiscountType === "THB" ? billDiscount : 0,
+                discount_per: billDiscountType === "%" ? billDiscount : 0,
+                vat_per: VAT_RATE * 100,
+                vat_amt: calculateVAT(),
+                net_amount: calculateTotalWithBillDiscount(),
+                status: 'N',
+                tables_id: tableCode || null,
                 created_by: userId,
                 items: cart.map((item) => ({
-                    product_id: item.id || 0, // รหัสสินค้า
-                    p_name: item.p_name || 'ไม่มีชื่อสินค้า', // ชื่อสินค้า
-                    quantity: item.quantity || 1, // จำนวนที่สั่งซื้อ
-                    price: item.price || 0, // ราคาต่อหน่วย
-                    total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // รวมราคา
-                    discount: item.discountType === "THB" ? item.discount || 0 : 0, // ส่วนลดแบบบาท
-                    discount_per: item.discountType === "%" ? item.discount || 0 : 0, // ส่วนลดแบบเปอร์เซ็นต์
-                    net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // ราคาสุทธิหลังส่วนลด
-                    status: 'Y', // สถานะ ('Y' = ใช้งานได้)
-                    created_at: new Date().toISOString(), // เวลาที่สร้าง
-                // created_at: new Date().toISOString(), // เวลาที่สร้าง
-                // updated_at: new Date().toISOString(), // เวลาที่อัปเดตล่าสุด
-            }))
+                    product_id: item.id || 0,
+                    p_name: item.p_name || 'ไม่มีชื่อสินค้า',
+                    quantity: item.quantity || 1,
+                    price: item.price || 0,
+                    total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
+                    discount: item.discountType === "THB" ? item.discount || 0 : 0,
+                    discount_per: item.discountType === "%" ? item.discount || 0 : 0,
+                    net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
+                    status: 'Y',
+                    created_at: new Date().toISOString(),
+                })),
             };
     
-            console.log('Order Data:', orderData); // Debugging: แสดงข้อมูล Order
-            await sendOrder(orderData);
-            // Step 1: สร้าง Order และรับ order_id กลับมา
-            // const orderId = await sendOrder(orderData);
+            console.log('Order Data:', orderData);
+            const newOrderId = await sendOrder(orderData);
+            if (!newOrderId) {
+                throw new Error('Failed to create order. No orderId returned.');
+            }
+            setOrderId(newOrderId); // เก็บ orderId ใน state
     
-            // if (!orderId) {
-            //     throw new Error('Failed to get order_id from the order creation response.');
-            // }
-    
-            // Step 2: เตรียมข้อมูลรายการสินค้า (Order Items)
-            // const itemsData = cart.map((item) => ({
-            //     order_id: orderId, // ใช้ order_id จาก Order ที่สร้างขึ้น
-            //     product_id: item.id || 0, // รหัสสินค้า
-            //     p_name: item.p_name || 'ไม่มีชื่อสินค้า', // ชื่อสินค้า
-            //     quantity: item.quantity || 1, // จำนวนที่สั่งซื้อ
-            //     price: item.price || 0, // ราคาต่อหน่วย
-            //     total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // รวมราคา
-            //     discount: item.discountType === "THB" ? item.discount || 0 : 0, // ส่วนลดแบบบาท
-            //     discount_per: item.discountType === "%" ? item.discount || 0 : 0, // ส่วนลดแบบเปอร์เซ็นต์
-            //     net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // ราคาสุทธิหลังส่วนลด
-            //     status: 'Y', // สถานะ ('Y' = ใช้งานได้)
-            //     created_by: userId, // ผู้สร้าง
-            //     created_at: new Date().toISOString(), // เวลาที่สร้าง
-            //     updated_at: new Date().toISOString(), // เวลาที่อัปเดตล่าสุด
-            // }));
-    
-            // console.log('Order Items Data to be sent:', itemsData); // Debugging: แสดงข้อมูล Order Items
-    
-            // Step 3: บันทึกข้อมูล Order Items
-            //await sendOrderItems(itemsData);
-    
-            // แสดงข้อความสำเร็จ
             Swal.fire({
                 icon: 'success',
                 title: 'รับออเดอร์สำเร็จ',
                 text: 'คำสั่งซื้อและรายการสินค้าถูกบันทึกเรียบร้อยแล้ว!',
                 confirmButtonText: 'ตกลง',
             }).then(() => {
-                setShowReceipt(true); // แสดงใบเสร็จ
+                setShowReceipt(true);
             });
         } catch (error) {
-            // แสดงข้อความ error หากเกิดข้อผิดพลาด
             console.error('Error while processing order:', error.message);
             Swal.fire('ผิดพลาด', error.message, 'error');
-            console.log(orderData);
         }
     };
     
-    
-    
-
     const handleAmountButton = (amount) => {
         setReceivedAmount((prevAmount) => prevAmount + amount);
     };
@@ -324,45 +254,74 @@ export default function SalesPage() {
 
     const closeReceipt = async () => {
         try {
-            const url = `${api_url}/api/${slug}/orders/${orderNumber}`;
+            if (!orderId) {
+                throw new Error('Order ID is missing.');
+            }
+    
+            const url = `${api_url}/api/${slug}/orders/${orderId}`;
+            console.log('Closing receipt for orderId:', orderId);
+    
+            // Fetch Order
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-            
-            if (response.data && response.data.status === 'N') {
-                await axios.put(url, {
-                    status: 'Y',
-                }, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                });
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'ชำระเงินสำเร็จ',
-                    text: 'การชำระเงินดำเนินการเรียบร้อยแล้ว!',
-                    confirmButtonText: 'ตกลง',
-                }).then(() => {
-                    setShowReceipt(false);
-                    setOrderReceived(true);
-                    setCart([]);
-                    setReceivedAmount(0);
-                    setBillDiscount(0);
-                    setBillDiscountType("THB");
-                    setIsBillPaused(false);
-                });
-            } else {
-                Swal.fire('ผิดพลาด', 'ไม่พบข้อมูลบิล หรือบิลนี้ถูกชำระแล้ว', 'error');
+    
+            console.log('Response from GET Order API:', response.data);
+    
+            // ดึงข้อมูล Order จาก Array
+            const order = Array.isArray(response.data) ? response.data[0] : response.data;
+    
+            if (!order || !order.id) {
+                throw new Error('Order not found.');
             }
+    
+            if (order.status !== 'N') {
+                throw new Error('Order has already been closed or invalid status.');
+            }
+    
+            // Update Order Status
+            const updateResponse = await axios.put(url, {
+                status: 'Y',
+            }, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            console.log('Response from PUT Order API:', updateResponse.data);
+    
+            if (!updateResponse.data || updateResponse.data.status !== 'Y') {
+                throw new Error('Failed to update order status.');
+            }
+    
+            Swal.fire({
+                icon: 'success',
+                title: 'ชำระเงินสำเร็จ',
+                text: 'การชำระเงินดำเนินการเรียบร้อยแล้ว!',
+                confirmButtonText: 'ตกลง',
+            }).then(() => {
+                setShowReceipt(false);
+                setOrderReceived(true);
+                setCart([]);
+                setReceivedAmount(0);
+                setBillDiscount(0);
+                setBillDiscountType("THB");
+                setIsBillPaused(false);
+            });
         } catch (error) {
-            Swal.fire('ผิดพลาด', `ไม่สามารถอัปเดตบิลได้: ${error.response?.data?.message || error.message}`, 'error');
+            console.error('Error closing receipt:', error.message);
+            Swal.fire('ผิดพลาด', `ไม่สามารถอัปเดตบิลได้: ${error.message}`, 'error');
         }
     };
+    
+    
+    
+    
+    
 
     const handlePauseBill = () => {
         setShowReceipt(false);
@@ -603,7 +562,7 @@ export default function SalesPage() {
                             <p style={styles.tableColumn}>จำนวน</p>
                             <p style={styles.tableColumn}>ราคา</p>
                         </div>
-                        <div style={styles.receiptItems}>
+                        <div className="receiptItems" style={styles.receiptItems}>
                             {cart.map((item) => (
                                 <div key={item.id} style={styles.receiptItem}>
                                     <p style={styles.itemName}>{item.p_name}</p>
@@ -637,7 +596,9 @@ export default function SalesPage() {
                             <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
                         </div>
                         <div style={styles.buttonContainer}>
-                            <button style={styles.actionButton} onClick={closeReceipt}>ดำเนินการ</button>
+                        <button style={styles.actionButton} onClick={() => closeReceipt(orderId)}>
+                            ดำเนินการ
+                        </button>
                             <button style={styles.pauseButton} onClick={handlePauseBill}>พักบิล</button>
                         </div>
                     </div>
@@ -656,7 +617,18 @@ const styles = {
     searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%' },
     pageContainer: { display: 'flex', padding: '10px', height: '92vh' },
     sidebarContainer: { flex: '0 0 100px' },
-    cart: { width: '400px', overflowY: 'auto', backgroundColor: '#ffffff', padding: '15px', borderRadius: '8px', marginTop: '-8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' },
+    cart: {
+        width: '400px',
+        overflowY: 'auto',
+        backgroundColor: '#f8f9fa',
+        padding: '15px',
+        borderRadius: '12px',
+        marginTop: '-8px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    },    
     discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
     totalText: { fontSize: '16px', fontWeight: 'bold', color: '#333' },
     discountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
@@ -676,11 +648,43 @@ const styles = {
     tableCode: { fontSize: '15px', color: '#333' },
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold', marginTop: '5px' },
     paymentButton: { flex: 1, padding: '10px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold', marginTop: '5px' },
-    receiptContainer: { backgroundColor: '#fff', padding: '20px', borderRadius: '8px', marginTop: '20px' },
+    receiptContainer: {
+        backgroundColor: '#fff',
+        padding: '20px 30px',
+        borderRadius: '12px',
+        width: '320px',
+        textAlign: 'center',
+        fontFamily: "'Poppins', sans-serif",
+        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
+        animation: 'fadeIn 0.5s ease',
+    },
+    // Animation Keyframes
+    '@keyframes fadeIn': {
+        from: { opacity: 0, transform: 'translateY(-20px)' },
+        to: { opacity: 1, transform: 'translateY(0)' },
+    },
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, marginLeft: '100px' },
     searchInput: { width: 'calc(890px - 150px)', padding: '9px', borderRadius: '5px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', paddingTop: '5px', marginTop: '0px' },
-    productCard: { width: '100px', height: '100px', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', backgroundColor: '#ffffff', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '15px', transition: 'transform 0.2s ease', overflow: 'hidden' },
+    productCard: {
+        width: '120px',
+        height: '100px',
+        border: '1px solid #ddd',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        backgroundColor: '#ffffff',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '15px',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        overflow: 'hidden',
+        ':hover': {
+            transform: 'scale(1.05)',
+            boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',
+        },
+    },
     productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
     noImage: { width: '100%', height: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: '5px', marginBottom: '8px' },
     noImageText: { fontSize: '14px', color: '#aaa' },
@@ -700,7 +704,13 @@ const styles = {
     tableHeader: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 'bold', borderBottom: '1px solid #ddd', paddingBottom: '5px', marginBottom: '5px' },
     tableColumn: { flex: 1, textAlign: 'right' },
     receiptItem: { display: 'flex', alignItems: 'center', fontSize: '12px', marginBottom: '5px', justifyContent: 'space-between' },
-    receiptItems: { maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', fontSize: '12px', marginBottom: '5px' },
+    receiptItems: {
+        maxHeight: '150px', // กำหนดความสูงสูงสุด
+        overflowY: 'scroll', // เปิดการเลื่อนในแนวตั้ง
+        scrollbarWidth: 'none', // ซ่อน scrollbar ใน Firefox
+        msOverflowStyle: 'none', // ซ่อน scrollbar ใน Internet Explorer/Edge
+        WebkitOverflowScrolling: 'touch', // ให้การเลื่อนลื่นใน iOS/Android
+    },    
     itemName: { flex: 2, textAlign: 'left' },
     itemQuantity: { flex: 1, textAlign: 'center' },
     itemPrice: { flex: 1, textAlign: 'right' },
@@ -742,6 +752,85 @@ const stylesWithHiddenScroll = `
 if (typeof document !== 'undefined') {
     const styleSheet = document.createElement("style");
     styleSheet.type = "text/css";
-    styleSheet.innerText = stylesWithHiddenScroll;
+    styleSheet.innerText = `
+        /* ตัวจัดการพื้นหลังของเว็บไซต์ */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to bottom, #eef2f3, #f7fbff);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            color: #333;
+        }
+        .receiptItems::-webkit-scrollbar {
+            display: none; /* ซ่อน scrollbar ใน Chrome/Safari */
+        }
+
+        .receiptItems {
+    max-height: 150px;
+    overflow-y: auto;
+    scrollbar-width: none; /* ซ่อน Scrollbar ใน Firefox */
+    -ms-overflow-style: none; /* ซ่อน Scrollbar ใน IE และ Edge */
+    position: relative; /* ป้องกันการขยายเกิน container */
+    padding: 0; /* ลบ Padding ที่อาจทำให้เกิดเส้น */
+    margin: 0; /* ลบ Margin ที่อาจทำให้เกิดเส้น */
+}
+    .receiptItems::-webkit-scrollbar {
+    display: none; /* ซ่อน Scrollbar ใน WebKit (Chrome/Safari) */
+}
+       /* จัดการเอฟเฟกต์ไล่สีในเส้นล่าง */
+
+
+        /* เพิ่มเอฟเฟกต์แถบเลื่อน */
+        .cartItems::-webkit-scrollbar {
+            width: 8px;
+        }
+        .cartItems::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #b0bec5, #ffffff);
+            border-radius: 10px;
+        }
+        .cartItems::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #90a4ae, #607d8b);
+        }
+
+        /* เพิ่มเอฟเฟกต์ hover ให้ปุ่ม */
+        button {
+            transition: all 0.3s ease-in-out;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* สไตล์กล่องสินค้า */
+        .productCard:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(to bottom, #ffffff, #f3f4f7);
+        }
+
+        /* เพิ่มมุมมนและเงาให้กับใบเสร็จ */
+        .receiptContainer {
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+        }
+
+        /* เพิ่มเอฟเฟกต์ใบเสร็จ */
+        .receiptContainer {
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    `;
     document.head.appendChild(styleSheet);
 }
