@@ -148,14 +148,32 @@ export default function SalesPage() {
         return calculateTotalWithBillDiscount() * VAT_RATE;
     };
 
-    const handlePayment = () => {
-        const totalWithBillDiscount = calculateTotalWithBillDiscount();
-        if (receivedAmount < totalWithBillDiscount) {
-            alert('ยอดเงินที่รับมายังไม่เพียงพอ');
+    const handlePayment = async () => {
+        if (!orderReceived) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณารับออเดอร์ก่อน',
+                text: 'ไม่สามารถชำระเงินได้จนกว่าจะรับออเดอร์',
+                confirmButtonText: 'ตกลง',
+            });
             return;
         }
-        setShowReceipt(true);
+    
+        if (cart.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ไม่มีสินค้าในตะกร้า',
+                text: 'กรุณาเพิ่มสินค้าในตะกร้าก่อนทำการชำระเงิน',
+                confirmButtonText: 'ตกลง',
+            });
+            return;
+        }
+    
+        setShowReceipt(true); // แสดงบิลเพื่อให้ผู้ใช้ตรวจสอบ
     };
+    
+    
+    
 
     const filteredProducts = products.filter(product =>
         (!selectedCategoryId || product.category_id === selectedCategoryId) &&
@@ -193,16 +211,18 @@ export default function SalesPage() {
         try {
             const generatedOrderNumber = `RE${Math.floor(100000 + Math.random() * 900000)}`;
             setOrderNumber(generatedOrderNumber);
+            setOrderReceived(true); // เปิดการทำงานของปุ่มชำระเงิน
+
     
             const userId = 1;
             const orderData = {
                 total_amount: calculateTotalAfterItemDiscounts(),
-                discount: billDiscountType === "THB" ? billDiscount : 0,
-                discount_per: billDiscountType === "%" ? billDiscount : 0,
+                discount: billDiscountType === 'THB' ? billDiscount : 0,
+                discount_per: billDiscountType === '%' ? billDiscount : 0,
                 vat_per: VAT_RATE * 100,
                 vat_amt: calculateVAT(),
                 net_amount: calculateTotalWithBillDiscount(),
-                status: 'N',
+                status: 'N', // ออเดอร์ยังไม่ชำระเงิน
                 tables_id: tableCode || null,
                 created_by: userId,
                 items: cart.map((item) => ({
@@ -210,10 +230,14 @@ export default function SalesPage() {
                     p_name: item.p_name || 'ไม่มีชื่อสินค้า',
                     quantity: item.quantity || 1,
                     price: item.price || 0,
-                    total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
-                    discount: item.discountType === "THB" ? item.discount || 0 : 0,
-                    discount_per: item.discountType === "%" ? item.discount || 0 : 0,
-                    net_total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
+                    total:
+                        calculateDiscountedPrice(item.price, item.discount, item.discountType) *
+                            item.quantity || 0,
+                    discount: item.discountType === 'THB' ? item.discount || 0 : 0,
+                    discount_per: item.discountType === '%' ? item.discount || 0 : 0,
+                    net_total:
+                        calculateDiscountedPrice(item.price, item.discount, item.discountType) *
+                            item.quantity || 0,
                     status: 'Y',
                     created_at: new Date().toISOString(),
                 })),
@@ -221,10 +245,13 @@ export default function SalesPage() {
     
             console.log('Order Data:', orderData);
             const newOrderId = await sendOrder(orderData);
+    
             if (!newOrderId) {
                 throw new Error('Failed to create order. No orderId returned.');
             }
+    
             setOrderId(newOrderId); // เก็บ orderId ใน state
+            setOrderReceived(true); // เปิดใช้งานการชำระเงิน
     
             Swal.fire({
                 icon: 'success',
@@ -239,6 +266,7 @@ export default function SalesPage() {
             Swal.fire('ผิดพลาด', error.message, 'error');
         }
     };
+    
     
     const handleAmountButton = (amount) => {
         setReceivedAmount((prevAmount) => prevAmount + amount);
@@ -315,6 +343,41 @@ export default function SalesPage() {
         } catch (error) {
             console.error('Error closing receipt:', error.message);
             Swal.fire('ผิดพลาด', `ไม่สามารถอัปเดตบิลได้: ${error.message}`, 'error');
+        }
+    };
+    const confirmPayment = async () => {
+        try {
+            const url = `${api_url}/api/${slug}/orders/${orderId}`;
+            const response = await axios.put(
+                url,
+                { status: 'Y' },
+                {
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                }
+            );
+    
+            if (!response.data || response.data.status !== 'Y') {
+                throw new Error('Failed to update order status.');
+            }
+    
+            Swal.fire({
+                icon: 'success',
+                title: 'ชำระเงินสำเร็จ',
+                text: 'คำสั่งซื้อถูกบันทึกเรียบร้อยแล้ว!',
+                confirmButtonText: 'ตกลง',
+            }).then(() => {
+                setShowReceipt(false);
+                setCart([]);
+                setReceivedAmount(0);
+                setBillDiscount(0);
+                setBillDiscountType('THB');
+            });
+        } catch (error) {
+            console.error('Error during payment:', error.message);
+            Swal.fire('ผิดพลาด', `ไม่สามารถดำเนินการได้: ${error.message}`, 'error');
         }
     };
     
@@ -449,6 +512,7 @@ export default function SalesPage() {
                         <FaTrash />
                     </button>
                 </div>
+                
                 <div style={styles.cartItems}>
                     {cart.map((item) => (
                         <div key={item.id} style={styles.cartItem}>
@@ -539,9 +603,18 @@ export default function SalesPage() {
                         <button style={styles.receiveOrderButton} onClick={receiveOrder}>
                             รับออเดอร์
                         </button>                    
-                        <button style={styles.paymentButton} onClick={handlePayment}>
+                        <button
+                            style={{
+                                ...styles.paymentButton,
+                                ...(orderReceived && cart.length > 0 ? {} : styles.paymentButtonDisabled),
+                            }}
+                            onClick={handlePayment}
+                            disabled={!orderReceived || cart.length === 0}
+                        >
                             ชำระเงิน
                         </button>
+
+
                     </div>
                 </div>
             </div>
@@ -596,10 +669,12 @@ export default function SalesPage() {
                             <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
                         </div>
                         <div style={styles.buttonContainer}>
-                        <button style={styles.actionButton} onClick={() => closeReceipt(orderId)}>
-                            ดำเนินการ
-                        </button>
-                            <button style={styles.pauseButton} onClick={handlePauseBill}>พักบิล</button>
+                            <button style={styles.actionButton} onClick={() => closeReceipt(orderId)}>
+                                ดำเนินการ
+                            </button>
+                            <button style={styles.pauseButton} onClick={handlePauseBill}>
+                                พักบิล
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -639,7 +714,31 @@ const styles = {
     amountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
     cartItemPriceDiscountRow: { display: 'flex', alignItems: 'center', gap: '3px', flexDirection: 'row', marginTop: '-27px' },
     categoryRow: { display: 'flex', justifyContent: 'center', gap: '19px', marginBottom: '1px', flexWrap: 'wrap' },
-    categoryCircle: { width: '95px', height: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '5px', color: '#ffffff', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px', textAlign: 'center', lineHeight: '1', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)', margin: '5px',marginLeft:'25px' },
+    categoryCircle: {
+        width: '95px',
+        height: '60px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '10px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        fontSize: '12px',
+        textAlign: 'center',
+        lineHeight: '1',
+        margin: '10px',
+        background: '#499cae', // สีพื้นหลังพร้อมโปร่งใส
+        backdropFilter: 'blur(5px)', // เบลอพื้นหลัง
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        color: '#ffffff', // สีข้อความ
+        transition: 'all 0.3s ease',
+        ':hover': {
+            transform: 'scale(1.1)',
+            background: 'rgba(255, 127, 36, 0.9)', // สีพื้นหลังเมื่อชี้เมาส์
+            boxShadow: '0 6px 8px rgba(0, 0, 0, 0.2)',
+        },
+    },
     headerContainer: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', position: 'sticky', top: '0', backgroundColor: '#f5f5f5', zIndex: 10, padding: '10px 0', width: '100%' },
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
@@ -647,8 +746,24 @@ const styles = {
     pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
     tableCode: { fontSize: '15px', color: '#333' },
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold', marginTop: '5px' },
-    paymentButton: { flex: 1, padding: '10px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold', marginTop: '5px' },
-    receiptContainer: {
+    paymentButton: {
+        flex: 1,
+        padding: '10px',
+        backgroundColor: '#499cae',
+        color: '#ffffff',
+        border: 'none',
+        cursor: 'pointer',
+        borderRadius: '5px',
+        fontWeight: 'bold',
+        marginTop: '5px',
+        opacity: 1, // ค่าเริ่มต้น
+    },    
+    
+    paymentButtonDisabled: {
+        opacity: 0.5,
+        cursor: 'not-allowed',
+    },
+        receiptContainer: {
         backgroundColor: '#fff',
         padding: '20px 30px',
         borderRadius: '12px',
