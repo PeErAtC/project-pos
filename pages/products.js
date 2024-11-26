@@ -220,63 +220,74 @@ export default function SalesPage() {
         
     
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
-    const receiveOrder = async () => {
-        try {
-            const userId = 1; // ตัวอย่าง user ID
-            const orderData = {
-                total_amount: calculateTotalAfterItemDiscounts(),
-                discount: billDiscountType === 'THB' ? billDiscount : 0,
-                discount_per: billDiscountType === '%' ? billDiscount : 0,
-                vat_per: VAT_RATE * 100,
-                vat_amt: calculateVAT(),
-                net_amount: calculateTotalWithBillDiscount(),
-                status: 'N', // ออเดอร์ยังไม่ชำระเงิน
-                tables_id: tableCode || null,
-                created_by: userId,
-                items: cart.map((item) => ({
-                    product_id: item.id || 0,
-                    p_name: item.p_name || 'ไม่มีชื่อสินค้า',
-                    quantity: item.quantity || 1,
-                    price: item.price || 0,
-                    total:
-                        calculateDiscountedPrice(item.price, item.discount, item.discountType) *
-                        item.quantity || 0,
-                    discount: item.discountType === 'THB' ? item.discount || 0 : 0,
-                    discount_per: item.discountType === '%' ? item.discount || 0 : 0,
-                    net_total:
-                        calculateDiscountedPrice(item.price, item.discount, item.discountType) *
-                        item.quantity || 0,
-                    status: 'Y',
-                    created_at: new Date().toISOString(),
-                })),
-            };
-    
-            console.log('Order Data:', orderData);
-            const newOrder = await sendOrder(orderData);
-    
-            if (!newOrder) {
-                throw new Error('Failed to create order. No order data returned.');
-            }
-    
-            setOrderNumber(newOrder.order_number); // ใช้หมายเลขออร์เดอร์จาก API
-            setOrderId(newOrder.id); // เก็บ orderId ใน state
-            setOrderReceived(true); // เปิดใช้งานการชำระเงิน
-    
-            Swal.fire({
-                icon: 'success',
-                title: 'รับออเดอร์สำเร็จ',
-                text: 'คำสั่งซื้อและรายการสินค้าถูกบันทึกเรียบร้อยแล้ว!',
-                confirmButtonText: 'ตกลง',
-            }).then(() => {
-                setShowReceipt(true);
-            });
-        } catch (error) {
-            console.error('Error while processing order:', error.message);
-            Swal.fire('ผิดพลาด', error.message, 'error');
+const receiveOrder = async () => {
+    try {
+        const userId = 1; // ตัวอย่าง user ID
+        const orderData = {
+            total_amount: calculateTotalAfterItemDiscounts(),
+            discount: billDiscountType === 'THB' ? billDiscount : 0,
+            discount_per: billDiscountType === '%' ? billDiscount : 0,
+            vat_per: VAT_RATE * 100, // เปอร์เซ็นต์ภาษีมูลค่าเพิ่ม
+            vat_amt: calculateVAT(), // ยอดภาษีมูลค่าเพิ่ม
+            net_amount: calculateTotalWithBillDiscount(), // ยอดรวมสุทธิ
+            status: 'N', // ออเดอร์ยังไม่ชำระเงิน
+            tables_id: tableCode || null, // รหัสโต๊ะที่นั่ง
+            created_by: userId, // ผู้สร้างคำสั่งซื้อ
+            items: cart.map((item) => ({
+                product_id: item.id || 0, // รหัสสินค้า
+                p_name: item.p_name || 'ไม่มีชื่อสินค้า', // ชื่อสินค้า
+                quantity: item.quantity || 1, // จำนวนสินค้า
+                price: item.price || 0, // ราคาสินค้า
+                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0, // ราคาสุทธิของสินค้า
+            })),
+        };
+
+        console.log('Order Data:', orderData); // แสดงข้อมูลออเดอร์ในคอนโซล
+
+        const newOrder = await sendOrder(orderData); // ส่งข้อมูลออเดอร์ไปยัง API
+
+        if (!newOrder) {
+            throw new Error('สร้างคำสั่งซื้อไม่สำเร็จ ไม่มีข้อมูลออเดอร์ส่งกลับมา'); // แจ้งข้อผิดพลาด
         }
-    };
-    
-    
+
+        setOrderNumber(newOrder.order_number); // ใช้หมายเลขออร์เดอร์จาก API
+        setOrderId(newOrder.id); // เก็บ orderId ใน state
+        setOrderReceived(true); // เปิดใช้งานการชำระเงิน
+
+        // แจ้งเตือนว่ารับออเดอร์สำเร็จ
+        Swal.fire({
+            icon: 'success',
+            title: 'รับออเดอร์สำเร็จ',
+            text: 'คำสั่งซื้อและรายการสินค้าถูกบันทึกเรียบร้อยแล้ว!',
+            confirmButtonText: 'ตกลง',
+        }).then(() => {
+            setShowReceipt(true); // แสดงใบเสร็จ
+        });
+    } catch (error) {
+        console.error('เกิดข้อผิดพลาดระหว่างการรับออเดอร์:', error.message); // แจ้งข้อผิดพลาดในคอนโซล
+        // แจ้งข้อผิดพลาดให้ผู้ใช้ทราบ
+        Swal.fire('ผิดพลาด', error.message, 'error');
+    }
+};
+
+const addOrderItems = async (orderId, items) => {
+    const url = `${api_url}/api/${slug}/orders/${orderId}/addItem`;
+  
+    try {
+      const response = await axios.post(url, { items }, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+      console.log('Items added successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error adding items:', error.response?.data || error.message);
+      throw new Error('Failed to add order items.');
+    }
+  };
+     
     
     const handleAmountButton = (amount) => {
         setReceivedAmount((prevAmount) => prevAmount + amount);
@@ -299,36 +310,17 @@ export default function SalesPage() {
             const url = `${api_url}/api/${slug}/orders/${orderId}`;
             console.log('Closing receipt for orderId:', orderId);
     
-            // Fetch Order
-            const response = await axios.get(url, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-    
-            console.log('Response from GET Order API:', response.data);
-    
-            // ดึงข้อมูล Order จาก Array
-            const order = Array.isArray(response.data) ? response.data[0] : response.data;
-    
-            if (!order || !order.id) {
-                throw new Error('Order not found.');
-            }
-    
-            if (order.status !== 'N') {
-                throw new Error('Order has already been closed or invalid status.');
-            }
-    
             // Update Order Status
-            const updateResponse = await axios.put(url, {
-                status: 'Y',
-            }, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
+            const updateResponse = await axios.put(
+                url,
+                { status: 'Y' }, // Sending the updated status as "Y"
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                }
+            );
     
             console.log('Response from PUT Order API:', updateResponse.data);
     
@@ -343,7 +335,7 @@ export default function SalesPage() {
                 confirmButtonText: 'ตกลง',
             }).then(() => {
                 setShowReceipt(false);
-                setOrderReceived(true);
+                setOrderReceived(false);
                 setCart([]);
                 setReceivedAmount(0);
                 setBillDiscount(0);
@@ -355,6 +347,7 @@ export default function SalesPage() {
             Swal.fire('ผิดพลาด', `ไม่สามารถอัปเดตบิลได้: ${error.message}`, 'error');
         }
     };
+    
     const confirmPayment = async () => {
         try {
             const url = `${api_url}/api/${slug}/orders/${orderId}`;
@@ -721,9 +714,10 @@ export default function SalesPage() {
                             <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
                         </div>
                         <div style={styles.buttonContainer}>
-                            <button style={styles.actionButton} onClick={() => closeReceipt(orderId)}>
-                                ดำเนินการ
-                            </button>
+                        <button style={styles.actionButton} onClick={closeReceipt}>
+    ดำเนินการ
+</button>
+
                             <button style={styles.pauseButton} onClick={handlePauseBill}>
                                 พักบิล
                             </button>
