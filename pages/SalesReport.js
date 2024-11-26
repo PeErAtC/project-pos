@@ -269,7 +269,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                                 <td style={styles.td}>{order.total_amount}</td>
                                                 <td style={styles.td}>{order.discount}</td>
                                                 <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
-                                                <td style={styles.td}>{order.net_amount}</td>
+                                                <td style={styles.td}>{order.net_amount} ฿</td>
                                                 <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
                                                     {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
                                                 </td>
@@ -286,7 +286,8 @@ export default function SalesReport({ initialReportData, initialError }) {
                                             <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalAmount : "0.00"}</td>
                                             <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalDiscount : "0.00"}</td>
                                             <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalVat : "0.00"}</td>
-                                            <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalNet : "0.00"}</td>
+                                            <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalNet : "0.00"} ฿</td>
+
                                             <td colSpan="2"></td>
                                         </tr>
                                     </tfoot>
@@ -325,7 +326,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
                                     <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
-                                    <td style={styles.td}>{order.net_amount}</td>
+                                    <td style={styles.td}>{order.net_amount} ฿</td>
                                     <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
                                     <td style={styles.td}>
                                         <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
@@ -339,7 +340,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalDiscount : "0.00"}</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalVat : "0.00"}</td>
-                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalNet : "0.00"}</td>
+                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalNet : "0.00"} ฿</td>
                                 <td colSpan="2"></td>
                             </tr>
                         </tfoot>
