@@ -30,6 +30,7 @@ export default function SalesPage() {
     const [categories, setCategories] = useState([]);
     const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
     const [orderId, setOrderId] = useState(null);
+    
 
     
     const VAT_RATE = 0.07;
@@ -52,6 +53,7 @@ export default function SalesPage() {
     // Fetch categories from API
     const fetchCategories = () => {
         const url = `${api_url}/api/${slug}/category`;
+        console.log('Fetching categories from:', url); // Debug URL
         axios.get(url, {
             headers: {
                 'Accept': 'application/json',
@@ -79,10 +81,19 @@ export default function SalesPage() {
 
     const addToCart = (product) => {
         if (product.status !== 'Y') return;
+    
+        const element = document.querySelector(`#product-${product.id}`);
+        if (element) {
+            element.style.animation = "none"; // รีเซ็ตก่อน
+            requestAnimationFrame(() => {
+                element.style.animation = "shake 0.5s ease, highlight 1s ease";
+            });
+        }
+    
         setCart((prevCart) => {
-            const existingItem = prevCart.find(item => item.id === product.id);
+            const existingItem = prevCart.find((item) => item.id === product.id);
             if (existingItem) {
-                return prevCart.map(item =>
+                return prevCart.map((item) =>
                     item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             } else {
@@ -90,6 +101,10 @@ export default function SalesPage() {
             }
         });
     };
+    
+    
+    
+    
 
     const updateQuantity = (productId, delta) => {
         setCart((prevCart) =>
@@ -183,38 +198,31 @@ export default function SalesPage() {
 
     
     const sendOrder = async (orderData) => {
-    try {
-        const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
-        });
-        console.log('Response from GET Order API:', response.data);
-
-        console.log('Response from sendOrder:', response.data);
-
-        if (response.data && response.data.order && response.data.order.id) {
-            return response.data.order.id;
-        } else {
-            throw new Error(`Invalid response format: ${JSON.stringify(response.data)}`);
+        try {
+            const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            if (response.data && response.data.order) {
+                return response.data.order; // ส่งคืนออบเจ็กต์ order
+            } else {
+                throw new Error('Invalid response format from API');
+            }
+        } catch (error) {
+            console.error('Error while creating order:', error.response?.data || error.message);
+            throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
         }
-    } catch (error) {
-        console.error('Error while creating order:', error.response?.data || error.message);
-        throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
-    }
-};
-
+    };
+    
+        
     
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
-            const generatedOrderNumber = `RE${Math.floor(100000 + Math.random() * 900000)}`;
-            setOrderNumber(generatedOrderNumber);
-            setOrderReceived(true); // เปิดการทำงานของปุ่มชำระเงิน
-
-    
-            const userId = 1;
+            const userId = 1; // ตัวอย่าง user ID
             const orderData = {
                 total_amount: calculateTotalAfterItemDiscounts(),
                 discount: billDiscountType === 'THB' ? billDiscount : 0,
@@ -232,25 +240,26 @@ export default function SalesPage() {
                     price: item.price || 0,
                     total:
                         calculateDiscountedPrice(item.price, item.discount, item.discountType) *
-                            item.quantity || 0,
+                        item.quantity || 0,
                     discount: item.discountType === 'THB' ? item.discount || 0 : 0,
                     discount_per: item.discountType === '%' ? item.discount || 0 : 0,
                     net_total:
                         calculateDiscountedPrice(item.price, item.discount, item.discountType) *
-                            item.quantity || 0,
+                        item.quantity || 0,
                     status: 'Y',
                     created_at: new Date().toISOString(),
                 })),
             };
     
             console.log('Order Data:', orderData);
-            const newOrderId = await sendOrder(orderData);
+            const newOrder = await sendOrder(orderData);
     
-            if (!newOrderId) {
-                throw new Error('Failed to create order. No orderId returned.');
+            if (!newOrder) {
+                throw new Error('Failed to create order. No order data returned.');
             }
     
-            setOrderId(newOrderId); // เก็บ orderId ใน state
+            setOrderNumber(newOrder.order_number); // ใช้หมายเลขออร์เดอร์จาก API
+            setOrderId(newOrder.id); // เก็บ orderId ใน state
             setOrderReceived(true); // เปิดใช้งานการชำระเงิน
     
             Swal.fire({
@@ -266,6 +275,7 @@ export default function SalesPage() {
             Swal.fire('ผิดพลาด', error.message, 'error');
         }
     };
+    
     
     
     const handleAmountButton = (amount) => {
@@ -407,34 +417,66 @@ export default function SalesPage() {
             <div style={styles.mainContent}>
                 <div style={styles.productListContainer}>
                 <div style={styles.headerContainer}>
-    <div style={styles.categoryContainer}>
-        <div style={styles.categoryRow}>
-            <div onClick={() => handleCategorySelect(null)} style={{ ...styles.categoryCircle, backgroundColor: '#27ae60' }}>
-                <span style={styles.iconText}>🍽️</span>
-                <span style={styles.labelText}>ทั้งหมด</span>
-            </div>
-            <div onClick={() => handleCategorySelect(1)} style={{ ...styles.categoryCircle, backgroundColor: '#e74c3c' }}>
-                <span style={styles.iconText}>🍛</span>
-                <span style={styles.labelText}>เมนูผัด</span>
-            </div>
-            <div onClick={() => handleCategorySelect(2)} style={{ ...styles.categoryCircle, backgroundColor: '#f1c40f' }}>
-                <span style={styles.iconText}>🍚</span>
-                <span style={styles.labelText}>ข้าวผัด</span>
-            </div>
-            <div onClick={() => handleCategorySelect(3)} style={{ ...styles.categoryCircle, backgroundColor: '#2980b9' }}>
-                <span style={styles.iconText}>🥗</span>
-                <span style={styles.labelText}>เมนูยำ</span>
-            </div>
-            <div onClick={() => handleCategorySelect(4)} style={{ ...styles.categoryCircle, backgroundColor: '#1abc9c' }}>
-                <span style={styles.iconText}>🍲</span>
-                <span style={styles.labelText}>ข้าวต้ม</span>
-            </div>
-            <div onClick={() => handleCategorySelect(5)} style={{ ...styles.categoryCircle, backgroundColor: '#8e44ad' }}>
-                <span style={styles.iconText}>🍹</span>
-                <span style={styles.labelText}>เครื่องดื่ม</span>
-            </div>
+                <div style={styles.categoryContainer}>
+    <div style={styles.categoryRow}>
+        <div
+            onClick={() => handleCategorySelect(null)}
+            className="categoryCircle"
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+        >
+            <span style={styles.iconText}>🍽️</span>
+            <span style={styles.labelText}>ทั้งหมด</span>
+        </div>
+        <div
+            onClick={() => handleCategorySelect(1)}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+        >
+            <span style={styles.iconText}>🍛</span>
+            <span style={styles.labelText}>เมนูผัด</span>
+        </div>
+        <div
+            onClick={() => handleCategorySelect(2)}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+        >
+            <span style={styles.iconText}>🍚</span>
+            <span style={styles.labelText}>ข้าวผัด</span>
+        </div>
+        <div
+            onClick={() => handleCategorySelect(3)}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+        >
+            <span style={styles.iconText}>🥗</span>
+            <span style={styles.labelText}>เมนูยำ</span>
+        </div>
+        <div
+            onClick={() => handleCategorySelect(4)}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+        >
+            <span style={styles.iconText}>🍲</span>
+            <span style={styles.labelText}>ข้าวต้ม</span>
+        </div>
+        <div
+            onClick={() => handleCategorySelect(5)}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+        >
+            <span style={styles.iconText}>🍹</span>
+            <span style={styles.labelText}>เครื่องดื่ม</span>
         </div>
     </div>
+</div>
+
     <div style={styles.searchAndTableCodeContainer}>
         <div style={styles.searchContainer}>
             <h5 style={styles.tableCode}>โต๊ะ: {tableCode}</h5>
@@ -450,56 +492,60 @@ export default function SalesPage() {
     </div>
 </div>
 
-                    <div style={styles.products}>
-                        {filteredProducts.map((product) => (
-                            <div
-                                key={product.id}
-                                style={{
-                                    ...styles.productCard,
-                                    position: 'relative',
-                                    cursor: product.status === 'Y' ? 'pointer' : 'not-allowed',
-                                }}
-                                onClick={() => addToCart(product)}
-                            >
-                                {product.status === 'N' && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#fff',
-                                        fontSize: '1.5em',
-                                        fontWeight: 'bold',
-                                    }}>
-                                        หมด
-                                    </div>
-                                )}
-                                {product.image ? (
-                                    <Image
-                                        src={`${api_url}/storage/app/public/product/${slug}/${product.image}`}
-                                        alt={product.p_name}
-                                        width={100}
-                                        height={100}
-                                        quality={100}
-                                        style={styles.productImage}
-                                    />
-                                ) : (
-                                    <div style={styles.noImage}>
-                                        <span style={styles.noImageText}>ไม่มีภาพ</span>
-                                    </div>
-                                )}
-                                <div style={styles.productDetails}>
-                                    <p style={styles.productName}>{product.p_name}</p>
-                                    <p style={styles.productPrice}> {product.price.toFixed(2)}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+<div style={styles.products}>
+    {filteredProducts.map((product) => (
+        <div
+            key={product.id}
+            id={`product-${product.id}`} // เพิ่ม ID สำหรับ Animation
+            style={{
+                ...styles.productCard,
+                position: 'relative',
+                cursor: product.status === 'Y' ? 'pointer' : 'not-allowed',
+            }}
+            onClick={() => addToCart(product)} // เรียกฟังก์ชันเมื่อคลิก
+        >
+            {product.status === 'N' && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '1.5em',
+                        fontWeight: 'bold',
+                    }}
+                >
+                    หมด
+                </div>
+            )}
+            {product.image ? (
+                <Image
+                    src={`${api_url}/storage/app/public/product/${slug}/${product.image}`}
+                    alt={product.p_name}
+                    width={100}
+                    height={100}
+                    quality={100}
+                    style={styles.productImage}
+                />
+            ) : (
+                <div style={styles.noImage}>
+                    <span style={styles.noImageText}>ไม่มีภาพ</span>
+                </div>
+            )}
+            <div style={styles.productDetails}>
+                <p style={styles.productName}>{product.p_name}</p>
+                <p style={styles.productPrice}>{product.price.toFixed(2)}</p>
+            </div>
+        </div>
+    ))}
+</div>
+
                 </div>
             </div>
             <div style={styles.cart}>
@@ -600,7 +646,14 @@ export default function SalesPage() {
                         เงินทอน: {(receivedAmount ? (receivedAmount - calculateTotalWithBillDiscount()).toFixed(2) : "0.00")} บาท
                     </div>
                     <div style={styles.paymentRow}>
-                        <button style={styles.receiveOrderButton} onClick={receiveOrder}>
+                        <button
+                            style={{
+                                ...styles.receiveOrderButton,
+                                ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                            }}
+                            onClick={receiveOrder}
+                            disabled={cart.length === 0} // ปุ่มจะถูกปิดใช้งานเมื่อไม่มีรายการในตะกร้า
+                        >
                             รับออเดอร์
                         </button>                    
                         <button
@@ -613,9 +666,8 @@ export default function SalesPage() {
                         >
                             ชำระเงิน
                         </button>
-
-
                     </div>
+
                 </div>
             </div>
             {showReceipt && (
@@ -692,18 +744,7 @@ const styles = {
     searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%' },
     pageContainer: { display: 'flex', padding: '10px', height: '92vh' },
     sidebarContainer: { flex: '0 0 100px' },
-    cart: {
-        width: '400px',
-        overflowY: 'auto',
-        backgroundColor: '#f8f9fa',
-        padding: '15px',
-        borderRadius: '12px',
-        marginTop: '-8px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },    
+    cart: {width: '400px',overflowY: 'auto',backgroundColor: '#f8f9fa',padding: '15px',borderRadius: '12px',marginTop: '-8px',display: 'flex',flexDirection: 'column',justifyContent: 'space-between',boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',},    
     discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
     totalText: { fontSize: '16px', fontWeight: 'bold', color: '#333' },
     discountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
@@ -714,31 +755,7 @@ const styles = {
     amountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
     cartItemPriceDiscountRow: { display: 'flex', alignItems: 'center', gap: '3px', flexDirection: 'row', marginTop: '-27px' },
     categoryRow: { display: 'flex', justifyContent: 'center', gap: '19px', marginBottom: '1px', flexWrap: 'wrap' },
-    categoryCircle: {
-        width: '95px',
-        height: '60px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: '10px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        fontSize: '12px',
-        textAlign: 'center',
-        lineHeight: '1',
-        margin: '10px',
-        background: '#499cae', // สีพื้นหลังพร้อมโปร่งใส
-        backdropFilter: 'blur(5px)', // เบลอพื้นหลัง
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        color: '#ffffff', // สีข้อความ
-        transition: 'all 0.3s ease',
-        ':hover': {
-            transform: 'scale(1.1)',
-            background: 'rgba(255, 127, 36, 0.9)', // สีพื้นหลังเมื่อชี้เมาส์
-            boxShadow: '0 6px 8px rgba(0, 0, 0, 0.2)',
-        },
-    },
+    categoryCircle: { width: '95px',height: '60px',display: 'flex',flexDirection: 'column',alignItems: 'center',justifyContent: 'center',borderRadius: '10px',fontWeight: 'bold',cursor: 'pointer',fontSize: '12px', textAlign: 'center',lineHeight: '1',margin: '10px',background: '#499cae',backdropFilter: 'blur(5px)', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',color: '#ffffff', transition: 'all 0.3s ease',':hover': {transform: 'scale(1.1)',background: 'rgba(255, 127, 36, 0.9)', boxShadow: '0 6px 8px rgba(0, 0, 0, 0.2)',},},
     headerContainer: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', position: 'sticky', top: '0', backgroundColor: '#f5f5f5', zIndex: 10, padding: '10px 0', width: '100%' },
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
@@ -746,60 +763,16 @@ const styles = {
     pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
     tableCode: { fontSize: '15px', color: '#333' },
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold', marginTop: '5px' },
-    paymentButton: {
-        flex: 1,
-        padding: '10px',
-        backgroundColor: '#499cae',
-        color: '#ffffff',
-        border: 'none',
-        cursor: 'pointer',
-        borderRadius: '5px',
-        fontWeight: 'bold',
-        marginTop: '5px',
-        opacity: 1, // ค่าเริ่มต้น
-    },    
-    
-    paymentButtonDisabled: {
-        opacity: 0.5,
-        cursor: 'not-allowed',
-    },
-        receiptContainer: {
-        backgroundColor: '#fff',
-        padding: '20px 30px',
-        borderRadius: '12px',
-        width: '320px',
-        textAlign: 'center',
-        fontFamily: "'Poppins', sans-serif",
-        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
-        animation: 'fadeIn 0.5s ease',
-    },
+    paymentButton: {flex: 1,padding: '10px',backgroundColor: '#499cae',color: '#ffffff',border: 'none',cursor: 'pointer',borderRadius: '5px',fontWeight: 'bold',marginTop: '5px', opacity: 1,},    
+    paymentButtonDisabled: { opacity: 0.5,cursor: 'not-allowed',},receiptContainer: { backgroundColor: '#fff', padding: '20px 30px',borderRadius: '12px',width: '320px',textAlign: 'center',fontFamily: "'Poppins', sans-serif",boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',animation: 'fadeIn 0.5s ease',},
     // Animation Keyframes
-    '@keyframes fadeIn': {
-        from: { opacity: 0, transform: 'translateY(-20px)' },
-        to: { opacity: 1, transform: 'translateY(0)' },
-    },
+    '@keyframes fadeIn': {from: { opacity: 0, transform: 'translateY(-20px)' },to: { opacity: 1, transform: 'translateY(0)' },},
+    receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer', borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},
+    buttonDisabled: {backgroundColor: '#bbbbd6',color: '#666666',cursor: 'not-allowed', pointerEvents: 'none'},
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, marginLeft: '100px' },
     searchInput: { width: 'calc(890px - 150px)', padding: '9px', borderRadius: '5px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', paddingTop: '5px', marginTop: '0px' },
-    productCard: {
-        width: '120px',
-        height: '100px',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        backgroundColor: '#ffffff',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '15px',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        overflow: 'hidden',
-        ':hover': {
-            transform: 'scale(1.05)',
-            boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',
-        },
-    },
+    productCard: {width: '120px',height: '100px',border: '1px solid #ddd',borderRadius: '8px',   cursor: 'pointer',   backgroundColor: '#ffffff',  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column',alignItems: 'center',padding: '15px',transition: 'transform 0.3s ease, box-shadow 0.3s ease',overflow: 'hidden',':hover': {transform: 'scale(1.05)',boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',},},
     productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
     noImage: { width: '100%', height: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: '5px', marginBottom: '8px' },
     noImageText: { fontSize: '14px', color: '#aaa' },
@@ -907,7 +880,10 @@ if (typeof document !== 'undefined') {
         .cartItems::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(45deg, #90a4ae, #607d8b);
         }
-
+        .categoryCircle:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 20px rgba(255, 127, 36, 0.8);
+}
         /* เพิ่มเอฟเฟกต์ hover ให้ปุ่ม */
         button {
             transition: all 0.3s ease-in-out;
@@ -923,6 +899,10 @@ if (typeof document !== 'undefined') {
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
             background: linear-gradient(to bottom, #ffffff, #f3f4f7);
         }
+            .shake-and-highlight {
+    animation: shake 0.5s ease, highlight 1s ease !important;
+    background-color: #f1c40f !important;
+}
 
         /* เพิ่มมุมมนและเงาให้กับใบเสร็จ */
         .receiptContainer {
@@ -931,7 +911,7 @@ if (typeof document !== 'undefined') {
             border-radius: 20px;
             padding: 30px;
         }
-
+        
         /* เพิ่มเอฟเฟกต์ใบเสร็จ */
         .receiptContainer {
             animation: fadeIn 0.5s ease;
@@ -946,6 +926,54 @@ if (typeof document !== 'undefined') {
                 transform: scale(1);
             }
         }
+           @keyframes shake {
+                0%, 100% {
+                    transform: translateX(0);
+                }
+                25% {
+                    transform: translateX(-5px);
+                }
+                50% {
+                    transform: translateX(5px);
+                }
+                75% {
+                    transform: translateX(-5px);
+                }
+            }
+
+            @keyframes highlight {
+                0% {
+                    background-color: #d9f1ea;
+                }
+                100% {
+                    background-color: #fff;
+                }
+            }
+
+            .shake-and-highlight {
+                animation: shake 0.5s ease, highlight 1s ease;
+                background-color: #d1f4e8;
+            }
+    @keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
+    }
+}
+
+.pulse-effect {
+    animation: pulse 0.5s ease-out;
+    background-color: #d9f7be !important;
+}
+
     `;
     document.head.appendChild(styleSheet);
 }
