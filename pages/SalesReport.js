@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
-import { FaClipboardList, FaTable, FaCalendarAlt, FaDollarSign, FaTag, FaPercentage, FaMoneyBill, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import {
+    FaClipboardList,
+    FaTable,
+    FaCalendarAlt,
+    FaDollarSign,
+    FaTag,
+    FaPercentage,
+    FaMoneyBill,
+    FaCheckCircle,
+    FaTimesCircle
+} from 'react-icons/fa';
 
 const api_url = "https://easyapp.clinic/pos-api/api";
 const slug = "abc";
+const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 export default function SalesReport({ initialReportData, initialError }) {
     const [reportData, setReportData] = useState(initialReportData || []);
@@ -13,24 +24,22 @@ export default function SalesReport({ initialReportData, initialError }) {
     const [dateFilter, setDateFilter] = useState('');
     const [currentItems, setCurrentItems] = useState([]);
 
-
     const fetchReportData = async () => {
         try {
-            const url = `${api_url}/${slug}/orders`; // API endpoint สำหรับคำสั่งซื้อ
+            const url = `${api_url}/${slug}/orders`;
             const response = await axios.get(url, {
                 headers: {
                     Accept: 'application/json',
-                    Authorization: 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                    'Authorization': `Bearer ${authToken}`,
                 },
             });
-    
-            // ตรวจสอบข้อมูล
+
             console.log('Fetched Orders:', response.data);
-    
+
             if (!response.data || response.data.length === 0) {
                 console.error('No orders found in API response');
             }
-    
+
             setReportData(response.data);
             setError(null);
         } catch (err) {
@@ -41,7 +50,7 @@ export default function SalesReport({ initialReportData, initialError }) {
 
     useEffect(() => {
         fetchReportData();
-        const interval = setInterval(fetchReportData, 15000); // เพิ่มเวลา Refresh เป็น 15 วินาที
+        const interval = setInterval(fetchReportData, 15000);
         return () => clearInterval(interval);
     }, []);
 
@@ -51,119 +60,28 @@ export default function SalesReport({ initialReportData, initialError }) {
             new Date(order.order_date).toLocaleDateString('en-CA') === dateFilter
         );
     };
-    const handleEditOrder = async (orderId) => {
-        if (!orderId) {
-            Swal.fire({
-                title: 'เกิดข้อผิดพลาด',
-                text: 'ไม่มี Order ID',
-                icon: 'error',
-                confirmButtonText: 'ปิด',
-            });
-            return;
-        }
-    
-        try {
-            const order = await fetchOrderDetails(orderId);
-    
-            if (!order || !order.items || order.items.length === 0) {
-                Swal.fire({
-                    title: 'ไม่มีรายการ',
-                    text: 'ไม่สามารถแก้ไขรายการออเดอร์นี้ได้ เนื่องจากไม่มีสินค้า',
-                    icon: 'info',
-                    confirmButtonText: 'ปิด',
-                });
-                return;
-            }
-    
-            // เปิดหน้าต่างแก้ไข หรือแสดงฟอร์มแก้ไขออเดอร์
-            Swal.fire({
-                title: 'แก้ไขออเดอร์',
-                html: `
-                    <div style="text-align: left;">
-                        <label>หมายเลขบิล: ${order.order_number}</label>
-                        <div id="order-items-edit"></div>
-                    </div>
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'บันทึก',
-                cancelButtonText: 'ยกเลิก',
-                preConfirm: async () => {
-                    // คุณสามารถเพิ่มตรรกะในการตรวจสอบหรืออัปเดตข้อมูลที่นี่
-                    return true;
-                },
-            });
-    
-            // แสดงรายการสินค้าในคำสั่งซื้อเพื่อแก้ไข
-            const container = document.getElementById('order-items-edit');
-            if (container) {
-                order.items.forEach((item) => {
-                    const itemElement = document.createElement('div');
-                    itemElement.innerHTML = `
-                        <div style="margin-bottom: 10px;">
-                            <strong>${item.p_name}</strong>
-                            <input type="number" value="${item.quantity}" style="margin-left: 10px; width: 50px;" />
-                            <label style="margin-left: 10px;">${item.price.toFixed(2)} บาท</label>
-                        </div>
-                    `;
-                    container.appendChild(itemElement);
-                });
-            }
-        } catch (error) {
-            console.error('Error fetching order details for editing:', error);
-            Swal.fire({
-                title: 'เกิดข้อผิดพลาด',
-                text: error.message || 'ไม่สามารถแก้ไขออเดอร์นี้ได้',
-                icon: 'error',
-                confirmButtonText: 'ปิด',
-            });
-        }
-    };
-    
+
     const fetchOrderDetails = async (orderId) => {
         try {
-            const orderResponse = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
+            const response = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
                 headers: {
                     Accept: 'application/json',
-                    Authorization: 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+                    'Authorization': `Bearer ${authToken}`,
                 },
             });
-    
-            const itemsResponse = await axios.get(`${api_url}/${slug}/order_items?order_id=${orderId}`, {
-                headers: {
-                    Accept: 'application/json',
-                    Authorization: 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
-                },
-            });
-    
-            console.log('Order Details:', {
-                order: orderResponse.data,
-                items: itemsResponse.data,
-            });
-    
-            if (!itemsResponse.data || itemsResponse.data.length === 0) {
-                Swal.fire({
-                    title: 'ไม่มีสินค้า',
-                    text: 'ไม่มีรายการสินค้าในบิลนี้',
-                    icon: 'info',
-                    confirmButtonText: 'ปิด',
-                });
-                return null;
-            }
-    
-            return { ...orderResponse.data, items: itemsResponse.data };
+            return response.data;
         } catch (error) {
             console.error('Error fetching order details:', error);
             Swal.fire({
                 title: 'เกิดข้อผิดพลาด',
-                text: error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้ กรุณาลองอีกครั้ง หรือแจ้งผู้ดูแลระบบ',
+                text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
                 icon: 'error',
                 confirmButtonText: 'ปิด',
             });
             return null;
         }
     };
-    
-    
+
     const showOrderDetails = async (orderId) => {
         if (!orderId) {
             Swal.fire({
@@ -178,6 +96,9 @@ export default function SalesReport({ initialReportData, initialError }) {
         try {
             const order = await fetchOrderDetails(orderId);
     
+            // ดูข้อมูลใน console ว่ามีข้อมูลครบถ้วนหรือไม่
+            console.log('Order details:', order);
+    
             if (!order || !order.items || order.items.length === 0) {
                 Swal.fire({
                     title: 'ไม่มีรายละเอียด',
@@ -188,21 +109,93 @@ export default function SalesReport({ initialReportData, initialError }) {
                 return;
             }
     
-            // อัปเดต currentItems เพื่อแสดงในหน้าเว็บ
-            setCurrentItems(order.items);
+            // เริ่มต้นการแสดงรายละเอียดใน Swal.fire
+            Swal.fire({
+                title: `รายละเอียดออเดอร์ #${order.order_number}`,
+                html: `
+                    <div style="font-family: 'Arial', sans-serif; line-height: 1.5; color: #333; font-size: 14px; overflow-y: auto;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                            <div>
+                                <p style="font-weight: bold;">หมายเลขบิล:</p>
+                                <p>${order.order_number || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p style="font-weight: bold;">โต๊ะ:</p>
+                                <p>${order.tables_id || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p style="font-weight: bold;">วันที่:</p>
+                                <p>${new Date(order.order_date).toLocaleDateString('th-TH')}</p>
+                            </div>
+                            <div>
+                                <p style="font-weight: bold;">เวลาชำระเงิน:</p>
+                                <p>${new Date(order.created_at).toLocaleTimeString('th-TH', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}</p>
+                            </div>
+                            <div>
+                                <p style="font-weight: bold;">ยอดรวม:</p>
+                                <p>${order.total_amount || '0.00'} ฿</p>
+                            </div>
+                            <div>
+                                <p style="font-weight: bold;">ส่วนลด:</p>
+                                <p>${order.discount || '0.00'} ฿</p>
+                            </div>
+                            <div>
+                                <p style="font-weight: bold;">ภาษีมูลค่าเพิ่ม:</p>
+                                <p>${order.vat_amt || '0.00'} ฿</p>
+                            </div>
+                            <div>
+                                <p style="font-weight: bold;">ยอดสุทธิ:</p>
+                                <p>${order.net_amount || '0.00'} ฿</p>
+                            </div>
+                        </div>
+                        <h4 style="font-size: 16px; font-weight: bold; margin-top: 20px;">รายการสินค้า:</h4>
+                        <div style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+                            <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                                ${order.items.map(item => `
+                                    <li style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                            <p style="font-weight: bold; color: #444; font-size: 14px; margin: 0;">ชื่อสินค้า:</p>
+                                            <p style="font-size: 14px; margin: 0;">${item.p_name}</p>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                            <p style="font-weight: bold; color: #444; font-size: 14px; margin: 0;">จำนวน:</p>
+                                            <p style="font-size: 14px; margin: 0;">${item.quantity}</p>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <p style="font-weight: bold; color: #444; font-size: 14px; margin: 0;">ราคา:</p>
+                                            <p style="font-size: 14px; margin: 0;">${item.price} ฿</p>
+                                        </div>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'ปิด',
+                width: '900px', // ขนาดที่พอเหมาะ
+                padding: '20px',
+                background: '#fff',
+                customClass: {
+                    container: 'custom-swal-container',
+                    title: 'custom-swal-title',
+                    htmlContainer: 'custom-swal-html',
+                    confirmButton: 'custom-swal-btn',
+                },
+            });
         } catch (error) {
             console.error('Error fetching order details:', error);
             Swal.fire({
                 title: 'เกิดข้อผิดพลาด',
-                text: error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้ กรุณาลองอีกครั้ง หรือแจ้งผู้ดูแลระบบ',
+                text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
                 icon: 'error',
                 confirmButtonText: 'ปิด',
             });
         }
     };
     
-    
-
     const calculateTotals = (orders) => {
         const totalAmount = orders.reduce((total, order) => total + parseFloat(order.total_amount || 0), 0).toFixed(2);
         const totalDiscount = orders.reduce((total, order) => total + parseFloat(order.discount || 0), 0).toFixed(2);
@@ -219,80 +212,78 @@ export default function SalesReport({ initialReportData, initialError }) {
 
     return (
         <div style={styles.pageContainer}>
-                        <div style={styles.sidebarContainer}>
-                            <BackendSidebar />
-                        </div>
-                        <div style={styles.content}>
-                            <div style={styles.headerContainer}>
-                                <h1 style={styles.title}>รายงานการขาย</h1>
-                                <div style={styles.datePickerContainer}>
-                                    <label style={styles.dateLabel}>เลือกวัน: </label>
-                                    <input
-                                        type="date"
-                                        value={dateFilter}
-                                        onChange={(e) => setDateFilter(e.target.value)}
-                                        style={styles.dateInput}
-                                    />
-                                </div>
-                            </div>
-                            {error && <p style={styles.error}>{error}</p>}
-                            <h2 style={styles.subTitle}>
-                                รายการที่ยังไม่ชำระ <span style={styles.itemCount}>({pendingOrders.length} รายการ)</span>
-                            </h2>
-                            <div style={{ ...styles.tableContainer, backgroundColor: '#fff3f3' }}>
-                                <table style={styles.table}>
-                                    <thead>
-                                        <tr>
-                                            <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
-                                            <th style={styles.th}><FaTable /> โต๊ะ</th>
-                                            <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
-                                            <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
-                                            <th style={styles.th}><FaTag /> ส่วนลด</th>
-                                            <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
-                                            <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
-                                            <th style={styles.th}>สถานะ</th>
-                                            <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {pendingOrders.map((order, index) => (
-                                            <tr key={index}>
-                                                <td style={styles.td}>{order.order_number}</td>
-                                                <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                                <td style={styles.td}>
-                                                    {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} />
-                                                    {new Date(order.created_at).toLocaleTimeString('th-TH', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
-                                                </td>
-                                                <td style={styles.td}>{order.total_amount}</td>
-                                                <td style={styles.td}>{order.discount}</td>
-                                                <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
-                                                <td style={styles.td}>{order.net_amount} ฿</td>
-                                                <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
-                                                    {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
-                                                </td>
-                                                <td style={styles.td}>
-                                                    <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
-                                                    <button style={styles.editButton} onClick={() => handleEditOrder(order.id)}>แก้ไขออเดอร์</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
-                                        <tr>
-                                            <td colSpan="3" style={styles.totalLabel}>รวมยอด:</td>
-                                            <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalAmount : "0.00"}</td>
-                                            <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalDiscount : "0.00"}</td>
-                                            <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalVat : "0.00"}</td>
-                                            <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalNet : "0.00"} ฿</td>
-
-                                            <td colSpan="2"></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
+            <div style={styles.sidebarContainer}>
+                <BackendSidebar />
+            </div>
+            <div style={styles.content}>
+                <div style={styles.headerContainer}>
+                    <h1 style={styles.title}>รายงานการขาย</h1>
+                    <div style={styles.datePickerContainer}>
+                        <label style={styles.dateLabel}>เลือกวัน: </label>
+                        <input
+                            type="date"
+                            value={dateFilter}
+                            onChange={(e) => setDateFilter(e.target.value)}
+                            style={styles.dateInput}
+                        />
+                    </div>
+                </div>
+                {error && <p style={styles.error}>{error}</p>}
+                <h2 style={styles.subTitle}>
+                    รายการที่ยังไม่ชำระ <span style={styles.itemCount}>({pendingOrders.length} รายการ)</span>
+                </h2>
+                <div style={{ ...styles.tableContainer, backgroundColor: '#fff3f3' }}>
+                    <table style={styles.table}>
+                        <thead>
+                            <tr>
+                                <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
+                                <th style={styles.th}><FaTable /> โต๊ะ</th>
+                                <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
+                                <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
+                                <th style={styles.th}><FaTag /> ส่วนลด</th>
+                                <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
+                                <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
+                                <th style={styles.th}>สถานะ</th>
+                                <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pendingOrders.map((order, index) => (
+                                <tr key={index}>
+                                    <td style={styles.td}>{order.order_number}</td>
+                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td>
+                                    <td style={styles.td}>
+                                        {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} />
+                                        {new Date(order.created_at).toLocaleTimeString('th-TH', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </td>
+                                    <td style={styles.td}>{order.total_amount}</td>
+                                    <td style={styles.td}>{order.discount}</td>
+                                    <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
+                                    <td style={styles.td}>{order.net_amount} ฿</td>
+                                    <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
+                                        {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
+                                    </td>
+                                    <td style={styles.td}>
+                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
+                            <tr>
+                                <td colSpan="3" style={styles.totalLabel}>รวมยอด:</td>
+                                <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalAmount : "0.00"}</td>
+                                <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalDiscount : "0.00"}</td>
+                                <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalVat : "0.00"}</td>
+                                <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalNet : "0.00"} ฿</td>
+                                <td colSpan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
                 <h2 style={styles.subTitle}>
                     รายการที่ชำระแล้ว <span style={styles.itemCount}>({paidOrders.length} รายการ)</span>
                 </h2>
@@ -367,42 +358,6 @@ const styles = {
     td: { padding: '5px', borderBottom: '1px solid #ddd', textAlign: 'center', color: '#333', fontSize: '14px' },
     totalLabel: { textAlign: 'right', fontWeight: 'bold' },
     totalValue: { textAlign: 'center', fontWeight: 'bold' },
-    detailsButton: {
-        padding: '5px 10px',
-        backgroundColor: '#FFA500',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        flex: 1, // ให้ปุ่มใช้พื้นที่เท่ากัน
-        maxWidth: '120px', // จำกัดความกว้างสูงสุด
-        minWidth: '80px', // กำหนดความกว้างขั้นต่ำ
-        margin: '5px', // ระยะห่างระหว่างปุ่ม
-    },
-    totalContainer: { display: 'flex', justifyContent: 'space-between', marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px' },
-    tfoot: {
-        position: 'sticky', // ช่วยให้แถวรวมยอดล็อคอยู่ที่ด้านล่าง
-        bottom: 0, // ระบุตำแหน่งให้ชิดด้านล่างของ container
-        backgroundColor: '#f0fff4', // สีพื้นหลังเพื่อแยกความชัดเจน
-        height: '40px', // ความสูงของแถว
-        borderTop: '2px solid #ddd', // ขอบด้านบนเพื่อแยกแถว
-        zIndex: 10, // ความสำคัญให้แถวอยู่เหนือข้อมูลอื่นในตาราง
-    },
-    minHeight: '300px', // ตั้งค่าให้มีความสูงขั้นต่ำเสมอ
-    maxHeight: '500px', // หรือกำหนดความสูงสูงสุด
-    editButton: {
-        padding: '5px 10px',
-        backgroundColor: '#4CAF50',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        flex: 1, // ให้ปุ่มใช้พื้นที่เท่ากัน
-        maxWidth: '120px', // จำกัดความกว้างสูงสุด
-        minWidth: '80px', // กำหนดความกว้างขั้นต่ำ
-        margin: '5px', // ระยะห่างระหว่างปุ่ม
-    },
-    
+    detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', flex: 1 },
+    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#f0fff4', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
 };
