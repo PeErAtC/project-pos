@@ -96,7 +96,6 @@ export default function SalesReport({ initialReportData, initialError }) {
         try {
             const order = await fetchOrderDetails(orderId);
     
-            // ดูข้อมูลใน console ว่ามีข้อมูลครบถ้วนหรือไม่
             console.log('Order details:', order);
     
             if (!order || !order.items || order.items.length === 0) {
@@ -109,73 +108,73 @@ export default function SalesReport({ initialReportData, initialError }) {
                 return;
             }
     
-            // เริ่มต้นการแสดงรายละเอียดใน Swal.fire
+            // แสดงรายละเอียดในรูปแบบตาราง
             Swal.fire({
                 title: `รายละเอียดออเดอร์ #${order.order_number}`,
                 html: `
-                    <div style="font-family: 'Arial', sans-serif; line-height: 1.5; color: #333; font-size: 14px; overflow-y: auto;">
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
-                            <div>
-                                <p style="font-weight: bold;">หมายเลขบิล:</p>
-                                <p>${order.order_number || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p style="font-weight: bold;">โต๊ะ:</p>
-                                <p>${order.tables_id || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p style="font-weight: bold;">วันที่:</p>
-                                <p>${new Date(order.order_date).toLocaleDateString('th-TH')}</p>
-                            </div>
-                            <div>
-                                <p style="font-weight: bold;">เวลาชำระเงิน:</p>
-                                <p>${new Date(order.created_at).toLocaleTimeString('th-TH', {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })}</p>
-                            </div>
-                            <div>
-                                <p style="font-weight: bold;">ยอดรวม:</p>
-                                <p>${order.total_amount || '0.00'} ฿</p>
-                            </div>
-                            <div>
-                                <p style="font-weight: bold;">ส่วนลด:</p>
-                                <p>${order.discount || '0.00'} ฿</p>
-                            </div>
-                            <div>
-                                <p style="font-weight: bold;">ภาษีมูลค่าเพิ่ม:</p>
-                                <p>${order.vat_amt || '0.00'} ฿</p>
-                            </div>
-                            <div>
-                                <p style="font-weight: bold;">ยอดสุทธิ:</p>
-                                <p>${order.net_amount || '0.00'} ฿</p>
-                            </div>
-                        </div>
-                        <h4 style="font-size: 16px; font-weight: bold; margin-top: 20px;">รายการสินค้า:</h4>
-                        <div style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
-                            <ul style="list-style-type: none; padding-left: 0; margin: 0;">
-                                ${order.items.map(item => `
-                                    <li style="border-bottom: 1px solid #ddd; padding: 10px 0;">
-                                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                            <p style="font-weight: bold; color: #444; font-size: 14px; margin: 0;">ชื่อสินค้า:</p>
-                                            <p style="font-size: 14px; margin: 0;">${item.p_name}</p>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                            <p style="font-weight: bold; color: #444; font-size: 14px; margin: 0;">จำนวน:</p>
-                                            <p style="font-size: 14px; margin: 0;">${item.quantity}</p>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <p style="font-weight: bold; color: #444; font-size: 14px; margin: 0;">ราคา:</p>
-                                            <p style="font-size: 14px; margin: 0;">${item.price} ฿</p>
-                                        </div>
-                                    </li>
-                                `).join('')}
-                            </ul>
+                    <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">หมายเลขบิล</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.order_number || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">โต๊ะ</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.tables_id || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">วันที่</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${new Date(order.order_date).toLocaleDateString('th-TH')}</td>
+                            </tr>
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">เวลาชำระเงิน</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">
+                                    ${new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ยอดรวม</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.total_amount || '0.00'} ฿</td>
+                            </tr>
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ส่วนลด</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.discount || '0.00'} ฿</td>
+                            </tr>
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ภาษีมูลค่าเพิ่ม</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.vat_amt || '0.00'} ฿</td>
+                            </tr>
+                            <tr>
+                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ยอดสุทธิ</th>
+                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.net_amount || '0.00'} ฿</td>
+                            </tr>
+                        </table>
+    
+                        <h4 style="margin-top: 15px; font-size: 16px; font-weight: bold;">รายการสินค้า:</h4>
+                        <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 5px; background-color: #f4f4f4; font-size: 14px;">ชื่อสินค้า</th>
+                                        <th style="padding: 5px; background-color: #f4f4f4; font-size: 14px;">จำนวน</th>
+                                        <th style="padding: 5px; background-color: #f4f4f4; font-size: 14px;">ราคา</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${order.items.map(item => `
+                                        <tr>
+                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
+                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.quantity}</td>
+                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.price} ฿</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 `,
                 confirmButtonText: 'ปิด',
-                width: '900px', // ขนาดที่พอเหมาะ
+                width: '700px', // ขยายขนาดให้พอเหมาะ
                 padding: '20px',
                 background: '#fff',
                 customClass: {
@@ -195,6 +194,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             });
         }
     };
+    
     
     const calculateTotals = (orders) => {
         const totalAmount = orders.reduce((total, order) => total + parseFloat(order.total_amount || 0), 0).toFixed(2);
