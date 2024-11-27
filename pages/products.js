@@ -12,7 +12,6 @@ const api_url = "https://easyapp.clinic/pos-api";
 const slug = "abc";
 const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
-
 export default function SalesPage() {
     const [products, setProducts] = useState([]);
     const router = useRouter();
@@ -627,7 +626,7 @@ const addOrderItems = async (orderId, items) => {
                         </select>
                     </div>
                     <div style={styles.amountButtons}>
-                        {[1, 5, 10, 20, 50, 100].map((amount) => (
+                        {[1, 10, 50, 100, 500, 1000].map((amount) => (
                             <button key={amount} onClick={() => handleAmountButton(amount)} style={styles.amountButton}>
                                 +{amount}.00
                             </button>
@@ -714,9 +713,7 @@ const addOrderItems = async (orderId, items) => {
                             <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
                         </div>
                         <div style={styles.buttonContainer}>
-                        <button style={styles.actionButton} onClick={closeReceipt}>
-    ดำเนินการ
-</button>
+                        <button style={styles.actionButton} onClick={closeReceipt}>ดำเนินการ</button>
 
                             <button style={styles.pauseButton} onClick={handlePauseBill}>
                                 พักบิล
@@ -754,8 +751,8 @@ const styles = {
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
     productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', paddingTop: '0px' },
-    pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
-    tableCode: { fontSize: '15px', color: '#333' },
+    pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333', },
+    tableCode: { fontSize: '14px', color: '#333',marginLeft:'50px',},
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold', marginTop: '5px' },
     paymentButton: {flex: 1,padding: '10px',backgroundColor: '#499cae',color: '#ffffff',border: 'none',cursor: 'pointer',borderRadius: '5px',fontWeight: 'bold',marginTop: '5px', opacity: 1,},    
     paymentButtonDisabled: { opacity: 0.5,cursor: 'not-allowed',},receiptContainer: { backgroundColor: '#fff', padding: '20px 30px',borderRadius: '12px',width: '320px',textAlign: 'center',fontFamily: "'Poppins', sans-serif",boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',animation: 'fadeIn 0.5s ease',},
@@ -823,6 +820,7 @@ const styles = {
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#333333', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' },
     paymentRow: { display: 'flex', gap: '10px', marginTop: '10px' },
+    categoryContainer: { marginLeft:'90px' },
 };
 // ซ่อนแถบเลื่อนใน WebKit browsers (Chrome, Safari และ Opera)
 const stylesWithHiddenScroll = `
