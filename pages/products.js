@@ -29,12 +29,10 @@ export default function SalesPage() {
     const [categories, setCategories] = useState([]);
     const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
     const [orderId, setOrderId] = useState(null);
-    
-
-    
     const VAT_RATE = 0.07;
-    
-    
+    const [paymentMethod, setPaymentMethod] = useState(null); // ใช้สถานะในการจัดการการเลือกชำระเงิน
+
+
     // Fetch products from API
     const fetchProducts = () => {
         const url = `${api_url}/api/${slug}/products`;
@@ -48,7 +46,6 @@ export default function SalesPage() {
         .then((response) => setProducts(response.data))
         .catch((error) => console.error('Error fetching products:', error));
     };
-
     // Fetch categories from API
     const fetchCategories = () => {
         const url = `${api_url}/api/${slug}/category`;
@@ -62,7 +59,6 @@ export default function SalesPage() {
         .then(response => setCategories(response.data.categories))
         .catch(error => console.error('Error fetching categories:', error));
     };
-
     useEffect(() => {
         fetchProducts();
         fetchCategories();
@@ -77,7 +73,6 @@ export default function SalesPage() {
     const handleCategorySelect = (categoryId) => {
         setSelectedCategoryId(categoryId);
     };
-
     const addToCart = (product) => {
         if (product.status !== 'Y') return;
     
@@ -100,11 +95,6 @@ export default function SalesPage() {
             }
         });
     };
-    
-    
-    
-    
-
     const updateQuantity = (productId, delta) => {
         setCart((prevCart) =>
             prevCart
@@ -114,6 +104,9 @@ export default function SalesPage() {
                 .filter(item => item.quantity > 0)
         );
     };
+    const handlePaymentChange = (method) => {
+        setPaymentMethod(method);
+      };
 
     const clearCart = () => {
         Swal.fire({
@@ -183,21 +176,29 @@ export default function SalesPage() {
             return;
         }
     
+        const totalAmount = calculateTotalWithBillDiscount();
+        if (receivedAmount < totalAmount) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยอดชำระเงินไม่เพียงพอ',
+                text: `กรุณารับเงินมาไม่น้อยกว่าหรือเท่ากับยอดรวม ${totalAmount} ก่อนทำการชำระเงิน`,
+                confirmButtonText: 'ตกลง',
+            });
+            return;
+        }
+    
         setShowReceipt(true); // แสดงบิลเพื่อให้ผู้ใช้ตรวจสอบ
     };
     
     
-    
-
     const filteredProducts = products.filter(product =>
         (!selectedCategoryId || product.category_id === selectedCategoryId) &&
         (product.p_name ? product.p_name.toLowerCase().includes(searchTerm.toLowerCase()) : false)
     );
-
-
     
     const sendOrder = async (orderData) => {
         try {
+            
             const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
                 headers: {
                     'Accept': 'application/json',
@@ -215,9 +216,7 @@ export default function SalesPage() {
             throw new Error(`Failed to create order: ${error.response?.data?.message || error.message}`);
         }
     };
-    
         
-    
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
 const receiveOrder = async () => {
     try {
@@ -269,25 +268,73 @@ const receiveOrder = async () => {
     }
 };
 
-const addOrderItems = async (orderId, items) => {
-    const url = `${api_url}/api/${slug}/orders/${orderId}/addItem`;
-  
-    try {
-      const response = await axios.post(url, { items }, {
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-      });
-      console.log('Items added successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error adding items:', error.response?.data || error.message);
-      throw new Error('Failed to add order items.');
+
+const addOrderItems = async () => {
+    if (!orderId) {
+        Swal.fire('ผิดพลาด', 'ไม่พบหมายเลขคำสั่งซื้อ', 'error');
+        return;
     }
-  };
-     
-    
+
+    const newItems = cart.map((item) => ({
+        product_id: item.id || 0,
+        p_name: item.p_name || 'ไม่มีชื่อสินค้า',
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
+    }));
+
+    try {
+        const response = await axios.post(
+            `${api_url}/api/${slug}/orders/${orderId}/addItem`,
+            { items: newItems },
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            }
+        );
+
+        if (response.data && response.data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'เพิ่มรายการสินค้าเรียบร้อย',
+                text: 'รายการสินค้าใหม่ถูกเพิ่มเข้าไปในออเดอร์สำเร็จ!',
+                confirmButtonText: 'ตกลง',
+            });
+        } else {
+            throw new Error(response.data.message || 'เกิดข้อผิดพลาดในการเพิ่มรายการสินค้า');
+        }
+    } catch (error) {
+        console.error('Error adding order items:', error);
+        Swal.fire('ผิดพลาด', `ไม่สามารถเพิ่มรายการสินค้าได้: ${error.message}`, 'error');
+    }
+};
+const renderOrderItems = () => {
+    return cart.map((item) => {
+        const isItemAdded = orderId && orderReceived; // ตรวจสอบว่าออเดอร์ได้รับแล้วหรือไม่
+        const isNewItem = !isItemAdded || item.quantity > 0; // ตรวจสอบว่าเป็นสินค้าที่ใหม่หรือไม่
+
+        return (
+            <div
+                key={item.id}
+                style={{
+                    backgroundColor: isNewItem ? 'lightgreen' : 'transparent', // สีที่แตกต่าง
+                    padding: '10px',
+                    margin: '5px',
+                    border: '1px solid #ccc',
+                }}
+            >
+                <h4>{item.p_name}</h4>
+                <p>จำนวน: {item.quantity}</p>
+                <p>ราคา: {item.price}</p>
+                <button onClick={() => addOrderItems(item)}>เพิ่มสินค้า</button>
+            </div>
+        );
+    });
+};
+
+  
     const handleAmountButton = (amount) => {
         setReceivedAmount((prevAmount) => prevAmount + amount);
     };
@@ -383,11 +430,6 @@ const addOrderItems = async (orderId, items) => {
         }
     };
     
-    
-    
-    
-    
-
     const handlePauseBill = () => {
         setShowReceipt(false);
         setIsBillPaused(true);
@@ -541,187 +583,316 @@ const addOrderItems = async (orderId, items) => {
                 </div>
             </div>
             <div style={styles.cart}>
-                <div style={styles.cartHeader}>
-                    <div style={{ display: 'flex', alignItems: 'center' ,fontSize:'11px',color:'#d33' }}>
-                        <Image src="/images/shopping.png" alt="รายการสั่งซื้อ" width={24} height={24} />
-                        <h2 style={{ marginLeft: '10px' }}>({cart.reduce((acc, item) => acc + item.quantity, 0)})</h2>
+    <div style={styles.cartHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', fontSize: '11px', color: '#d33' }}>
+            <Image src="/images/shopping.png" alt="รายการสั่งซื้อ" width={24} height={24} />
+            <h2 style={{ marginLeft: '10px' }}>
+                ({cart.reduce((acc, item) => acc + item.quantity, 0)})
+            </h2>
+        </div>
+        <button onClick={clearCart} style={styles.clearCartButton}>
+            <FaTrash />
+        </button>
+    </div>
+
+    {/* แสดงรายการสินค้า */}
+    <div style={{ 
+    ...styles.cartItems, 
+    flexDirection: 'column',  // เปลี่ยนให้รายการเริ่มจากด้านบน
+
+    minHeight: '300px', // กำหนดความสูงขั้นต่ำที่ต้องการ
+    flexGrow: 1,  // ใช้ flex-grow เพื่อให้พื้นที่ขยายตามเนื้อหา
+}}>
+        {cart.map((item) => (
+            <div key={item.id} style={styles.cartItem}>
+                {item.image ? (
+                    <Image
+                        src={`${api_url}/storage/app/public/product/${slug}/${item.image}`}
+                        alt={item.p_name}
+                        width={40}
+                        height={40}
+                        quality={100}
+                        style={styles.cartItemImage}
+                    />
+                ) : (
+                    <div style={styles.noImage}>
+                        <span style={styles.noImageText}>ไม่มีภาพ</span>
                     </div>
-                    <button onClick={clearCart} style={styles.clearCartButton}>
-                        <FaTrash />
+                )}
+                <div style={styles.cartItemDetails}>
+                    <p style={styles.cartItemName}>{item.p_name}</p>
+                    <div style={styles.cartItemPriceDiscountRow}>
+                        <p style={styles.cartItemPrice}>ราคา {item.price.toFixed(2)} บาท</p>
+                        <div style={styles.discountContainer}>
+                            <input
+                                type="number"
+                                value={item.discount === 0 ? '' : item.discount}
+                                placeholder="ส่วนลด"
+                                onChange={(e) =>
+                                    handleItemDiscountChange(
+                                        item.id,
+                                        parseFloat(e.target.value) || 0,
+                                        item.discountType
+                                    )
+                                }
+                                style={{ flex: '1', width: '60px' }}
+                            />
+                            <select
+                                value={item.discountType}
+                                onChange={(e) =>
+                                    handleItemDiscountChange(item.id, item.discount, e.target.value)
+                                }
+                                style={{ flex: '1', width: '50px' }}
+                            >
+                                <option value="THB">บาท (฿)</option>
+                                <option value="%">%</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style={styles.quantityControls}>
+                    <button
+                        onClick={() => updateQuantity(item.id, -1)}
+                        style={styles.quantityButton}
+                    >
+                        -
+                    </button>
+                    <span style={styles.quantityDisplay}>{item.quantity}</span>
+                    <button
+                        onClick={() => updateQuantity(item.id, 1)}
+                        style={styles.quantityButton}
+                    >
+                        +
                     </button>
                 </div>
+            </div>
+        ))}
+    </div>
+
+    {/* บล็อกรวมยอดรวม */}
+    <div
+        style={{
+            ...styles.totalContainer,
+            position: 'sticky',  // ใช้ sticky เพื่อให้บล็อคติดอยู่
+            bottom: '0',  // ให้อยู่ด้านล่างสุดของพื้นที่แสดงรายการสินค้า
+            width: '100%',
+            maxWidth: '380px',  // ไม่ให้มันยาวเกิน
+            margin: '0 auto',  // จัดให้อยู่กลาง
+            backgroundColor: '#fff',  // สีพื้นหลัง
+            zIndex: 10,  // ทำให้บล็อคอยู่ด้านบนเมื่อเลื่อน
+        }}
+    >
+        {/* <h3 style={styles.totalText}>
+            รวม: {calculateTotalWithBillDiscount().toFixed(2)} บาท
+        </h3> */}
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+    <h3 style={styles.totalText}>
+        รวม: {calculateTotalWithBillDiscount().toFixed(2)}฿
+    </h3>
+    <div style={{ width: '220px', marginRight: '-40px' }}>
+        <select
+            value={paymentMethod}
+            onChange={(e) => handlePaymentChange(e.target.value)}
+            style={{
+                padding: '12px 20px',
+                width: '82%',
+                border: '2px solid #6c5ce7',  // เพิ่มขอบสีสดใส
+                borderRadius: '5px',
+                background: 'linear-gradient(145deg, #ffffff, #f2f2f2)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',  // เงาบางๆ
+                fontSize: '13px',
+                color: '#010101',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
                 
-                <div style={styles.cartItems}>
-                    {cart.map((item) => (
-                        <div key={item.id} style={styles.cartItem}>
-                            {item.image ? (
-                                    <Image 
-                                        src={`${api_url}/storage/app/public/product/${slug}/${item.image}`}
-                                        alt={item.p_name}
-                                        width={40}
-                                        height={40}
-                                        quality={100}
-                                        style={styles.cartItemImage}
-                                    />
-                                ) : (
-                                    <div style={styles.noImage}>
-                                        <span style={styles.noImageText}>ไม่มีภาพ</span>
-                                    </div>
-                                )}
-                            <div style={styles.cartItemDetails}>
-                                <p style={styles.cartItemName}>{item.p_name}</p> 
-                                <div style={styles.cartItemPriceDiscountRow}>
-                                    <p style={styles.cartItemPrice}>ราคา {item.price.toFixed(2)} บาท</p>
-                                    <div style={styles.discountContainer}>
-                                        <input
-                                            type="number"
-                                            value={item.discount === 0 ? '' : item.discount}
-                                            placeholder="ส่วนลด"
-                                            onChange={(e) => handleItemDiscountChange(item.id, parseFloat(e.target.value) || 0, item.discountType)}
-                                            style={{ flex: '1', width: '60px' }}
-                                        />
-                                        <select
-                                            value={item.discountType}
-                                            onChange={(e) => handleItemDiscountChange(item.id, item.discount, e.target.value)}
-                                            style={{ flex: '1', width: '50px' }}
-                                        >
-                                            <option value="THB">บาท (฿)</option>
-                                            <option value="%">%</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={styles.quantityControls}>
-                                <button onClick={() => updateQuantity(item.id, -1)} style={styles.quantityButton}>-</button>
-                                <span style={styles.quantityDisplay}>{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.id, 1)} style={styles.quantityButton}>+</button>
-                            </div>
-                        </div>
-                    ))}
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#6c5ce7'}  // เมื่อโฟกัสให้สีขอบเปลี่ยน
+            onBlur={(e) => e.target.style.borderColor = '#ccc'}  // เมื่อเลิกโฟกัสให้กลับเป็นปกติ
+        >
+            <option value="" disabled>เลือกวิธีการชำระเงิน</option>
+            <option value="cash">เงินสด</option>
+            <option value="qr">QR Code พร้อมเพย์</option>
+        </select>
+    </div>
+</div>
+
+        {orderReceived ? (
+            <>
+                {/* ส่วนที่เกี่ยวกับการรับเงินและส่วนลด */}
+                <div style={styles.discountAndReceivedAmountRow}>
+                    <input
+                        type="number"
+                        placeholder="รับเงิน"
+                        value={receivedAmount || ''}
+                        onChange={(e) => setReceivedAmount(parseFloat(e.target.value) || 0)}
+                        style={styles.amountInputHalf}
+                    />
+                    <input
+                        type="number"
+                        placeholder="ส่วนลดรวม"
+                        value={billDiscount || ''}
+                        onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
+                        style={styles.discountInputSmall}
+                    />
+                    <select
+                        value={billDiscountType}
+                        onChange={(e) => setBillDiscountType(e.target.value)}
+                        style={styles.discountSelectSmall}
+                    >
+                        <option value="THB">บาท (฿)</option>
+                        <option value="%">%</option>
+                    </select>
                 </div>
-                <div style={styles.totalContainer}>
-                    <h3 style={styles.totalText}>รวม: {calculateTotalWithBillDiscount().toFixed(2)} บาท</h3>
-                    <div style={styles.discountAndReceivedAmountRow}>
-                        <input
-                            type="number"
-                            placeholder="รับเงิน"
-                            value={receivedAmount === 0 ? '' : receivedAmount}
-                            onChange={(e) => setReceivedAmount(parseFloat(e.target.value) || 0)}
-                            style={styles.amountInputHalf}
-                        />
-                        <input 
-                            type="number" 
-                            placeholder="ส่วนลดรวม" 
-                            value={billDiscount === 0 ? '' : billDiscount} 
-                            onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)} 
-                            style={styles.discountInputSmall}
-                        />
-                        <select 
-                            value={billDiscountType} 
-                            onChange={(e) => setBillDiscountType(e.target.value)} 
-                            style={styles.discountSelectSmall}
-                        >
-                            <option value="THB">บาท (฿)</option>
-                            <option value="%">%</option>
-                        </select>
+
+                {/* ปุ่มเพิ่มจำนวนเงิน */}
+                <div style={styles.amountButtons}>
+                    {[1, 5, 10, 20, 50, 100].map((amount) => (
+                        <button key={amount} onClick={() => handleAmountButton(amount)} style={styles.amountButton}>
+                            +{amount}.00
+                        </button>
+                    ))}
+                    <button
+                        onClick={resetAmount}
+                        style={{
+                            ...styles.amountButton,
+                            background: 'linear-gradient(to right, #ff7f7f, #ff0000)',
+                            color: '#ffffff',
+                        }}
+                    >
+                        C
+                    </button>
+                    <button
+                        onClick={handleFullAmount}
+                        style={{
+                            ...styles.amountButton,
+                            background: 'linear-gradient(to right, #50de75, #038a26)',
+                            gridColumn: 'span 2',
+                            color: '#ffffff',
+                        }}
+                    >
+                        รับเงินเต็มจำนวน
+                    </button>
+                </div>
+
+                {/* การแสดงเงินทอน */}
+                <div style={styles.changeDisplay}>
+                    เงินทอน: {(receivedAmount ? (receivedAmount - calculateTotalWithBillDiscount()).toFixed(2) : '0.00')} บาท
+                </div>
+            </>
+        ) : null}
+
+        {/* ปุ่มการทำงาน */}
+        <div style={styles.paymentRow}>
+            {orderReceived ? (
+                <button
+                    style={{
+                        ...styles.receiveOrderButton,
+                        ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                    }}
+                    onClick={addOrderItems} // เรียกฟังก์ชันเพิ่มรายการสินค้า
+                    disabled={cart.length === 0}
+                >
+                    เพิ่มรายการสินค้า
+                </button>
+            ) : (
+                <button
+                    style={{
+                        ...styles.receiveOrderButton,
+                        ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                    }}
+                    onClick={receiveOrder} // เรียกฟังก์ชันรับออเดอร์
+                    disabled={cart.length === 0}
+                >
+                    รับออเดอร์
+                </button>
+            )}
+
+            <button
+                style={{
+                    ...styles.paymentButton,
+                    ...(orderReceived && cart.length > 0 ? {} : styles.paymentButtonDisabled),
+                }}
+                onClick={handlePayment} // ฟังก์ชันการชำระเงิน
+                disabled={!orderReceived || cart.length === 0}
+            >
+                ชำระเงิน
+            </button>
+        </div>
+    </div>
+</div>
+
+
+        {showReceipt && (
+            <div style={styles.receiptOverlay}>
+                <div style={styles.receiptContainer}>
+                    <div style={styles.header}>
+                        <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
+                        <h2 style={styles.shopName}>Easy PÖS</h2>
+                        <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
                     </div>
-                    <div style={styles.amountButtons}>
-                        {[1, 10, 50, 100, 500, 1000].map((amount) => (
-                            <button key={amount} onClick={() => handleAmountButton(amount)} style={styles.amountButton}>
-                                +{amount}.00
-                            </button>
+                    <div style={styles.info}>
+                        <p style={styles.billId}>No: {orderNumber}</p>
+                        <p style={styles.date}>{new Date().toLocaleString()}</p>
+                    </div>
+                    <div style={styles.tableHeader}>
+                        <p style={styles.tableColumn}>รายการ</p>
+                        <p style={styles.tableColumn}>จำนวน</p>
+                        <p style={styles.tableColumn}>ราคา</p>
+                    </div>
+                    <div className="receiptItems" style={styles.receiptItems}>
+                        {cart.map((item) => (
+                            <div key={item.id} style={styles.receiptItem}>
+                                <p style={styles.itemName}>{item.p_name}</p>
+                                <p style={styles.itemQuantity}>{item.quantity}</p>
+                                <p style={styles.itemPrice}>
+                                    <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
+                                        {item.price.toFixed(2)}
+                                    </span>
+                                    {item.discount > 0 && (
+                                        <>
+                                            <br />
+                                            <span>{`ลด ${item.discountType === 'THB' ? item.discount.toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
+                                            <br />
+                                            <span>{`${calculateDiscountedPrice(item.price, item.discount, item.discountType).toFixed(2)} บาท`}</span>
+                                        </>
+                                    )}
+                                </p>
+                            </div>
                         ))}
-                        <button onClick={resetAmount} style={{ ...styles.amountButton, background: 'linear-gradient(to right, #ff7f7f, #ff0000)', color: '#ffffff' }}>C</button>
-                        <button onClick={handleFullAmount} style={{ ...styles.amountButton, background: 'linear-gradient(to right, #50de75, #038a26)', gridColumn: 'span 2', color: '#ffffff' }}>รับเงินเต็มจำนวน</button>
                     </div>
-                    <div style={styles.changeDisplay}>
-                        เงินทอน: {(receivedAmount ? (receivedAmount - calculateTotalWithBillDiscount()).toFixed(2) : "0.00")} บาท
+                    <div style={styles.receiptItem}>
+                        <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
+                        <p style={styles.itemQuantity}></p>
+                        <p style={styles.itemPrice}><strong>{billDiscountType === 'THB' ? billDiscount.toFixed(2) + ' บาท' : billDiscount + '%'}</strong></p>
                     </div>
-                    <div style={styles.paymentRow}>
+                    <div style={styles.receiptSummary}>
+                        <p>โต๊ะ: {tableCode}</p>
+                        <p>ยอดบิล: <span style={styles.summaryValue}>{calculateTotalWithBillDiscount().toFixed(2)} บาท</span></p>
+                        <p>ยอดภาษีมูลค่าเพิ่ม (VAT) 7%: <span style={styles.summaryValue}>{calculateVAT().toFixed(2)} บาท</span></p>
+                        <p>รับเงิน: <span style={styles.summaryValue}>{receivedAmount.toFixed(2)} บาท</span></p>
+                        <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
+                    </div>
+                    <div style={styles.buttonContainer}>
                         <button
                             style={{
-                                ...styles.receiveOrderButton,
-                                ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                                ...styles.actionButton,
+                                ...(receivedAmount < calculateTotalWithBillDiscount() ? styles.buttonDisabled : {}),
                             }}
-                            onClick={receiveOrder}
-                            disabled={cart.length === 0} // ปุ่มจะถูกปิดใช้งานเมื่อไม่มีรายการในตะกร้า
+                            onClick={closeReceipt}
+                            disabled={receivedAmount < calculateTotalWithBillDiscount()} // ปิดการใช้งานปุ่มหากเงินที่รับมา < ยอดบิล
                         >
-                            รับออเดอร์
-                        </button>                    
-                        <button
-                            style={{
-                                ...styles.paymentButton,
-                                ...(orderReceived && cart.length > 0 ? {} : styles.paymentButtonDisabled),
-                            }}
-                            onClick={handlePayment}
-                            disabled={!orderReceived || cart.length === 0}
-                        >
-                            ชำระเงิน
+                            ดำเนินการ
+                        </button>
+                        <button style={styles.pauseButton} onClick={handlePauseBill}>
+                            พักบิล
                         </button>
                     </div>
-
                 </div>
             </div>
-            {showReceipt && (
-                <div style={styles.receiptOverlay}>
-                    <div style={styles.receiptContainer}>
-                        <div style={styles.header}>
-                            <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
-                            <h2 style={styles.shopName}>Easy PÖS</h2>
-                            <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
-                        </div>
-                        <div style={styles.info}>
-                            <p style={styles.billId}>No: {orderNumber}</p>
-                            <p style={styles.date}>{new Date().toLocaleString()}</p>
-                        </div>
-                        <div style={styles.tableHeader}>
-                            <p style={styles.tableColumn}>รายการ</p>
-                            <p style={styles.tableColumn}>จำนวน</p>
-                            <p style={styles.tableColumn}>ราคา</p>
-                        </div>
-                        <div className="receiptItems" style={styles.receiptItems}>
-                            {cart.map((item) => (
-                                <div key={item.id} style={styles.receiptItem}>
-                                    <p style={styles.itemName}>{item.p_name}</p>
-                                    <p style={styles.itemQuantity}>{item.quantity}</p>
-                                    <p style={styles.itemPrice}>
-                                        <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
-                                            {item.price.toFixed(2)}
-                                        </span>
-                                        {item.discount > 0 && (
-                                            <>
-                                                <br />
-                                                <span>{`ลด ${item.discountType === 'THB' ? item.discount.toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
-                                                <br />
-                                                <span>{`${calculateDiscountedPrice(item.price, item.discount, item.discountType).toFixed(2)} บาท`}</span>
-                                            </>
-                                        )}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                        <div style={styles.receiptItem}>
-                            <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
-                            <p style={styles.itemQuantity}></p>
-                            <p style={styles.itemPrice}><strong>{billDiscountType === 'THB' ? billDiscount.toFixed(2) + ' บาท' : billDiscount + '%'}</strong></p>
-                        </div>
-                        <div style={styles.receiptSummary}>
-                            <p>โต๊ะ: {tableCode}</p>
-                            <p>ยอดบิล: <span style={styles.summaryValue}>{calculateTotalWithBillDiscount().toFixed(2)} บาท</span></p>
-                            <p>ยอดภาษีมูลค่าเพิ่ม (VAT) 7%: <span style={styles.summaryValue}>{calculateVAT().toFixed(2)} บาท</span></p>
-                            <p>รับเงิน: <span style={styles.summaryValue}>{receivedAmount.toFixed(2)} บาท</span></p>
-                            <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
-                        </div>
-                        <div style={styles.buttonContainer}>
-                        <button style={styles.actionButton} onClick={closeReceipt}>ดำเนินการ</button>
+        )}
 
-                            <button style={styles.pauseButton} onClick={handlePauseBill}>
-                                พักบิล
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }  
@@ -733,16 +904,58 @@ const styles = {
     icon: { margin: '20px 0', cursor: 'pointer', borderRadius: '12px', padding: '5px', width: '10px', height: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' },
     categoryRow: { display: 'flex', justifyContent: 'flex-start', gap: '10px', marginBottom: '5px', flexWrap: 'wrap' },
     searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%' },
-    pageContainer: { display: 'flex', padding: '10px', height: '92vh' },
+    pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden'  },
     sidebarContainer: { flex: '0 0 100px' },
-    cart: {width: '400px',overflowY: 'auto',backgroundColor: '#f8f9fa',padding: '15px',borderRadius: '12px',marginTop: '-8px',display: 'flex',flexDirection: 'column',justifyContent: 'space-between',boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',},    
-    discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
-    totalText: { fontSize: '16px', fontWeight: 'bold', color: '#333' },
-    discountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
-    discountSelectSmall: { width: '20%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
-    discountAndReceivedAmountRow: { display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '10px' },
+    cart: {
+        width: '400px',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        backgroundColor: '#f8f9fa',
+        padding: '15px',
+        borderRadius: '12px',
+        marginTop: '-8px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    },    discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
+    
+    totalText: {
+        fontSize: '1.2rem', // ขนาดตัวอักษรเพิ่มขึ้นเพื่อให้ข้อความเด่นชัด
+        fontWeight: '500', // ใช้ fontWeight ที่เหมาะสม ไม่หนาจนเกินไป
+        textAlign: 'left', // จัดข้อความไปทางซ้าย
+        marginTop: '15px', // เพิ่มระยะห่างจากด้านบนให้เหมาะสม
+        color: '#444', // สีตัวอักษรเข้มขึ้นเล็กน้อย แต่ไม่หนักเกินไป
+        paddingLeft: '5px', // ระยะห่างจากขอบซ้ายมากขึ้น เพื่อให้ดูสบายตา
+        lineHeight: '1.1', // เพิ่มความสูงของบรรทัดเพื่อให้ข้อความมีระยะห่างที่พอดี
+        fontFamily: '   Impact, sans-serif ', // ฟอนต์ที่อ่านง่ายและดูทันสมัย
+        textTransform: 'uppercase', // เปลี่ยนข้อความเป็นตัวพิมพ์ใหญ่ทั้งหมด
+        paddingBottom: '5px', // เพิ่มระยะห่างด้านล่างของข้อความ
+        letterSpacing: '1px', // ปรับระยะห่างระหว่างตัวอักษร (เพิ่มระยะห่างเล็กน้อย)
+    },
+    
+       
+    orderReceived: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginTop: '20px',
+    },
+    discountInputSmall: {
+        width: 'calc(33.33% - 10px)',
+        padding: '8px',
+        borderRadius: '4px',
+        border: '1px solid #ddd',
+    },
+    discountAndReceivedAmountRow: {display: 'flex',gap: '10px',flexWrap: 'wrap',justifyContent: 'space-between',marginBottom: '15px',},
     discountContainerHalf: { display: 'flex', alignItems: 'center', gap: '2px', flex: 1, marginTop: '-12px' },
-    amountInputHalf: { flex: 1, padding: '6px', borderRadius: '1px', border: '1px solid #ddd' },
+    amountInputHalf: {
+        width: 'calc(33.33% - 10px)',
+        padding: '8px',
+        borderRadius: '4px',
+        border: '1px solid #ddd',
+        flex: '1',
+    },    
     amountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
     cartItemPriceDiscountRow: { display: 'flex', alignItems: 'center', gap: '3px', flexDirection: 'row', marginTop: '-27px' },
     categoryRow: { display: 'flex', justifyContent: 'center', gap: '19px', marginBottom: '1px', flexWrap: 'wrap' },
@@ -751,12 +964,22 @@ const styles = {
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
     productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', paddingTop: '0px' },
-    pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333', },
-    tableCode: { fontSize: '14px', color: '#333',marginLeft:'50px',},
-    receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae', color: '#ffffff', border: 'none', cursor: 'pointer', borderRadius: '5px', fontWeight: 'bold', marginTop: '5px' },
-    paymentButton: {flex: 1,padding: '10px',backgroundColor: '#499cae',color: '#ffffff',border: 'none',cursor: 'pointer',borderRadius: '5px',fontWeight: 'bold',marginTop: '5px', opacity: 1,},    
-    paymentButtonDisabled: { opacity: 0.5,cursor: 'not-allowed',},receiptContainer: { backgroundColor: '#fff', padding: '20px 30px',borderRadius: '12px',width: '320px',textAlign: 'center',fontFamily: "'Poppins', sans-serif",boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',animation: 'fadeIn 0.5s ease',},
-    // Animation Keyframes
+    pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
+    tableCode: { fontSize: '15px', color: '#333' },
+    receiveOrderButton: {
+        flex: '1',
+        padding: '10px',
+        backgroundColor: '#347cae',
+        color: '#ffffff',
+        border: 'none',
+        cursor: 'pointer',
+        borderRadius: '5px',
+        fontWeight: 'bold',
+        marginTop: '5px',
+        transition: 'all 0.3s ease',
+    },    
+    paymentButton: {flex: '1',padding: '10px',backgroundColor: '#2ecc71',color: '#fff',fontWeight: 'bold',textAlign: 'center',borderRadius: '4px',cursor: 'pointer',
+    },paymentButtonDisabled: { opacity: 0.5,cursor: 'not-allowed',},receiptContainer: { backgroundColor: '#fff', padding: '20px 30px',borderRadius: '12px',width: '320px',textAlign: 'center',fontFamily: "'Poppins', sans-serif",boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',animation: 'fadeIn 0.5s ease',},
     '@keyframes fadeIn': {from: { opacity: 0, transform: 'translateY(-20px)' },to: { opacity: 1, transform: 'translateY(0)' },},
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer', borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},
     buttonDisabled: {backgroundColor: '#bbbbd6',color: '#666666',cursor: 'not-allowed', pointerEvents: 'none'},
@@ -783,13 +1006,7 @@ const styles = {
     tableHeader: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 'bold', borderBottom: '1px solid #ddd', paddingBottom: '5px', marginBottom: '5px' },
     tableColumn: { flex: 1, textAlign: 'right' },
     receiptItem: { display: 'flex', alignItems: 'center', fontSize: '12px', marginBottom: '5px', justifyContent: 'space-between' },
-    receiptItems: {
-        maxHeight: '150px', // กำหนดความสูงสูงสุด
-        overflowY: 'scroll', // เปิดการเลื่อนในแนวตั้ง
-        scrollbarWidth: 'none', // ซ่อน scrollbar ใน Firefox
-        msOverflowStyle: 'none', // ซ่อน scrollbar ใน Internet Explorer/Edge
-        WebkitOverflowScrolling: 'touch', // ให้การเลื่อนลื่นใน iOS/Android
-    },    
+    receiptItems: {maxHeight: '150px',overflowY: 'scroll',scrollbarWidth: 'none',msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch',},    
     itemName: { flex: 2, textAlign: 'left' },
     itemQuantity: { flex: 1, textAlign: 'center' },
     itemPrice: { flex: 1, textAlign: 'right' },
@@ -797,11 +1014,31 @@ const styles = {
     summaryValue: { fontWeight: 'bold', color: '#000' },
     proceedButton: { marginTop: '20px', backgroundColor: '#499cae', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', width: '100%', fontSize: '16px', fontWeight: 'bold' },
     cartHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
-    cartItems: { maxHeight: '300px', overflowY: 'scroll', marginBottom: '15px', position: 'relative', scrollbarWidth: 'none', msOverflowStyle: 'none' },
-    cartItemsGradient: { position: 'absolute', bottom: '0', left: '0', right: '0', height: '20px', background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1))', pointerEvents: 'none' },
-    totalContainer: { position: 'sticky', bottom: '0', backgroundColor: '#ffffff', paddingTop: '1px', paddingBottom: '10px', marginTop: '-30px', boxShadow: '0 -4px 20px rgba(2, 9, 9, 0.2)', borderRadius: '5px', border: '1px solid #ddd', padding: '8px' },
-    cartItem: { display: 'flex', alignItems: 'center', marginBottom: '10px', padding: '10px', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', border: '1px solid #ddd' },
-    cartItemImage: { width: '40px', height: '40px', borderRadius: '3px', margin:'2px' },
+    cartItems: {
+        display: 'flex',
+        flexDirection: 'column',  /* เรียงจากบนลงล่าง */
+        gap: '3px',
+        maxHeight: '800px',
+        overflowY: 'auto',
+    },    cartItemsGradient: { position: 'absolute', bottom: '0', left: '0', right: '0', height: '20px', background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1))', pointerEvents: 'none' },
+    totalContainer: {
+        padding: '10px',
+        marginTop: 'auto',
+        backgroundColor: '#ffffff',
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        maxWidth: '100%',
+    },
+    
+    cartItem: {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '10px',
+        backgroundColor: '#ffffff',
+        borderRadius: '8px',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #ddd',
+    },    cartItemImage: { width: '40px', height: '40px', borderRadius: '3px', margin:'2px' },
     cartItemDetails: { display: 'flex', flexDirection: 'column', gap: '1px', width: '100%', marginTop: '-18px' },
     cartItemName: { fontSize: '14px', fontWeight: 'bold', color: '#333', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginLeft:'10px' },
     cartItemPrice: { fontSize: '12px', color: '#555', marginRight: '5px' , marginLeft:'10px'},
@@ -812,15 +1049,15 @@ const styles = {
     quantityDisplay: { fontSize: '14px', fontWeight: 'bold', color: '#333' },
     clearCartButton: { color: '#555', border: 'none', padding: '5px 10px', cursor: 'pointer', fontSize: '18px' },
     amountInput: { placeholder: 'รับเงิน', width: '100%', padding: '6px', marginTop: '10px', border: '1px solid #ddd', borderRadius: '5px' },
-    amountButtons: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '15px' },
-    amountButton: { width: '100%', padding: '8px', backgroundColor: '#eee', border: 'none', cursor: 'pointer', borderRadius: '5px', boxShadow: '0px 2px 1px rgba(0, 0, 0, 0.2)' },
-    changeDisplay: { backgroundColor: '#b3e5fc', padding: '8px', textAlign: 'center', marginTop: '10px', borderRadius: '5px', fontWeight: 'bold' },
+    amountButtons: {display: 'grid',gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',gap: '10px',},    
+    amountButton: {padding: '10px',borderRadius: '4px',backgroundColor: '#f0f0f0',color: '#333',fontWeight: 'bold',cursor: 'pointer',textAlign: 'center',boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',},    
+    changeDisplay: {fontSize: '1.2rem',fontWeight: 'bold',textAlign: 'center',margin: '15px 0',color: '#2ecc71',},
     buttonContainer: { display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center' },
     actionButton: { flex: 1, padding: '8px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#333333', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' },
-    paymentRow: { display: 'flex', gap: '10px', marginTop: '10px' },
-    categoryContainer: { marginLeft:'90px' },
+    paymentRow: {display: 'flex',gap: '10px',justifyContent: 'space-around',},
+    
 };
 // ซ่อนแถบเลื่อนใน WebKit browsers (Chrome, Safari และ Opera)
 const stylesWithHiddenScroll = `
@@ -828,144 +1065,144 @@ const stylesWithHiddenScroll = `
         display: none;
     }
 `;
-// เพิ่ม CSS เข้าไปในหัวของเอกสาร
-if (typeof document !== 'undefined') {
-    const styleSheet = document.createElement("style");
-    styleSheet.type = "text/css";
-    styleSheet.innerText = `
-        /* ตัวจัดการพื้นหลังของเว็บไซต์ */
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(to bottom, #eef2f3, #f7fbff);
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-            color: #333;
-        }
+    // เพิ่ม CSS เข้าไปในหัวของเอกสาร
+    if (typeof document !== 'undefined') {
+        const styleSheet = document.createElement("style");
+        styleSheet.type = "text/css";
+        styleSheet.innerText = `
+            /* ตัวจัดการพื้นหลังของเว็บไซต์ */
+            body {
+                font-family: 'Roboto', sans-serif;
+                background: linear-gradient(to bottom, #eef2f3, #f7fbff);
+                margin: 0;
+                padding: 0;
+                overflow-x: hidden;
+                color: #333;
+            }
+            .receiptItems::-webkit-scrollbar {
+                display: none; /* ซ่อน scrollbar ใน Chrome/Safari */
+            }
+
+            .receiptItems {
+        max-height: 150px;
+        overflow-y: auto;
+        scrollbar-width: none; /* ซ่อน Scrollbar ใน Firefox */
+        -ms-overflow-style: none; /* ซ่อน Scrollbar ใน IE และ Edge */
+        position: relative; /* ป้องกันการขยายเกิน container */
+        padding: 0; /* ลบ Padding ที่อาจทำให้เกิดเส้น */
+        margin: 0; /* ลบ Margin ที่อาจทำให้เกิดเส้น */
+    }
         .receiptItems::-webkit-scrollbar {
-            display: none; /* ซ่อน scrollbar ใน Chrome/Safari */
-        }
-
-        .receiptItems {
-    max-height: 150px;
-    overflow-y: auto;
-    scrollbar-width: none; /* ซ่อน Scrollbar ใน Firefox */
-    -ms-overflow-style: none; /* ซ่อน Scrollbar ใน IE และ Edge */
-    position: relative; /* ป้องกันการขยายเกิน container */
-    padding: 0; /* ลบ Padding ที่อาจทำให้เกิดเส้น */
-    margin: 0; /* ลบ Margin ที่อาจทำให้เกิดเส้น */
-}
-    .receiptItems::-webkit-scrollbar {
-    display: none; /* ซ่อน Scrollbar ใน WebKit (Chrome/Safari) */
-}
-       /* จัดการเอฟเฟกต์ไล่สีในเส้นล่าง */
+        display: none; /* ซ่อน Scrollbar ใน WebKit (Chrome/Safari) */
+    }
+        /* จัดการเอฟเฟกต์ไล่สีในเส้นล่าง */
 
 
-        /* เพิ่มเอฟเฟกต์แถบเลื่อน */
-        .cartItems::-webkit-scrollbar {
-            width: 8px;
-        }
-        .cartItems::-webkit-scrollbar-thumb {
-            background: linear-gradient(45deg, #b0bec5, #ffffff);
-            border-radius: 10px;
-        }
-        .cartItems::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(45deg, #90a4ae, #607d8b);
-        }
-        .categoryCircle:active {
-    transform: scale(0.95);
-    box-shadow: 0 0 20px rgba(255, 127, 36, 0.8);
-}
-        /* เพิ่มเอฟเฟกต์ hover ให้ปุ่ม */
-        button {
-            transition: all 0.3s ease-in-out;
-        }
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-        }
+            /* เพิ่มเอฟเฟกต์แถบเลื่อน */
+            .cartItems::-webkit-scrollbar {
+                width: 8px;
+            }
+            .cartItems::-webkit-scrollbar-thumb {
+                background: linear-gradient(45deg, #b0bec5, #ffffff);
+                border-radius: 10px;
+            }
+            .cartItems::-webkit-scrollbar-thumb:hover {
+                background: linear-gradient(45deg, #90a4ae, #607d8b);
+            }
+            .categoryCircle:active {
+        transform: scale(0.95);
+        box-shadow: 0 0 20px rgba(255, 127, 36, 0.8);
+    }
+            /* เพิ่มเอฟเฟกต์ hover ให้ปุ่ม */
+            button {
+                transition: all 0.3s ease-in-out;
+            }
+            button:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            }
 
-        /* สไตล์กล่องสินค้า */
-        .productCard:hover {
+            /* สไตล์กล่องสินค้า */
+            .productCard:hover {
+                transform: scale(1.05);
+                box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+                background: linear-gradient(to bottom, #ffffff, #f3f4f7);
+            }
+                .shake-and-highlight {
+        animation: shake 0.5s ease, highlight 1s ease !important;
+        background-color: #f1c40f !important;
+    }
+
+            /* เพิ่มมุมมนและเงาให้กับใบเสร็จ */
+            .receiptContainer {
+                background: #ffffff;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+                border-radius: 20px;
+                padding: 30px;
+            }
+            
+            /* เพิ่มเอฟเฟกต์ใบเสร็จ */
+            .receiptContainer {
+                animation: fadeIn 0.5s ease;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.9);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            @keyframes shake {
+                    0%, 100% {
+                        transform: translateX(0);
+                    }
+                    25% {
+                        transform: translateX(-5px);
+                    }
+                    50% {
+                        transform: translateX(5px);
+                    }
+                    75% {
+                        transform: translateX(-5px);
+                    }
+                }
+
+                @keyframes highlight {
+                    0% {
+                        background-color: #d9f1ea;
+                    }
+                    100% {
+                        background-color: #fff;
+                    }
+                }
+
+                .shake-and-highlight {
+                    animation: shake 0.5s ease, highlight 1s ease;
+                    background-color: #d1f4e8;
+                }
+        @keyframes pulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
+        }
+        50% {
             transform: scale(1.05);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-            background: linear-gradient(to bottom, #ffffff, #f3f4f7);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
         }
-            .shake-and-highlight {
-    animation: shake 0.5s ease, highlight 1s ease !important;
-    background-color: #f1c40f !important;
-}
-
-        /* เพิ่มมุมมนและเงาให้กับใบเสร็จ */
-        .receiptContainer {
-            background: #ffffff;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
-            padding: 30px;
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
         }
-        
-        /* เพิ่มเอฟเฟกต์ใบเสร็จ */
-        .receiptContainer {
-            animation: fadeIn 0.5s ease;
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-           @keyframes shake {
-                0%, 100% {
-                    transform: translateX(0);
-                }
-                25% {
-                    transform: translateX(-5px);
-                }
-                50% {
-                    transform: translateX(5px);
-                }
-                75% {
-                    transform: translateX(-5px);
-                }
-            }
-
-            @keyframes highlight {
-                0% {
-                    background-color: #d9f1ea;
-                }
-                100% {
-                    background-color: #fff;
-                }
-            }
-
-            .shake-and-highlight {
-                animation: shake 0.5s ease, highlight 1s ease;
-                background-color: #d1f4e8;
-            }
-    @keyframes pulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
     }
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
-    }
-}
 
-.pulse-effect {
-    animation: pulse 0.5s ease-out;
-    background-color: #d9f7be !important;
-}
+    .pulse-effect {
+        animation: pulse 0.5s ease-out;
+        background-color: #d9f7be !important;
+    }
 
-    `;
-    document.head.appendChild(styleSheet);
-}
+        `;
+        document.head.appendChild(styleSheet);
+    }
