@@ -69,7 +69,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-            return response.data;
+            return response.data;  // ข้อมูลจะต้องอยู่ในรูปของอาเรย์หรือออบเจ็กต์
         } catch (error) {
             console.error('Error fetching order details:', error);
             Swal.fire({
@@ -81,6 +81,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             return null;
         }
     };
+    
 
     const showOrderDetails = async (orderId) => {
         if (!orderId) {
@@ -96,60 +97,23 @@ export default function SalesReport({ initialReportData, initialError }) {
         try {
             const order = await fetchOrderDetails(orderId);
     
-            console.log('Order details:', order);
-    
+            // เพิ่มการตรวจสอบว่าได้รับข้อมูลบิลหรือไม่
             if (!order || !order.items || order.items.length === 0) {
                 Swal.fire({
-                    title: 'ไม่มีรายละเอียด',
-                    text: 'ไม่มีข้อมูลสินค้าในบิลนี้',
+                    title: 'ไม่มีข้อมูล',
+                    text: 'ไม่พบข้อมูลสำหรับบิลนี้ หรือบิลนี้ไม่มีรายการสินค้า',
                     icon: 'info',
                     confirmButtonText: 'ปิด',
                 });
                 return;
             }
     
+            console.log('Order details:', order);  // ตรวจสอบข้อมูลที่ดึงมา
+    
             // แสดงรายละเอียดในรูปแบบตาราง
             Swal.fire({
-                title: `รายละเอียดออเดอร์ #${order.order_number}`,
                 html: `
                     <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
-                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">หมายเลขบิล</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.order_number || 'N/A'}</td>
-                            </tr>
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">โต๊ะ</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.tables_id || 'N/A'}</td>
-                            </tr>
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">วันที่</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${new Date(order.order_date).toLocaleDateString('th-TH')}</td>
-                            </tr>
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">เวลาชำระเงิน</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">
-                                    ${new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                                </td>
-                            </tr>
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ยอดรวม</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.total_amount || '0.00'} ฿</td>
-                            </tr>
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ส่วนลด</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.discount || '0.00'} ฿</td>
-                            </tr>
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ภาษีมูลค่าเพิ่ม</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.vat_amt || '0.00'} ฿</td>
-                            </tr>
-                            <tr>
-                                <th style="text-align: left; padding: 5px; background-color: #f4f4f4; font-size: 14px;">ยอดสุทธิ</th>
-                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${order.net_amount || '0.00'} ฿</td>
-                            </tr>
-                        </table>
-    
                         <h4 style="margin-top: 15px; font-size: 16px; font-weight: bold;">รายการสินค้า:</h4>
                         <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
                             <table style="width: 100%; border-collapse: collapse;">
@@ -194,6 +158,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             });
         }
     };
+    
     
     
     const calculateTotals = (orders) => {
