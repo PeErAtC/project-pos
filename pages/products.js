@@ -943,56 +943,14 @@ const styles = {
     searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%' },
     pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden'  },
     sidebarContainer: { flex: '0 0 100px' },
-    cart: {
-        width: '400px',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        backgroundColor: '#f8f9fa',
-        padding: '15px',
-        borderRadius: '12px',
-        marginTop: '-8px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    },    discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
-    
-    totalText: {
-        fontSize: '1.2rem', // ขนาดตัวอักษรเพิ่มขึ้นเพื่อให้ข้อความเด่นชัด
-        fontWeight: '500', // ใช้ fontWeight ที่เหมาะสม ไม่หนาจนเกินไป
-        textAlign: 'left', // จัดข้อความไปทางซ้าย
-        marginTop: '15px', // เพิ่มระยะห่างจากด้านบนให้เหมาะสม
-        color: '#444', // สีตัวอักษรเข้มขึ้นเล็กน้อย แต่ไม่หนักเกินไป
-        paddingLeft: '5px', // ระยะห่างจากขอบซ้ายมากขึ้น เพื่อให้ดูสบายตา
-        lineHeight: '1.1', // เพิ่มความสูงของบรรทัดเพื่อให้ข้อความมีระยะห่างที่พอดี
-        fontFamily: '   Impact, sans-serif ', // ฟอนต์ที่อ่านง่ายและดูทันสมัย
-        textTransform: 'uppercase', // เปลี่ยนข้อความเป็นตัวพิมพ์ใหญ่ทั้งหมด
-        paddingBottom: '5px', // เพิ่มระยะห่างด้านล่างของข้อความ
-        letterSpacing: '1px', // ปรับระยะห่างระหว่างตัวอักษร (เพิ่มระยะห่างเล็กน้อย)
-    },
-    
-       
-    orderReceived: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        marginTop: '20px',
-    },
-    discountInputSmall: {
-        width: 'calc(33.33% - 10px)',
-        padding: '8px',
-        borderRadius: '4px',
-        border: '1px solid #ddd',
-    },
+    cart: {width: '400px',overflowY: 'auto',overflowX: 'hidden',backgroundColor: '#f8f9fa',padding: '15px',borderRadius: '12px',marginTop: '-8px',display: 'flex',flexDirection: 'column',justifyContent: 'flex-start',boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',},    
+    discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
+    totalText: { fontSize: '1.2rem',fontWeight: '500', textAlign: 'left', marginTop: '15px', color: '#444', paddingLeft: '5px', lineHeight: '1.1', fontFamily: '   Impact, sans-serif ', textTransform: 'uppercase', paddingBottom: '5px', letterSpacing: '1px', },
+    orderReceived: { display: 'flex',flexDirection: 'column',alignItems: 'center',marginTop: '20px',},
+    discountInputSmall: { width: 'calc(33.33% - 10px)',padding: '8px',borderRadius: '4px',border: '1px solid #ddd',},
     discountAndReceivedAmountRow: {display: 'flex',gap: '10px',flexWrap: 'wrap',justifyContent: 'space-between',marginBottom: '15px',},
     discountContainerHalf: { display: 'flex', alignItems: 'center', gap: '2px', flex: 1, marginTop: '-12px' },
-    amountInputHalf: {
-        width: 'calc(33.33% - 10px)',
-        padding: '8px',
-        borderRadius: '4px',
-        border: '1px solid #ddd',
-        flex: '1',
-    },    
+    amountInputHalf: { width: 'calc(33.33% - 10px)',padding: '8px',borderRadius: '4px',border: '1px solid #ddd',flex: '1',},    
     amountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
     cartItemPriceDiscountRow: { display: 'flex', alignItems: 'center', gap: '3px', flexDirection: 'row', marginTop: '-27px' },
     categoryRow: { display: 'flex', justifyContent: 'center', gap: '19px', marginBottom: '1px', flexWrap: 'wrap' },
@@ -1003,18 +961,7 @@ const styles = {
     productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', paddingTop: '0px' },
     pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
     tableCode: { fontSize: '15px', color: '#333' },
-    receiveOrderButton: {
-        flex: '1',
-        padding: '10px',
-        backgroundColor: '#347cae',
-        color: '#ffffff',
-        border: 'none',
-        cursor: 'pointer',
-        borderRadius: '5px',
-        fontWeight: 'bold',
-        marginTop: '5px',
-        transition: 'all 0.3s ease',
-    },    
+    receiveOrderButton: { flex: '1',padding: '10px',backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer',borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},    
     paymentButton: {flex: '1',padding: '10px',backgroundColor: '#2ecc71',color: '#fff',fontWeight: 'bold',textAlign: 'center',borderRadius: '4px',cursor: 'pointer',
     },paymentButtonDisabled: { opacity: 0.5,cursor: 'not-allowed',},receiptContainer: { backgroundColor: '#fff', padding: '20px 30px',borderRadius: '12px',width: '320px',textAlign: 'center',fontFamily: "'Poppins', sans-serif",boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',animation: 'fadeIn 0.5s ease',},
     '@keyframes fadeIn': {from: { opacity: 0, transform: 'translateY(-20px)' },to: { opacity: 1, transform: 'translateY(0)' },},
@@ -1050,42 +997,12 @@ const styles = {
     receiptSummary: { fontSize: '14px', textAlign: 'right', marginTop: '10px', borderTop: '1px solid #ddd', paddingTop: '10px', color: '#333' },
     summaryValue: { fontWeight: 'bold', color: '#000' },
     proceedButton: { marginTop: '20px', backgroundColor: '#499cae', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', width: '100%', fontSize: '16px', fontWeight: 'bold' },
-    cartHeader: { 
-        position: 'sticky',  // ใช้ 'position' แทน 'display'
-        top: '0', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '10px',
-        backgroundColor: 'white',  /* พื้นหลังสีขาวเพื่อให้ดูชัด */
-        zIndex: 100,  /* ตระกร้ามีค่า z-index สูงเพื่อไม่ให้ซ้อนกับเนื้อหา */
-        
-    },
-    
-    cartItems: {
-        display: 'flex',
-        flexDirection: 'column',  /* เรียงจากบนลงล่าง */
-        gap: '3px',
-        maxHeight: '800px',
-        overflowY: 'auto',
-    },    cartItemsGradient: { position: 'absolute', bottom: '0', left: '0', right: '0', height: '20px', background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1))', pointerEvents: 'none' },
-    totalContainer: {
-        padding: '10px',
-        marginTop: 'auto',
-        backgroundColor: '#ffffff',
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        maxWidth: '100%',
-    },
-    
-    cartItem: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px',
-        borderBottom: '1px solid #ddd',  /* เส้นขอบด้านล่างของแต่ละรายการ */
-        backgroundColor: '#f9f9f9',  /* สีพื้นหลังของรายการ */
-    },    cartItemImage: { width: '40px', height: '40px', borderRadius: '3px', margin:'2px' },
+    cartHeader: { position: 'sticky', top: '0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px',backgroundColor: 'white',  zIndex: 100,},
+    cartItems: { display: 'flex',flexDirection: 'column', gap: '3px',maxHeight: '800px',overflowY: 'auto',},    
+    cartItemsGradient: { position: 'absolute', bottom: '0', left: '0', right: '0', height: '20px', background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1))', pointerEvents: 'none' },
+    totalContainer: { padding: '10px',marginTop: 'auto',backgroundColor: '#ffffff',borderRadius: '8px',boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',maxWidth: '100%'},
+    cartItem: { display: 'flex',alignItems: 'center',justifyContent: 'space-between',padding: '10px',borderBottom: '1px solid #ddd',backgroundColor: '#f9f9f9',},    
+    cartItemImage: { width: '40px', height: '40px', borderRadius: '3px', margin:'2px' },
     cartItemDetails: { display: 'flex', flexDirection: 'column', gap: '1px', width: '100%', marginTop: '-18px' },
     cartItemName: { fontSize: '14px', fontWeight: 'bold', color: '#333', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginLeft:'10px' },
     cartItemPrice: { fontSize: '12px', color: '#555', marginRight: '5px' , marginLeft:'10px'},
@@ -1104,8 +1021,8 @@ const styles = {
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#333333', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' },
     paymentRow: {display: 'flex',gap: '10px',justifyContent: 'space-around',},
-    
 };
+
 // ซ่อนแถบเลื่อนใน WebKit browsers (Chrome, Safari และ Opera)
 const stylesWithHiddenScroll = `
     .cartItems::-webkit-scrollbar {
