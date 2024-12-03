@@ -256,7 +256,7 @@ export default function TableManagement() {
 const styles = {
     pageContainer: { display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8' },
     contentContainer: { display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', justifyContent: 'space-between', alignItems: 'flex-start', fontFamily: 'Arial, sans-serif', width: 'calc(100% - 100px)', marginLeft: '100px' },
-    listContainer: { flex: 6, backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', height: 'calc(90vh - 40px)' },
+    listContainer: { flex: 6, backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', height: 'calc(90vh - 40px)' }, 
     formContainer: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', textAlign: 'center', height: 'calc(90vh - 40px)' },
     title: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px' },
     input: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
@@ -266,7 +266,7 @@ const styles = {
     button: { width: '340px', padding: '12px', borderRadius: '5px', backgroundColor: '#499cae', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginBottom: '15px' },
     cancelButton: { width: '340px', padding: '12px', borderRadius: '5px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
     listTitle: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'center', marginRight: '750px' },
-    tableContainer: { overflowY: 'auto', maxHeight: 'calc(100vh - 150px)', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' },
+    tableContainer: { overflowY: 'auto', maxHeight: 'calc(76vh - 120px)', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' },
     table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
     th: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
     thActions: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'center', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
