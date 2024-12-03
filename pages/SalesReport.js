@@ -114,19 +114,21 @@ export default function SalesReport({ initialReportData, initialError }) {
             Swal.fire({
                 html: `
                     <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
-                        <h4 style="margin-top: 15px; font-size: 16px; font-weight: bold;">รายการสินค้า:</h4>
-                        <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
+                        <h4 style="margin-top: 15px; font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
+                        <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
                             <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
+                                <thead style="position: sticky; top: -1; background-color: #499cae; z-index: 1;">
                                     <tr>
-                                        <th style="padding: 5px; background-color: #f4f4f4; font-size: 14px;">ชื่อสินค้า</th>
-                                        <th style="padding: 5px; background-color: #f4f4f4; font-size: 14px;">จำนวน</th>
-                                        <th style="padding: 5px; background-color: #f4f4f4; font-size: 14px;">ราคา</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">หมายเลข</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ชื่อสินค้า</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">จำนวน</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคา</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${order.items.map(item => `
+                                    ${order.items.map((item, index) => `
                                         <tr>
+                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${index + 1}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.quantity}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.price} ฿</td>
@@ -135,10 +137,13 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 </tbody>
                             </table>
                         </div>
+                        <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
+                            <p>ราคารวม: ${order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)} ฿</p>
+                        </div>
                     </div>
                 `,
                 confirmButtonText: 'ปิด',
-                width: '700px', // ขยายขนาดให้พอเหมาะ
+                width: '900px', // ขยายขนาดให้พอเหมาะ
                 padding: '20px',
                 background: '#fff',
                 customClass: {
@@ -146,8 +151,17 @@ export default function SalesReport({ initialReportData, initialError }) {
                     title: 'custom-swal-title',
                     htmlContainer: 'custom-swal-html',
                     confirmButton: 'custom-swal-btn',
+                    closeButton: 'custom-swal-close-btn'  // เพิ่มคลาสนี้เพื่อปรับขนาดปุ่มปิด
                 },
-            });
+                didOpen: () => {
+                    // เพิ่มการปรับขนาดปุ่มที่นี่
+                    const confirmButton = document.querySelector('.swal2-confirm');
+                    confirmButton.style.fontSize = '14px';  // เพิ่มขนาดตัวอักษร
+                    confirmButton.style.padding = '14px 40px';  // ขยายพื้นที่ปุ่ม
+                }
+            });            
+            
+            
         } catch (error) {
             console.error('Error fetching order details:', error);
             Swal.fire({
@@ -155,12 +169,12 @@ export default function SalesReport({ initialReportData, initialError }) {
                 text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
                 icon: 'error',
                 confirmButtonText: 'ปิด',
+                
             });
         }
     };
     
-    
-    
+
     const calculateTotals = (orders) => {
         const totalAmount = orders.reduce((total, order) => total + parseFloat(order.total_amount || 0), 0).toFixed(2);
         const totalDiscount = orders.reduce((total, order) => total + parseFloat(order.discount || 0), 0).toFixed(2);
