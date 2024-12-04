@@ -47,11 +47,30 @@ export default function TableManagement() {
             Swal.fire('กรุณากรอกข้อมูลให้ครบถ้วน');
             return;
         }
-
+    
+        // ตรวจสอบว่า tableCode ซ้ำหรือไม่
+        const isTableCodeExist = tables.some((table) => table.table_code.toLowerCase() === tableCode.toLowerCase());
+    
+        // ถ้าเป็นการเพิ่มโต๊ะ และมีรหัสโต๊ะซ้ำ
+        if (isTableCodeExist && !(editMode && tables.some(table => table.id === editTableId))) {
+            Swal.fire('รหัสโต๊ะนี้มีอยู่แล้ว กรุณากรอกรหัสโต๊ะใหม่');
+            return;
+        }
+    
         const tableData = { table_code: tableCode, seats, status };
-        
+    
         try {
             if (editMode && editTableId) {
+                // ตรวจสอบการแก้ไขโต๊ะ ถ้ารหัสโต๊ะที่แก้ไขมีอยู่แล้ว จะไม่สามารถแก้ไขได้
+                const isTableCodeExistForEdit = tables.some(
+                    (table) => table.table_code.toLowerCase() === tableCode.toLowerCase() && table.id !== editTableId
+                );
+    
+                if (isTableCodeExistForEdit) {
+                    Swal.fire('รหัสโต๊ะนี้มีอยู่แล้ว กรุณากรอกรหัสโต๊ะใหม่');
+                    return;
+                }
+    
                 const result = await Swal.fire({
                     title: 'ยืนยันการแก้ไข',
                     text: "คุณต้องการบันทึกการแก้ไขนี้หรือไม่?",
@@ -62,9 +81,9 @@ export default function TableManagement() {
                     confirmButtonText: 'บันทึก',
                     cancelButtonText: 'ยกเลิก',
                 });
-
+    
                 if (!result.isConfirmed) return;
-
+    
                 const url = `${api_url}/${slug}/table_codes/${editTableId}`;
                 await axios.put(url, tableData, {
                     headers: {
@@ -84,9 +103,9 @@ export default function TableManagement() {
                     confirmButtonText: 'เพิ่ม',
                     cancelButtonText: 'ยกเลิก',
                 });
-
+    
                 if (!result.isConfirmed) return;
-
+    
                 const url = `${api_url}/${slug}/table_codes`;
                 await axios.post(url, tableData, {
                     headers: {
@@ -106,8 +125,8 @@ export default function TableManagement() {
             setSnackbarSeverity('error');
             setSnackbarOpen(true);
         }
-    };
-
+    };      
+    
     const handleDeleteTable = async (id) => {
         Swal.fire({
             title: 'คุณแน่ใจหรือไม่?',
