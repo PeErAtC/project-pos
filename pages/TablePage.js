@@ -64,6 +64,7 @@ export default function MainTablePage() {
     const [error, setError] = useState(null);
     const { tableCode } = router.query;
     const [displayTable, setDisplayTable] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');  // State for search query
 
     // Play sound on table click
     const playClickSound = () => {
@@ -81,14 +82,17 @@ export default function MainTablePage() {
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-            
+
             const tablesData = response.data;
             // Filter out special table and place it at the start of the list
             const specialTable = tablesData.find(table => table.table_code === 'CT001');
             const otherTables = tablesData.filter(table => table.table_code !== 'CT001');
-            
-            setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
-            setError(null);
+
+            // Compare current tables with new data to check for changes
+            if (JSON.stringify(tables) !== JSON.stringify([specialTable ? [specialTable, ...otherTables] : otherTables])) {
+                setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
+                setError(null);
+            }
         } catch (error) {
             console.error('Error fetching tables:', error);
             if (error.response) {
@@ -116,7 +120,7 @@ export default function MainTablePage() {
 
     useEffect(() => {
         fetchTables();
-        const interval = setInterval(fetchTables, 5000); // Refresh every 5 seconds
+        const interval = setInterval(fetchTables, 5000); // Fetch every 5 seconds
         return () => clearInterval(interval);
     }, []);
 
@@ -127,6 +131,17 @@ export default function MainTablePage() {
             query: { tableCode }
         });
     };
+
+    // Handle search input change
+    const handleSearchChange = (event) => {
+        setSearchQuery(event.target.value);
+    };
+
+    // Filter tables based on the search query
+    const filteredTables = tables.filter((table) => {
+        const tableCode = table.table_code.toLowerCase();
+        return tableCode.includes(searchQuery.toLowerCase());
+    });
 
     return (
         <div style={styles.pageContainer}>
@@ -139,11 +154,19 @@ export default function MainTablePage() {
             ) : (
                 <div style={styles.tableSelectionContainer}>
                     <h1 style={styles.title}>เลือกโต๊ะ</h1>
+                    {/* Search Bar */}
+                    <input
+                        type="text"
+                        placeholder="ค้นหาโต๊ะ"
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        style={styles.searchInput}
+                    />
                     <div style={styles.tableGrid}>
                         {error ? (
                             <p style={styles.errorText}>{error}</p>
-                        ) : tables.length > 0 ? (
-                            tables.map((table) => (
+                        ) : filteredTables.length > 0 ? (
+                            filteredTables.map((table) => (
                                 <TableCard
                                     key={table.id}
                                     table={table}
@@ -164,8 +187,37 @@ const styles = {
     pageContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#f0f2f5', minHeight: '100vh' }, 
     header: { padding: '20px', textAlign: 'center', backgroundColor: '#f0f2f5', width: '100%' }, 
     tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }, 
+    stickyHeader: {
+        position: 'sticky',
+        top: '0',
+        backgroundColor: '#f0f2f5',
+        zIndex: '10',
+        padding: '20px',
+        width: '100%',
+        boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
+    },
     title: { fontSize: '28px', fontWeight: '600', textAlign: 'center', marginBottom: '30px' }, 
-    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' }, 
+    searchInput: { padding: '10px', fontSize: '16px', marginBottom: '20px', width: '80%', maxWidth: '400px' },
+    loadingText: { fontSize: '18px', color: '#666' },
+    tableGrid: { 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
+        gap: '20px', 
+        justifyContent: 'center', 
+        padding: '20px', 
+        width: '100%', 
+        maxWidth: '1000px',
+        maxHeight: '64vh',  
+        overflowY: 'auto',  
+    }, 
     errorText: { color: 'red' }, 
-    noTableText: { color: '#333' } 
+    noTableText: { color: '#333' },
+    searchInput: { 
+        width: '50%', 
+        padding: '10px', 
+        fontSize: '16px', 
+        marginBottom: '20px', 
+        borderRadius: '5px', 
+        border: '1px solid #ccc',
+    }, 
 };
