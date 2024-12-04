@@ -22,6 +22,7 @@ export default function BackendPage() {
   const [editMode, setEditMode] = useState(false); // สถานะเก็บว่ากำลังแก้ไขหรือไม่
   const [editIndex, setEditIndex] = useState(null); // สถานะเก็บรหัสรายการที่แก้ไข
   const [notification, setNotification] = useState(null); // สถานะเก็บการแจ้งเตือน
+  
 
   useEffect(() => {
     fetchItems(); // เรียกใช้ฟังก์ชันเพื่อดึงรายการอาหาร
@@ -75,14 +76,21 @@ export default function BackendPage() {
       showNotification("กรุณากรอกข้อมูลให้ครบถ้วน!", 'error'); // แจ้งเตือนถ้าข้อมูลไม่ครบ
       return; // ไม่ทำอะไรต่อหากข้อมูลไม่ครบ
     }
-
+  
+    // ตรวจสอบชื่ออาหารซ้ำ
+    const isNameDuplicate = items.some(item => item.p_name === itemName);
+    if (isNameDuplicate) {
+      showNotification("ชื่ออาหารซ้ำกับที่มีอยู่แล้ว!", 'error'); // แจ้งเตือนหากชื่อซ้ำ
+      return;
+    }
+  
     const formData = new FormData();
     formData.append('p_name', itemName); 
     formData.append('price', itemPrice || 0); 
     formData.append('category_id', itemCategory); 
     formData.append('status', itemStatus ? 'Y' : 'N'); 
     if (itemImage instanceof File) formData.append('image', itemImage); // เพิ่มรูปภาพถ้ามี    
-
+  
     try {
       const config = {
         headers: {
@@ -91,7 +99,7 @@ export default function BackendPage() {
           'Content-Type': itemImage instanceof File ? 'multipart/form-data' : 'application/json',
         },
       };
-
+  
       let response;
       if (editMode && editIndex !== null) {
         // แสดงการแจ้งเตือนก่อนบันทึกการแก้ไข
@@ -105,7 +113,7 @@ export default function BackendPage() {
           confirmButtonText: 'บันทึก',
           cancelButtonText: 'ยกเลิก',
         });
-
+  
         if (result.isConfirmed) {
           const url = `${api_url}/api/${slug}/products/${editIndex}`;
           response = await axios.put(url, formData, config);
@@ -125,7 +133,7 @@ export default function BackendPage() {
           confirmButtonText: 'เพิ่ม',
           cancelButtonText: 'ยกเลิก',
         });
-
+  
         if (result.isConfirmed) {
           const url = `${api_url}/api/${slug}/products`;
           response = await axios.post(url, formData, config);
@@ -134,14 +142,14 @@ export default function BackendPage() {
           return; // ถ้ายกเลิกไม่ต้องทำอะไรต่อ
         }
       }
-
+  
       await fetchItems(); // ดึงข้อมูลรายการอาหารใหม่
       resetForm(); // รีเซ็ตฟอร์ม
     } catch (error) {
       console.error("Error while adding/updating item:", error); // แสดงข้อผิดพลาดหากมี
       showNotification("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองอีกครั้ง", 'error'); // แจ้งเตือนข้อผิดพลาด
     }
-  };
+  };  
 
   // ฟังก์ชันรีเซ็ตฟอร์ม
   const resetForm = () => {
@@ -223,6 +231,7 @@ export default function BackendPage() {
   });
 
   const availableItemsForSale = filteredItems.filter(item => item.status === 'Y'); // รายการที่มีสถานะเปิด
+  const sortedItems = items.sort((a, b) => a.id - b.id);
 
   return (
     <div style={styles.container}>
@@ -284,7 +293,7 @@ export default function BackendPage() {
                 <tbody>
                   {filteredItems.map((item, index) => (
                     <tr key={index} style={styles.row(index)}>
-                      <td style={styles.td}>{String(index + 1).padStart(4, '0')}</td>
+                      <td style={styles.td}>{item.id.toString().padStart(4, '0')}</td>
                       <td style={styles.td}>{item.p_name || item.name}</td>
                       <td style={styles.td}>{item.price.toFixed(2)}</td>
                       <td style={styles.td}>{categories.find(cat => cat.id === item.category_id)?.c_name}</td>
@@ -363,7 +372,7 @@ export default function BackendPage() {
 const styles = {
   container: { display: 'flex' },
   contentContainer: { display: 'flex', flex: 1, gap: '20px', padding: '17px 0 20px 120px', fontFamily: 'Arial, sans-serif' },
-  notification: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', padding: '15px 25px', color: '#fff', fontSize: '16px', borderRadius: '8px', zIndex: 1000 },
+  notification: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', padding: '15px 25px', color: '#fff', fontSize: '16px', borderRadius: '15px', zIndex: 1000 },
   formContainer: { flex: 1, backgroundColor: '#ffffff', borderRadius: '10px', alignItems: 'center', display: 'flex', flexDirection: 'column' },
   title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' },
   searchContainer: { display: 'flex', gap: '10px', marginBottom: '20px' },
@@ -387,4 +396,3 @@ const styles = {
   statusToggle: { display: 'flex', gap: '10px', marginBottom: '15px' },
   statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' }
 };
-
