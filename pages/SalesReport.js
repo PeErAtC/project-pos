@@ -11,7 +11,7 @@ import {
     FaPercentage,
     FaMoneyBill,
     FaCheckCircle,
-    FaTimesCircle
+    FaTimesCircle,
 } from 'react-icons/fa';
 
 const api_url = "https://easyapp.clinic/pos-api/api";
@@ -111,14 +111,18 @@ export default function SalesReport({ initialReportData, initialError }) {
             console.log('Order details:', order);  // ตรวจสอบข้อมูลที่ดึงมา
     
             // แสดงรายละเอียดในรูปแบบตาราง
+            console.log(order.order_number); // ตรวจสอบค่าหมายเลขบิล
+
             Swal.fire({
                 html: `
                     <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
-                        <h4 style="margin-top: 15px; font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
+                        <h4 style="margin-top: 15px; font-size: 20px; font-weight: bold;">รายการสินค้า</span></h4>
                         <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead style="position: sticky; top: -1; background-color: #499cae; z-index: 1;">
                                     <tr>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">หมายเลขบิล</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">รหัสรายการอาหาร</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">หมายเลข</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ชื่อสินค้า</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">จำนวน</th>
@@ -128,6 +132,8 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <tbody>
                                     ${order.items.map((item, index) => `
                                         <tr>
+                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.order_id}</td>
+                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.product_id}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${index + 1}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.quantity}</td>
@@ -143,7 +149,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                     </div>
                 `,
                 confirmButtonText: 'ปิด',
-                width: '900px', // ขยายขนาดให้พอเหมาะ
+                width: '900px',
                 padding: '20px',
                 background: '#fff',
                 customClass: {
@@ -151,15 +157,14 @@ export default function SalesReport({ initialReportData, initialError }) {
                     title: 'custom-swal-title',
                     htmlContainer: 'custom-swal-html',
                     confirmButton: 'custom-swal-btn',
-                    closeButton: 'custom-swal-close-btn'  // เพิ่มคลาสนี้เพื่อปรับขนาดปุ่มปิด
+                    closeButton: 'custom-swal-close-btn'
                 },
                 didOpen: () => {
-                    // เพิ่มการปรับขนาดปุ่มที่นี่
                     const confirmButton = document.querySelector('.swal2-confirm');
-                    confirmButton.style.fontSize = '14px';  // เพิ่มขนาดตัวอักษร
-                    confirmButton.style.padding = '14px 40px';  // ขยายพื้นที่ปุ่ม
+                    confirmButton.style.fontSize = '14px';
+                    confirmButton.style.padding = '14px 40px';
                 }
-            });            
+            });
             
             
         } catch (error) {
