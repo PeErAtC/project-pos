@@ -343,5 +343,5 @@ const styles = {
     totalLabel: { textAlign: 'right', fontWeight: 'bold' },
     totalValue: { textAlign: 'center', fontWeight: 'bold' },
     detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', flex: 1 },
-    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#f0fff4', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
+    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fff3f3', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
 };
