@@ -77,13 +77,6 @@ export default function BackendPage() {
       return; // ไม่ทำอะไรต่อหากข้อมูลไม่ครบ
     }
   
-    // ตรวจสอบชื่ออาหารซ้ำ
-    const isNameDuplicate = items.some(item => item.p_name === itemName);
-    if (isNameDuplicate) {
-      showNotification("ชื่ออาหารซ้ำกับที่มีอยู่แล้ว!", 'error'); // แจ้งเตือนหากชื่อซ้ำ
-      return;
-    }
-  
     const formData = new FormData();
     formData.append('p_name', itemName); 
     formData.append('price', itemPrice || 0); 
@@ -396,3 +389,4 @@ const styles = {
   statusToggle: { display: 'flex', gap: '10px', marginBottom: '15px' },
   statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' }
 };
+
