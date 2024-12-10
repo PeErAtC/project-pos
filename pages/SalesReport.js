@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsidebar';
+import BackendSidebar from './components/backendsideber';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -26,25 +26,39 @@ export default function SalesReport({ initialReportData, initialError }) {
 
     const fetchReportData = async () => {
         try {
-            const url = `${api_url}/${slug}/orders`;
-            const response = await axios.get(url, {
+            const ordersResponse = await axios.get(`${api_url}/${slug}/orders`, {
                 headers: {
                     Accept: 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-
-            console.log('Fetched Orders:', response.data);
-
-            if (!response.data || response.data.length === 0) {
-                console.error('No orders found in API response');
-            }
-
-            setReportData(response.data);
+    
+            const paymentsResponse = await axios.get(`${api_url}/${slug}/payments`, {
+                headers: {
+                    Accept: 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            const orders = ordersResponse.data || [];
+            const payments = paymentsResponse.data || [];
+    
+            // เชื่อมโยง pay_channel_id กับ orders
+            const ordersWithPayments = orders.map((order) => {
+                const payment = payments.find((pay) => pay.order_id === order.id);
+                return {
+                    ...order,
+                    payment_method: payment ? 
+                        (payment.pay_channel_id === 1 ? 'เงินสด' : 'QR Code พร้อมเพย์') 
+                        : 'N/A',
+                };
+            });
+    
+            setReportData(ordersWithPayments);
             setError(null);
         } catch (err) {
             setError('ไม่สามารถเชื่อมต่อกับ API ได้');
-            console.error('Error fetching orders:', err);
+            console.error('Error fetching orders or payments:', err);
         }
     };
 
@@ -123,7 +137,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     <tr>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">หมายเลขบิล</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">รหัสรายการอาหาร</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">หมายเลข</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">รายการ</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ชื่อสินค้า</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">จำนวน</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคา</th>
@@ -227,6 +241,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <th style={styles.th}><FaTag /> ส่วนลด</th>
                                 <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
                                 <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
+                                <th style={styles.th}>ชำระเงินด้วย</th> {/* New Column */}
                                 <th style={styles.th}>สถานะ</th>
                                 <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
                             </tr>
@@ -247,6 +262,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     <td style={styles.td}>{order.discount}</td>
                                     <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
                                     <td style={styles.td}>{order.net_amount} ฿</td>
+                                    <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Check if payment_method exists */}
                                     <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
                                         {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
                                     </td>
@@ -256,9 +272,10 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 </tr>
                             ))}
                         </tbody>
+
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
                             <tr>
-                                <td colSpan="3" style={styles.totalLabel}>รวมยอด:</td>
+                                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalAmount : "0.00"}</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalDiscount : "0.00"}</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalVat : "0.00"}</td>
@@ -282,6 +299,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <th style={styles.th}><FaTag /> ส่วนลด</th>
                                 <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
                                 <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
+                                <th style={styles.th}>ชำระเงินด้วย</th> {/* New Column */}
                                 <th style={styles.th}><FaCheckCircle /> สถานะ</th>
                                 <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
                             </tr>
@@ -302,6 +320,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     <td style={styles.td}>{order.discount}</td>
                                     <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
                                     <td style={styles.td}>{order.net_amount} ฿</td>
+                                    <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Display Payment Method */}
                                     <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
                                     <td style={styles.td}>
                                         <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
@@ -311,7 +330,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                         </tbody>
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#f0fff4', zIndex: 1 }}>
                             <tr>
-                                <td colSpan="3" style={styles.totalLabel}>รวมยอด:</td>
+                                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalDiscount : "0.00"}</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalVat : "0.00"}</td>
@@ -343,5 +362,5 @@ const styles = {
     totalLabel: { textAlign: 'right', fontWeight: 'bold' },
     totalValue: { textAlign: 'center', fontWeight: 'bold' },
     detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', flex: 1 },
-    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fff3f3', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
+    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#f0fff4', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
 };
