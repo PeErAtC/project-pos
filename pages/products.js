@@ -253,32 +253,31 @@ export default function SalesPage() {
     };
     
 
-    const savePaymentMethod = async (paymentMethod, order_id, amount, currency) => {
+    const savePaymentMethod = async (paymentMethod, order_id, amount) => {
         try {
-            // ส่งข้อมูลการชำระเงินไปยัง API
-            const response = await fetch('/api/payChaneis', {
-                method: 'POST',
+            const response = await axios.post(`${api_url}/api/${slug}/payments`, {
+                order_id,                // รหัสคำสั่งซื้อ (order_id)
+                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, // 1 = เงินสด, 2 = QR
+                payment_date: new Date().toISOString(), // วันที่และเวลาปัจจุบัน
+                amount,                  // จำนวนเงินที่ชำระ
+                status: 'Y',             // สถานะการชำระเงิน (Y = ชำระสำเร็จ)
+            }, {
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
                 },
-                body: JSON.stringify({
-                    paymentMethod: paymentMethod,  // วิธีการชำระเงินที่เลือก
-                    order_id: order_id,            // รหัสคำสั่งซื้อ
-                    amount: amount,                // จำนวนเงินที่ชำระ
-                    currency: currency,            // สกุลเงิน
-                }),
             });
     
-            if (response.ok) {
-                const data = await response.json();
-                console.log('บันทึกวิธีการชำระเงินสำเร็จ:', data);
+            if (response.data && response.data.success) {
+                console.log('บันทึกการชำระเงินสำเร็จ:', response.data);
             } else {
-                console.error('บันทึกวิธีการชำระเงินไม่สำเร็จ');
+                console.error('บันทึกการชำระเงินล้มเหลว:', response.data.message || 'ไม่ทราบข้อผิดพลาด');
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการบันทึกวิธีการชำระเงิน:', error);
+            console.error('เกิดข้อผิดพลาดในการบันทึกการชำระเงิน:', error.response?.data || error.message);
         }
     };
+    
     
 
 
@@ -744,31 +743,33 @@ const fetchPaymentMethods = async () => {
                 รวม: {calculateTotalWithBillDiscount().toFixed(2)}฿
             </h3>
             <div style={{ width: '220px', marginRight: '-70px' }}>
-    <select
-        value={paymentMethod}
-        onChange={(e) => handlePaymentChange(e.target.value)}
-        style={{
-            padding: '7px 10px',
-            width: '100%', // กว้างเต็มที่ตามขนาดของพื้นที่
-            border: '2px solid #6c5ce7', // ขอบสีสดใส
-            borderRadius: '5px',
-            background: 'linear-gradient(145deg, #ffffff, #f2f2f2)', // พื้นหลังแบบเกรเดียนท์
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // เงาบางๆ
-            fontSize: '14px', // ขนาดฟอนต์ปรับให้ดูชัดเจนขึ้น
-            color: '#010101',
-            cursor: 'pointer',
-            maxWidth: '220px', // ความยาวแนวนอนเพิ่มขึ้นให้เต็มพื้นที่
-            transition: 'all 0.3s ease',
-            marginBottom: '7px',
-            textAlign: 'center', // จัดข้อความให้ตรงกลางใน select
-        }}
-        onFocus={(e) => e.target.style.borderColor = '#6c5ce7'} // เมื่อโฟกัสจะเปลี่ยนสีขอบ
-        onBlur={(e) => e.target.style.borderColor = '#ccc'} // เมื่อเลิกโฟกัสจะกลับเป็นสีปกติ
-    >
-        <option value="" disabled>เลือกวิธีการชำระเงิน</option>
-        <option value="cash">เงินสด</option>
-        <option value="qr">QR Code พร้อมเพย์</option>
-    </select>
+            <select
+    value={paymentMethod}
+    onChange={(e) => handlePaymentChange(e.target.value)}
+    style={{
+        padding: '7px 10px',
+        width: '100%', // กว้างเต็มที่ตามขนาดของพื้นที่
+        border: '2px solid #6c5ce7', // ขอบสีสดใส
+        borderRadius: '5px',
+        background: 'linear-gradient(145deg, #ffffff, #f2f2f2)', // พื้นหลังแบบเกรเดียนท์
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // เงาบางๆ
+        fontSize: '13px', // ขนาดฟอนต์ปรับให้ดูชัดเจนขึ้น
+        color: '#010101',
+        cursor: 'pointer',
+        maxWidth: '160px', // กำหนดความยาวเฉพาะเจาะจง
+        transition: 'all 0.3s ease',
+        marginBottom: '7px',
+        textAlign: 'center', // จัดข้อความให้ตรงกลางใน select
+        marginLeft: '-10px', // ขยับไปทางซ้ายสุด
+        textAlign: 'left', // จัดข้อความให้ตรงซ้าย
+    }}
+    onFocus={(e) => e.target.style.borderColor = '#6c5ce7'} // เมื่อโฟกัสจะเปลี่ยนสีขอบ
+    onBlur={(e) => e.target.style.borderColor = '#ccc'} // เมื่อเลิกโฟกัสจะกลับเป็นสีปกติ
+>
+    <option value="" disabled>เลือกวิธีการชำระเงิน</option>
+    <option value="cash">เงินสด</option>
+    <option value="qr">QR Code พร้อมเพย์</option>
+</select>
 </div>
 
 
