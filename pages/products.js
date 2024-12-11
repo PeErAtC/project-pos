@@ -374,56 +374,75 @@ export default function SalesPage() {
     };
 
     const closeReceipt = async () => {
-        if (receivedAmount < calculateTotalWithBillDiscount()) {
+        const totalDue = calculateTotalWithBillDiscount(); // ยอดเงินรวมที่ต้องชำระ
+    
+        if (receivedAmount < totalDue) {
             Swal.fire({
                 icon: 'error',
                 title: 'ยอดเงินไม่เพียงพอ',
-                text: 'กรุณาให้เงินชำระครบก่อนดำเนินการ',
+                text: `กรุณาชำระเงินให้ครบ: ${totalDue.toFixed(2)} บาท`,
             });
             return;
         }
     
         try {
-            // บันทึกข้อมูลการชำระเงิน
-            await savePaymentToDatabase(orderId, paymentMethod, calculateTotalWithBillDiscount());
+            // บันทึกข้อมูลการชำระเงิน (Partial Payment)
+            await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
     
-            // อัปเดตสถานะออเดอร์เป็น 'Y'
-            const url = `${api_url}/api/${slug}/orders/${orderId}`;
-            const response = await axios.put(
-                url,
-                { status: 'Y' }, 
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
+            const remainingTotal = totalDue - receivedAmount; // คำนวณยอดรวมหลังการชำระ
+    
+            if (remainingTotal <= 0) {
+                // อัปเดตสถานะบิลเป็น 'Y' เมื่อยอดเงินครบ
+                const url = `${api_url}/api/${slug}/orders/${orderId}`;
+                const response = await axios.put(
+                    url,
+                    { status: 'Y' },
+                    {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                        },
+                    }
+                );
+    
+                if (!response.data || response.data.status !== 'Y') {
+                    throw new Error('ไม่สามารถบันทึกสถานะการปิดบิลได้');
                 }
-            );
     
-            if (response.data.status === 'Y') {
                 Swal.fire({
                     icon: 'success',
-                    title: 'ดำเนินการสำเร็จ',
-                    text: 'การชำระเงินและการอัปเดตบิลสำเร็จ!',
+                    title: 'ชำระเงินสำเร็จ',
+                    text: `ยอดเงินที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nสถานะบิลถูกอัปเดตเรียบร้อย!`,
                     confirmButtonText: 'ตกลง',
                 });
     
                 // รีเซ็ตสถานะหลังการชำระเงิน
-                setShowReceipt(false);
+                setShowReceipt(true); // แสดงบิล
                 setOrderReceived(false);
+                setOrderId(null);
                 setCart([]);
                 setReceivedAmount(0);
                 setBillDiscount(0);
                 setBillDiscountType("THB");
                 setIsBillPaused(false);
             } else {
-                throw new Error('ไม่สามารถอัปเดตสถานะบิลได้');
+                // แจ้งยอดคงเหลือหลัง Partial Payment
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ชำระเงินบางส่วนสำเร็จ',
+                    text: `ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nยอดคงเหลือ: ${remainingTotal.toFixed(2)} บาท`,
+                    confirmButtonText: 'ตกลง',
+                });
+    
+                setReceivedAmount(0); // รีเซ็ตยอดรับเงิน
             }
         } catch (error) {
-            console.error('Error closing receipt:', error.message);
+            console.error('Error closing receipt:', error.response?.data || error.message);
             Swal.fire('ผิดพลาด', `ไม่สามารถดำเนินการได้: ${error.message}`, 'error');
         }
     };
+    
+    
     
     const handlePauseBill = () => {
         setShowReceipt(false);
@@ -500,6 +519,32 @@ export default function SalesPage() {
         } catch (error) {
             console.error('เกิดข้อผิดพลาดในการดึงช่องทางชำระเงิน:', error.message);
             Swal.fire('ผิดพลาด', 'ไม่สามารถดึงข้อมูลช่องทางการชำระเงินได้', 'error');
+        }
+    };
+    const handlePartialPayment = async () => {
+        if (receivedAmount <= 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ไม่มียอดเงิน',
+                text: 'กรุณาใส่ยอดเงินก่อนทำการแยกชำระ',
+            });
+            return;
+        }
+    
+        try {
+            // บันทึกยอดเงินที่ชำระบางส่วน
+            await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
+    
+            Swal.fire({
+                icon: 'success',
+                title: 'แยกชำระเรียบร้อย',
+                text: `ยอดชำระ: ${receivedAmount.toFixed(2)} บันทึกเรียบร้อย`,
+            });
+    
+            // อัปเดตยอดเงินคงเหลือ
+            setReceivedAmount(0);
+        } catch (error) {
+            Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกการแยกชำระได้: ${error.message}`, 'error');
         }
     };
     
@@ -890,10 +935,10 @@ export default function SalesPage() {
                     ...styles.receiveOrderButton,
                     ...(cart.length === 0 ? styles.buttonDisabled : {}),
                 }}
-                onClick={addOrderItems} // เรียกฟังก์ชันเพิ่มรายการสินค้า
+                onClick={handlePartialPayment} // เรียกฟังก์ชันแยกชำระเงิน
                 disabled={cart.length === 0}
             >
-                เพิ่มรายการสินค้า
+                แยกชำระในบิลนี้
             </button>
         ) : (
             <button
@@ -908,19 +953,18 @@ export default function SalesPage() {
             </button>
         )}
 
-        <button
-            style={{
-                ...styles.paymentButton,
-                ...(orderReceived && cart.length > 0 ? {} : styles.paymentButtonDisabled),
-            }}
-            onClick={handlePayment} // ฟังก์ชันการชำระเงิน
-            disabled={!orderReceived || cart.length === 0}
-        >
-            ชำระเงิน
-        </button>
+            <button
+                style={{
+                    ...styles.paymentButton,
+                    ...(orderReceived && cart.length > 0 ? {} : styles.paymentButtonDisabled),
+                }}
+                onClick={handlePayment} // ฟังก์ชันการชำระเงิน
+                disabled={!orderReceived || cart.length === 0}
+            >
+                ชำระเงิน
+            </button>
+        </div>
     </div>
-</div>
-
     </div>
     
             {showReceipt && (
