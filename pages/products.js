@@ -475,7 +475,7 @@ const fetchPaymentMethods = async () => {
             )
         );
     };
-// kkkkkk
+
     return (
         <div style={styles.pageContainer}>
             <div style={styles.sidebarContainer}>
@@ -1005,8 +1005,7 @@ const styles = {
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
     productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', paddingTop: '0px' },
-    pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
-    tableCode: { fontSize: '15px', color: '#333' },
+    tableCode: { fontSize: '14px', color: '#333' },
     receiveOrderButton: { flex: '1',padding: '10px',backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer',borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},    
     paymentButton: {flex: '1',    border: 'none', padding: '10px',backgroundColor: '#2ecc71',color: '#fff',fontWeight: 'bold',textAlign: 'center',borderRadius: '5px',cursor: 'pointer',},
     paymentButtonDisabled: { opacity: 0.5,cursor: 'not-allowed',    fontSize: '0.9rem',    },
@@ -1015,7 +1014,7 @@ const styles = {
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer', borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},
     buttonDisabled: {backgroundColor: '#bbbbd6',color: '#666666',cursor: 'not-allowed', pointerEvents: 'none'},
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, marginLeft: '100px' },
-    searchInput: { width: 'calc(890px - 150px)', padding: '9px', borderRadius: '5px', border: '1px solid #ddd' },
+    searchInput: { width: 'calc(960px - 150px)', padding: '9px', borderRadius: '5px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', paddingTop: '5px', marginTop: '0px' },
     productCard: {width: '120px',height: '100px',border: '1px solid #ddd',borderRadius: '8px',   cursor: 'pointer',   backgroundColor: '#ffffff',  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column',alignItems: 'center',padding: '15px',transition: 'transform 0.3s ease, box-shadow 0.3s ease',overflow: 'hidden',':hover': {transform: 'scale(1.05)',boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',},},
     productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
@@ -1066,10 +1065,11 @@ const styles = {
     buttonContainer: { display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center' },
     actionButton: { flex: 1, padding: '8px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#0f0e0e', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
-    productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' },
+    productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' , fontWeight: 'bold'},
     paymentRow: {display: 'flex',gap: '10px',justifyContent: 'space-around',},
     qrCodeContainer: {textAlign: 'center',marginTop: '20px',},
-    qrCodeImage: {width: '150px',height: '150px',marginBottom: '10px',}
+    qrCodeImage: {width: '150px',height: '150px', marginBottom: '10px'},
+    categoryContainer: {marginLeft: '75px'},
 };
 
 // ซ่อนแถบเลื่อนใน WebKit browsers (Chrome, Safari และ Opera)
