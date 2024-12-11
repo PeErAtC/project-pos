@@ -194,8 +194,9 @@ export default function SalesPage() {
     };
 
     const calculateTotalWithBillDiscount = () => {
-        const totalAfterItemDiscounts = calculateTotalAfterItemDiscounts();
-        return calculateDiscountedPrice(totalAfterItemDiscounts, billDiscount, billDiscountType);
+        const totalAfterItemDiscounts = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดต่อชิ้น
+        const totalWithDiscount = calculateDiscountedPrice(totalAfterItemDiscounts, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดบิล
+        return totalWithDiscount; // ยอดรวมที่ต้องชำระ
     };
 
     const calculateVAT = () => {
@@ -414,17 +415,17 @@ export default function SalesPage() {
                     title: 'ชำระเงินสำเร็จ',
                     text: `ยอดเงินที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nสถานะบิลถูกอัปเดตเรียบร้อย!`,
                     confirmButtonText: 'ตกลง',
+                }).then(() => {
+                    // รีเซ็ตสถานะหลังการชำระเงิน
+                    setShowReceipt(false); // ปิดบิล
+                    setOrderReceived(false);
+                    setOrderId(null);
+                    setCart([]);
+                    setReceivedAmount(0);
+                    setBillDiscount(0);
+                    setBillDiscountType("THB");
+                    setIsBillPaused(false);
                 });
-    
-                // รีเซ็ตสถานะหลังการชำระเงิน
-                setShowReceipt(true); // แสดงบิล
-                setOrderReceived(false);
-                setOrderId(null);
-                setCart([]);
-                setReceivedAmount(0);
-                setBillDiscount(0);
-                setBillDiscountType("THB");
-                setIsBillPaused(false);
             } else {
                 // แจ้งยอดคงเหลือหลัง Partial Payment
                 Swal.fire({
@@ -441,6 +442,7 @@ export default function SalesPage() {
             Swal.fire('ผิดพลาด', `ไม่สามารถดำเนินการได้: ${error.message}`, 'error');
         }
     };
+    
     
     
     
@@ -521,32 +523,42 @@ export default function SalesPage() {
             Swal.fire('ผิดพลาด', 'ไม่สามารถดึงข้อมูลช่องทางการชำระเงินได้', 'error');
         }
     };
-    const handlePartialPayment = async () => {
-        if (receivedAmount <= 0) {
+    const handlePartialPayment = () => {
+        const totalDue = calculateTotalWithBillDiscount(); // ยอดที่ต้องชำระทั้งหมด
+    
+        if (receivedAmount <= 0 || receivedAmount > totalDue) {
             Swal.fire({
                 icon: 'error',
-                title: 'ไม่มียอดเงิน',
-                text: 'กรุณาใส่ยอดเงินก่อนทำการแยกชำระ',
+                title: 'ยอดเงินไม่ถูกต้อง',
+                text: `กรุณาระบุยอดเงินที่ถูกต้อง (ไม่เกิน ${totalDue.toFixed(2)} บาท)`,
             });
             return;
         }
     
-        try {
-            // บันทึกยอดเงินที่ชำระบางส่วน
-            await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
+        const remainingTotal = totalDue - receivedAmount; // คำนวณยอดที่เหลือหลังแยกชำระ
     
-            Swal.fire({
-                icon: 'success',
-                title: 'แยกชำระเรียบร้อย',
-                text: `ยอดชำระ: ${receivedAmount.toFixed(2)} บันทึกเรียบร้อย`,
-            });
+        // อัปเดตสถานะการแยกชำระ
+        Swal.fire({
+            icon: 'success',
+            title: 'แยกชำระเรียบร้อย',
+            text: `ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nยอดคงเหลือ: ${remainingTotal.toFixed(2)} บาท`,
+        });
     
-            // อัปเดตยอดเงินคงเหลือ
-            setReceivedAmount(0);
-        } catch (error) {
-            Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกการแยกชำระได้: ${error.message}`, 'error');
+        // อัปเดตยอดรวมใหม่
+        setBillDiscountType("THB"); // ตรวจสอบว่าส่วนลดเป็นแบบไหน
+        setBillDiscount((prevDiscount) => prevDiscount + receivedAmount); // อัปเดตส่วนลดที่ใช้จ่ายไปแล้ว
+    
+        setReceivedAmount(0); // รีเซ็ตยอดรับเงิน
+    
+        // หากยอดรวมเหลือ 0 บาท ให้ปิดบิลโดยอัตโนมัติ
+        if (remainingTotal <= 0) {
+            closeReceipt(); // เรียกฟังก์ชันปิดบิล
         }
     };
+    
+    
+    
+    
     
 // kkkkkk
     return (
@@ -967,89 +979,109 @@ export default function SalesPage() {
     </div>
     </div>
     
-            {showReceipt && (
-                <div style={styles.receiptOverlay}>
-                    <div style={styles.receiptContainer}>
-                        <div style={styles.header}>
-                            <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
-                            <h2 style={styles.shopName}>Easy PÖS</h2>
-                            <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
-                        </div>
-                        <div style={styles.info}>
-                            <p style={styles.billId}>No: {orderNumber}</p>
-                            <p style={styles.date}>{new Date().toLocaleString()}</p>
-                        </div>
-                        <div style={styles.tableHeader}>
-                            <p style={styles.tableColumn}>รายการ</p>
-                            <p style={styles.tableColumn}>จำนวน</p>
-                            <p style={styles.tableColumn}>ราคา</p>
-                        </div>
-                        <div className="receiptItems" style={styles.receiptItems}>
-                            {cart.map((item) => (
-                                <div key={item.id} style={styles.receiptItem}>
-                                    <p style={styles.itemName}>{item.p_name}</p>
-                                    <p style={styles.itemQuantity}>{item.quantity}</p>
-                                    <p style={styles.itemPrice}>
-                                        <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
-                                            {item.price.toFixed(2)}
-                                        </span>
-                                        {item.discount > 0 && (
-                                            <>
-                                                <br />
-                                                <span>{`ลด ${item.discountType === 'THB' ? item.discount.toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
-                                                <br />
-                                                <span>{`${calculateDiscountedPrice(item.price, item.discount, item.discountType).toFixed(2)} บาท`}</span>
-                                            </>
-                                        )}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                        <div style={styles.receiptItem}>
-                            <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
-                            <p style={styles.itemQuantity}></p>
-                            <p style={styles.itemPrice}>
-                                <strong>
-                                    {billDiscountType === 'THB' ? `${billDiscount.toFixed(2)} บาท` : `${billDiscount}%`}
-                                </strong>
-                            </p>
-                        </div>
-                        <div style={styles.receiptSummary}>
-                            <p>โต๊ะ: {tableCode}</p>
-                            <p>ยอดบิล: <span style={styles.summaryValue}>{calculateTotalWithBillDiscount().toFixed(2)} บาท</span></p>
-                            <p>ยอดภาษีมูลค่าเพิ่ม (VAT) 7%: <span style={styles.summaryValue}>{calculateVAT().toFixed(2)} บาท</span></p>
-                            <p>รับเงิน: <span style={styles.summaryValue}>{receivedAmount.toFixed(2)} บาท</span></p>
-                            <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
-                        </div>
-                        <div style={styles.receiptItem}>
-                            <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
-                            <p style={styles.itemQuantity}></p>
-                            <p style={styles.itemPrice}>
-                                <strong>
-                                    {paymentMethod === 'cash' ? 'เงินสด' : 
-                                    paymentMethod === 'qr' ? 'QR Code พร้อมเพย์' : 
-                                    'ยังไม่ได้เลือก'}
-                                </strong>
-                            </p>
-                        </div>
-                        <div style={styles.buttonContainer}>
-                            <button
-                                style={{
-                                    ...styles.actionButton,
-                                    ...(receivedAmount < calculateTotalWithBillDiscount() ? styles.buttonDisabled : {}),
-                                }}
-                                onClick={closeReceipt}
-                                disabled={receivedAmount < calculateTotalWithBillDiscount()} // ปิดการใช้งานปุ่มหากเงินที่รับมา < ยอดบิล
-                            >
-                                ดำเนินการ
-                            </button>
-                            <button style={styles.pauseButton} onClick={handlePauseBill}>
-                                พักบิล
-                            </button>
-                        </div>
+    {showReceipt && (
+    <div style={styles.receiptOverlay}>
+        <div style={styles.receiptContainer}>
+            <div style={styles.header}>
+                <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
+                <h2 style={styles.shopName}>Easy PÖS</h2>
+                <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
+            </div>
+            <div style={styles.info}>
+                <p style={styles.billId}>No: {orderNumber}</p>
+                <p style={styles.date}>{new Date().toLocaleString()}</p>
+            </div>
+            <div style={styles.tableHeader}>
+                <p style={styles.tableColumn}>รายการ</p>
+                <p style={styles.tableColumn}>จำนวน</p>
+                <p style={styles.tableColumn}>ราคา</p>
+            </div>
+            <div className="receiptItems" style={styles.receiptItems}>
+                {cart.map((item) => (
+                    <div key={item.id} style={styles.receiptItem}>
+                        <p style={styles.itemName}>{item.p_name}</p>
+                        <p style={styles.itemQuantity}>{item.quantity}</p>
+                        <p style={styles.itemPrice}>
+                            <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
+                                {item.price.toFixed(2)}
+                            </span>
+                            {item.discount > 0 && (
+                                <>
+                                    <br />
+                                    <span>{`ลด ${item.discountType === 'THB' ? item.discount.toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
+                                    <br />
+                                    <span>{`${calculateDiscountedPrice(item.price, item.discount, item.discountType).toFixed(2)} บาท`}</span>
+                                </>
+                            )}
+                        </p>
                     </div>
-                </div>
-            )}
+                ))}
+            </div>
+            <div style={styles.receiptItem}>
+                <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
+                <p style={styles.itemQuantity}></p>
+                <p style={styles.itemPrice}>
+                    <strong>
+                        {billDiscountType === 'THB' ? `${billDiscount.toFixed(2)} บาท` : `${billDiscount}%`}
+                    </strong>
+                </p>
+            </div>
+            <div style={styles.receiptSummary}>
+                <p>โต๊ะ: {tableCode}</p>
+                <p>ยอดบิล: <span style={styles.summaryValue}>{calculateTotalWithBillDiscount().toFixed(2)} บาท</span></p>
+                <p>ยอดภาษีมูลค่าเพิ่ม (VAT) 7%: <span style={styles.summaryValue}>{calculateVAT().toFixed(2)} บาท</span></p>
+                <p>รับเงิน: <span style={styles.summaryValue}>{receivedAmount.toFixed(2)} บาท</span></p>
+                <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscount()).toFixed(2)} บาท</span></p>
+            </div>
+            <div style={styles.receiptItem}>
+                <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
+                <p style={styles.itemQuantity}></p>
+                <p style={styles.itemPrice}>
+                    <strong>
+                        {paymentMethod === 'cash' ? 'เงินสด' : 
+                        paymentMethod === 'qr' ? 'QR Code พร้อมเพย์' : 
+                        'ยังไม่ได้เลือก'}
+                    </strong>
+                </p>
+            </div>
+            <div style={styles.buttonContainer}>
+                {calculateTotalWithBillDiscount() === 0 ? (
+                    <button
+                        style={styles.actionButton}
+                        onClick={() => {
+                            setShowReceipt(false);
+                            setOrderReceived(false);
+                            setOrderId(null);
+                            setCart([]);
+                            setReceivedAmount(0);
+                            setBillDiscount(0);
+                            setBillDiscountType("THB");
+                            setIsBillPaused(false);
+                        }}
+                    >
+                        ตกลง
+                    </button>
+                ) : (
+                    <>
+                        <button
+                            style={{
+                                ...styles.actionButton,
+                                ...(receivedAmount < calculateTotalWithBillDiscount() ? styles.buttonDisabled : {}),
+                            }}
+                            onClick={closeReceipt}
+                            disabled={receivedAmount < calculateTotalWithBillDiscount()} // ปิดการใช้งานปุ่มหากเงินที่รับมา < ยอดบิล
+                        >
+                            ดำเนินการ
+                        </button>
+                        <button style={styles.pauseButton} onClick={handlePauseBill}>
+                            พักบิล
+                        </button>
+                    </>
+                )}
+            </div>
+        </div>
+    </div>
+)}
 
         </div>
     );
