@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import { Bar } from 'react-chartjs-2';
 import Chart from 'chart.js/auto';
 import { FiTrendingUp, FiBarChart, FiShoppingCart, FiPackage } from 'react-icons/fi';  // เพิ่มการนำเข้าไอคอน
@@ -91,11 +91,6 @@ export default function PaymentSummary() {
         }
     };
     
-    
-    
-    
-    
-
     const calculateTotalSales = (data) => {
         const [selectedYear, selectedMonth] = startDate.split('-'); // แยกปีและเดือนจาก startDate
         const total = data
@@ -317,7 +312,7 @@ export default function PaymentSummary() {
 }
 
 const styles = {
-    pageContainer: {display: 'flex',minHeight: '100vh',backgroundColor: '#f4f6f8',overflowY: 'auto',overflowX: 'hidden'},
+    pageContainer: {display: 'flex',minHeight: '100vh',overflowY: 'auto',overflowX: 'hidden', marginRight: '70px'},
     content: { flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft:'65px' },
     titleWithHighlight: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textShadow: '2px 2px #ffe6e6' ,marginRight:'1150px' },
     filterContainer: { display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '20px', justifyContent: 'flex-start',  width: '100%', marginLeft: '89%' },
@@ -361,5 +356,3 @@ const styles = {
         overflow: 'hidden', // ป้องกันข้อความเกินออกมา
     }
 };
-
-
