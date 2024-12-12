@@ -350,15 +350,7 @@ export default function SalesPage() {
                 Swal.fire('ผิดพลาด', 'รูปแบบข้อมูลช่องทางการชำระเงินไม่ถูกต้อง', 'error');
             }
         } catch (error) {
-            console.error('Error fetching payment channels:', error.response?.data || error.message);
-    
-            // แสดงข้อความผิดพลาดให้ผู้ใช้งานทราบ
-            Swal.fire({
-                icon: 'error',
-                title: 'ผิดพลาด',
-                text: 'ไม่สามารถดึงข้อมูลช่องทางการชำระเงินได้ กรุณาตรวจสอบการเชื่อมต่อหรือแจ้งผู้ดูแลระบบ',
-                confirmButtonText: 'ตกลง',
-            });
+            console.error('Error fetching payment channels:', error.response?.data || error.message)
         }
     };
 
@@ -1116,7 +1108,7 @@ const styles = {
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer', borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},
     buttonDisabled: {backgroundColor: '#bbbbd6',color: '#666666',cursor: 'not-allowed', pointerEvents: 'none'},
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, marginLeft: '100px' },
-    searchInput: { width: 'calc(890px - 150px)', padding: '9px', borderRadius: '5px', border: '1px solid #ddd' },
+    searchInput: { width: 'calc(970px - 150px)', padding: '9px', borderRadius: '5px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', paddingTop: '5px', marginTop: '0px' },
     productCard: {width: '120px',height: '100px',border: '1px solid #ddd',borderRadius: '8px',   cursor: 'pointer',   backgroundColor: '#ffffff',  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column',alignItems: 'center',padding: '15px',transition: 'transform 0.3s ease, box-shadow 0.3s ease',overflow: 'hidden',':hover': {transform: 'scale(1.05)',boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',},},
     productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
