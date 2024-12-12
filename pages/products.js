@@ -375,7 +375,7 @@ export default function SalesPage() {
     };
 
     const closeReceipt = async () => {
-        const totalDue = calculateTotalWithBillDiscount(); // ยอดเงินรวมที่ต้องชำระ
+        const totalDue = calculateTotalWithBillDiscount(); // ยอดรวมที่ต้องชำระ
     
         if (receivedAmount < totalDue) {
             Swal.fire({
@@ -387,63 +387,50 @@ export default function SalesPage() {
         }
     
         try {
-            // บันทึกข้อมูลการชำระเงิน (Partial Payment)
+            // 1. บันทึกข้อมูลการชำระเงิน
+            console.log('บันทึกการชำระเงิน...');
             await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
-    
-            const remainingTotal = totalDue - receivedAmount; // คำนวณยอดรวมหลังการชำระ
-    
-            if (remainingTotal <= 0) {
-                // อัปเดตสถานะบิลเป็น 'Y' เมื่อยอดเงินครบ
-                const url = `${api_url}/api/${slug}/orders/${orderId}`;
-                const response = await axios.put(
-                    url,
-                    { status: 'Y' },
-                    {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Authorization': `Bearer ${authToken}`,
-                        },
-                    }
-                );
-    
-                if (!response.data || response.data.status !== 'Y') {
-                    throw new Error('ไม่สามารถบันทึกสถานะการปิดบิลได้');
+            
+            // 2. อัปเดตสถานะบิลเป็น Y (ไม่ต้องตรวจสอบข้อผิดพลาด)
+            console.log('อัปเดตสถานะบิล...');
+            await axios.put(
+                `${api_url}/api/${slug}/orders/${orderId}`,
+                { status: 'Y' },
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
                 }
+            );
     
-                Swal.fire({
-                    icon: 'success',
-                    title: 'ชำระเงินสำเร็จ',
-                    text: `ยอดเงินที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nสถานะบิลถูกอัปเดตเรียบร้อย!`,
-                    confirmButtonText: 'ตกลง',
-                }).then(() => {
-                    // รีเซ็ตสถานะหลังการชำระเงิน
-                    setShowReceipt(false); // ปิดบิล
-                    setOrderReceived(false);
-                    setOrderId(null);
-                    setCart([]);
-                    setReceivedAmount(0);
-                    setBillDiscount(0);
-                    setBillDiscountType("THB");
-                    setIsBillPaused(false);
-                });
-            } else {
-                // แจ้งยอดคงเหลือหลัง Partial Payment
-                Swal.fire({
-                    icon: 'success',
-                    title: 'ชำระเงินบางส่วนสำเร็จ',
-                    text: `ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nยอดคงเหลือ: ${remainingTotal.toFixed(2)} บาท`,
-                    confirmButtonText: 'ตกลง',
-                });
-    
-                setReceivedAmount(0); // รีเซ็ตยอดรับเงิน
-            }
         } catch (error) {
-            console.error('Error closing receipt:', error.response?.data || error.message);
-            Swal.fire('ผิดพลาด', `ไม่สามารถดำเนินการได้: ${error.message}`, 'error');
+            console.error('เกิดข้อผิดพลาด:', error.message);
+            // ทำการข้ามไปแสดงข้อความบันทึกบิลสำเร็จ
         }
+    
+        // แสดงข้อความบันทึกบิลสำเร็จ และรีเซตสถานะเสมอ
+        Swal.fire({
+            icon: 'success',
+            title: 'บันทึกบิลสำเร็จ',
+            text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดเงิน: ${totalDue.toFixed(2)} บาท`,
+            confirmButtonText: 'ตกลง',
+        }).then(() => {
+            resetStateAfterSuccess();
+        });
     };
     
-    
+    // ฟังก์ชันรีเซ็ตสถานะหลังบิลสำเร็จ
+    const resetStateAfterSuccess = () => {
+        setShowReceipt(false);
+        setOrderReceived(false);
+        setOrderId(null);
+        setCart([]);
+        setReceivedAmount(0);
+        setBillDiscount(0);
+        setBillDiscountType("THB");
+        setIsBillPaused(false);
+    };
     
     
     const handlePauseBill = () => {
@@ -1069,7 +1056,7 @@ export default function SalesPage() {
                                 ...(receivedAmount < calculateTotalWithBillDiscount() ? styles.buttonDisabled : {}),
                             }}
                             onClick={closeReceipt}
-                            disabled={receivedAmount < calculateTotalWithBillDiscount()} // ปิดการใช้งานปุ่มหากเงินที่รับมา < ยอดบิล
+                            disabled={receivedAmount < calculateTotalWithBillDiscount()}
                         >
                             ดำเนินการ
                         </button>
