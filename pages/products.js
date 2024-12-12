@@ -1073,10 +1073,11 @@ const fetchCategories = () => {
                             onClick={closeReceipt}
                             disabled={receivedAmount < calculateTotalWithBillDiscount()}
                         >
-                            ดำเนินการ
+                            บันทึกบิล
+
                         </button>
                         <button style={styles.pauseButton} onClick={handlePauseBill}>
-                            พักบิล
+                            พักพ์บิล
                         </button>
                     </>
                 )}
