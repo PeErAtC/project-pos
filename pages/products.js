@@ -36,31 +36,54 @@ export default function SalesPage() {
 
 
     // Fetch products from API
-    const fetchProducts = () => {
-        const url = `${api_url}/api/${slug}/products`;
-        console.log('Fetching products from:', url);
-        axios.get(url, {
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
-        })
-        .then((response) => setProducts(response.data))
-        .catch((error) => console.error('Error fetching products:', error));
+    // ฟังก์ชัน fetchProducts
+    const fetchProducts = async () => {
+        try {
+            const response = await axios.get(`${api_url}/api/${slug}/products`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+            setProducts(response.data);
+        } catch (error) {
+            if (error.response && error.response.status === 404) {
+                console.warn('ไม่พบเส้นทาง API:', error.response.config.url);
+            } else {
+                console.warn('เกิดข้อผิดพลาด:', error.message);
+            }
+            setProducts([]); // UI จะไม่แสดงสินค้า
+        }
     };
-    // Fetch categories from API
-    const fetchCategories = () => {
-        const url = `${api_url}/api/${slug}/category`;
-        console.log('Fetching categories from:', url); // Debug URL
-        axios.get(url, {
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
-        })
-        .then(response => setCategories(response.data.categories))
-        .catch(error => console.error('Error fetching categories:', error));
-    };
+    
+
+// ฟังก์ชัน fetchCategories
+const fetchCategories = () => {
+    const url = `${api_url}/api/${slug}/category`;
+    console.log('Fetching categories from:', url);
+
+    axios.get(url, {
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+        },
+    })
+    .then((response) => setCategories(response.data.categories)) // ตั้งค่าหมวดหมู่หากสำเร็จ
+    .catch((error) => {
+        if (error.response) {
+            if (error.response.status === 404) {
+                console.warn('API ไม่พบเส้นทางสำหรับหมวดหมู่ (404)');
+            } else {
+                console.warn(`เกิดข้อผิดพลาด API: ${error.response.status}`);
+            }
+        } else {
+            console.warn('เกิดข้อผิดพลาดในการเชื่อมต่อ API');
+        }
+        setCategories([]); // กำหนดหมวดหมู่ให้เป็นค่าว่าง
+    });
+};
+
+
     useEffect(() => {
         fetchProducts();
         fetchCategories();
