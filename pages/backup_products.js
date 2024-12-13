@@ -221,12 +221,19 @@ const fetchCategories = () => {
     
     
 
+    // ฟังก์ชันคำนวณยอดรวมที่ต้องชำระ
     const calculateTotalWithBillDiscountAndVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดต่อสินค้า
+        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
         const totalWithBillDiscount = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดบิล
-        const vatAmount = calculateVAT(); // คำนวณ VAT
     
-        return Number(totalWithBillDiscount) + Number(vatAmount); // แปลงให้เป็นตัวเลขและคืนค่า
+        // หากเลือก "รวม VAT" จะไม่เพิ่ม VAT ซ้ำในยอดรวม
+        if (vatType === 'includeVat7' || vatType === 'includeVat3') {
+            return totalWithBillDiscount; // ยอดรวมพร้อม VAT อยู่แล้ว
+        }
+    
+        // หากเลือก "ไม่รวม VAT" จะเพิ่ม VAT
+        const vatAmount = calculateVAT(); // คำนวณ VAT
+        return totalWithBillDiscount + vatAmount; // รวมยอดหลังส่วนลดและ VAT
     };
 
     const calculateVAT = () => {
@@ -234,19 +241,19 @@ const fetchCategories = () => {
         let vatAmount = 0;
     
         switch (vatType) {
-            case 'includeVat7':
+            case 'includeVat7': // รวม VAT 7% ในยอดแล้ว
                 vatAmount = baseTotal * (7 / 107);
                 break;
-            case 'excludeVat7':
+            case 'excludeVat7': // ไม่รวม VAT 7%
                 vatAmount = baseTotal * 0.07;
                 break;
-            case 'includeVat3':
+            case 'includeVat3': // รวม VAT 3% ในยอดแล้ว
                 vatAmount = baseTotal * (3 / 103);
                 break;
-            case 'excludeVat3':
+            case 'excludeVat3': // ไม่รวม VAT 3%
                 vatAmount = baseTotal * 0.03;
                 break;
-            default:
+            default: // ไม่มี VAT
                 vatAmount = 0;
                 break;
         }
@@ -254,14 +261,10 @@ const fetchCategories = () => {
         return vatAmount || 0; // คืนค่า 0 หากไม่มีการคำนวณ
     };
     
-    
-    
-    
-    
-    
-    
 
     const handlePayment = () => {
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
+    
         if (paymentMethod === '') {
             Swal.fire({
                 icon: 'warning',
@@ -282,12 +285,11 @@ const fetchCategories = () => {
             return;
         }
     
-        const totalAmount = calculateTotalWithBillDiscount();
-        if (receivedAmount < totalAmount) {
+        if (receivedAmount < totalDue) {
             Swal.fire({
                 icon: 'warning',
                 title: 'ยอดชำระเงินไม่เพียงพอ',
-                text: `กรุณารับเงินมาไม่น้อยกว่าหรือเท่ากับยอดรวม ${totalAmount} ก่อนทำการชำระเงิน`,
+                text: `กรุณารับเงินมาไม่น้อยกว่าหรือเท่ากับยอดรวม ${totalDue.toFixed(2)} บาท`,
                 confirmButtonText: 'ตกลง',
             });
             return;
@@ -296,6 +298,7 @@ const fetchCategories = () => {
         // แสดงบิล (ไม่มีการบันทึกข้อมูลใด ๆ)
         setShowReceipt(true);
     };
+    
     const calculateTotalWithBillDiscount = () => {
         const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
         return calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดบิล
@@ -439,7 +442,8 @@ const fetchCategories = () => {
                     total: calculateDiscountedPrice(Number(item.price), Number(item.discount), item.discountType) * Number(item.quantity) || 0,
                 })),
             };
-    
+            console.log("Order Data to Send:", orderData); // ดูข้อมูลออร์เดอร์ที่จะส่งไป
+
             // ส่งข้อมูลออร์เดอร์ไปยังเซิร์ฟเวอร์
             const newOrder = await sendOrder(orderData); // ฟังก์ชันสำหรับส่งข้อมูลออร์เดอร์
             setOrderNumber(newOrder.order_number); // รับหมายเลขออร์เดอร์จากการตอบกลับ
@@ -522,20 +526,26 @@ const fetchCategories = () => {
         }
     };
 
+    // ฟังก์ชันอัปเดตจำนวนเงินด้วยปุ่ม
     const handleAmountButton = (amount) => {
-        setReceivedAmount((prevAmount) => prevAmount + amount);
+        setReceivedAmount((prevAmount) => {
+            const totalDue = calculateTotalWithBillDiscountAndVAT(); // คำนวณยอดรวมหลังส่วนลดและ VAT
+            const updatedAmount = prevAmount + amount; // เพิ่มจำนวนเงินที่กดปุ่ม
+            return updatedAmount > totalDue ? totalDue : updatedAmount; // ไม่ให้เกินยอดรวมที่ต้องชำระ
+        });
     };
 
     const resetAmount = () => {
         setReceivedAmount(0);
     };
 
+    // ฟังก์ชันอัปเดตจำนวนเงินเต็ม
     const handleFullAmount = () => {
-        setReceivedAmount(calculateTotalWithBillDiscount());
+        setReceivedAmount(calculateTotalWithBillDiscountAndVAT()); // รับเงินเท่ากับยอดรวมที่ต้องชำระ
     };
 
     const closeReceipt = async () => {
-        const totalDue = calculateTotalWithBillDiscount(); // ยอดรวมที่ต้องชำระ
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระหลังส่วนลดและภาษี
     
         if (receivedAmount < totalDue) {
             Swal.fire({
@@ -550,8 +560,8 @@ const fetchCategories = () => {
             // 1. บันทึกข้อมูลการชำระเงิน
             console.log('บันทึกการชำระเงิน...');
             await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
-            
-            // 2. อัปเดตสถานะบิลเป็น Y (ไม่ต้องตรวจสอบข้อผิดพลาด)
+    
+            // 2. อัปเดตสถานะบิลเป็น Y
             console.log('อัปเดตสถานะบิล...');
             await axios.put(
                 `${api_url}/api/${slug}/orders/${orderId}`,
@@ -563,34 +573,43 @@ const fetchCategories = () => {
                     },
                 }
             );
+    
+            // คำนวณยอดสุทธิ (net_amount)
+            const netAmount = calculateNetAmount(totalDue, billDiscount).toFixed(2);
+    
+            // แสดงข้อความบันทึกบิลสำเร็จพร้อม net_amount
+            Swal.fire({
+                icon: 'success',
+                title: 'บันทึกบิลสำเร็จ',
+                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount} บาท`,
+                confirmButtonText: 'ตกลง',
+            }).then(() => {
+                resetStateAfterSuccess();
+            });
         } catch (error) {
             console.error('เกิดข้อผิดพลาด:', error.message);
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
-    
-        // แสดงข้อความบันทึกบิลสำเร็จ และรีเซตสถานะเสมอ
-        Swal.fire({
-            icon: 'success',
-            title: 'บันทึกบิลสำเร็จ',
-            text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดเงิน: ${totalDue.toFixed(2)} บาท`,
-            confirmButtonText: 'ตกลง',
-        }).then(() => {
-            resetStateAfterSuccess();
-        });
     };
+    // ฟังก์ชันคำนวณยอดสุทธิ
+    const calculateNetAmount = (totalDue, billDiscount) => {
+        return totalDue - (billDiscountType === 'THB' ? billDiscount : (totalDue * billDiscount) / 100);
+    };
+
     
-    // ฟังก์ชันรีเซตสถานะหลังการชำระเงิน
+    // ฟังก์ชันรีเซ็ตสถานะหลังชำระเงินสำเร็จ
     const resetStateAfterSuccess = () => {
         setShowReceipt(false);
         setOrderReceived(false);
         setOrderId(null);
-        setOrderNumber(null); // รีเซตเลขที่ออเดอร์
+        setOrderNumber(null); // รีเซ็ตเลขที่ออร์เดอร์
         setCart([]);
         setReceivedAmount(0);
         setBillDiscount(0);
         setBillDiscountType("THB");
+        setVatType("includeVat7"); // ตั้ง VAT กลับเป็นค่าเริ่มต้น
         setIsBillPaused(false);
     };
-    
     
     
     const handlePauseBill = () => {
@@ -1184,16 +1203,18 @@ const fetchCategories = () => {
             </button>
         )}
 
-            <button
-                style={{
-                    ...styles.paymentButton,
-                    ...(orderReceived && cart.length > 0 ? {} : styles.paymentButtonDisabled),
-                }}
-                onClick={handlePayment} // ฟังก์ชันการชำระเงิน
-                disabled={!orderReceived || cart.length === 0}
-            >
-                ชำระเงิน
-            </button>
+        <button
+            style={{
+                ...styles.paymentButton,
+                ...(orderReceived && cart.length > 0 && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
+                    ? {} 
+                    : styles.paymentButtonDisabled),
+            }}
+            onClick={handlePayment} // ฟังก์ชันการชำระเงิน
+            disabled={!orderReceived || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+        >
+            ชำระเงิน
+        </button>
         </div>
     </div>
     </div>
