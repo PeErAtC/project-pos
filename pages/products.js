@@ -227,6 +227,16 @@ const fetchCategories = () => {
     };
 
     const handlePayment = () => {
+        if (paymentMethod === '') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณาเลือกวิธีการชำระเงิน',
+                text: 'กรุณาเลือกวิธีการชำระเงินก่อนทำการชำระ',
+                confirmButtonText: 'ตกลง',
+            });
+            return;
+        }
+    
         if (cart.length === 0) {
             Swal.fire({
                 icon: 'warning',
@@ -251,6 +261,7 @@ const fetchCategories = () => {
         // แสดงบิล (ไม่มีการบันทึกข้อมูลใด ๆ)
         setShowReceipt(true);
     };
+    
     
     const filteredProducts = products.filter(product =>
         (!selectedCategoryId || product.category_id === selectedCategoryId) &&
@@ -418,10 +429,8 @@ const fetchCategories = () => {
                     },
                 }
             );
-    
         } catch (error) {
             console.error('เกิดข้อผิดพลาด:', error.message);
-            // ทำการข้ามไปแสดงข้อความบันทึกบิลสำเร็จ
         }
     
         // แสดงข้อความบันทึกบิลสำเร็จ และรีเซตสถานะเสมอ
@@ -435,17 +444,19 @@ const fetchCategories = () => {
         });
     };
     
-    // ฟังก์ชันรีเซ็ตสถานะหลังบิลสำเร็จ
+    // ฟังก์ชันรีเซตสถานะหลังการชำระเงิน
     const resetStateAfterSuccess = () => {
         setShowReceipt(false);
         setOrderReceived(false);
         setOrderId(null);
+        setOrderNumber(null); // รีเซตเลขที่ออเดอร์
         setCart([]);
         setReceivedAmount(0);
         setBillDiscount(0);
         setBillDiscountType("THB");
         setIsBillPaused(false);
     };
+    
     
     
     const handlePauseBill = () => {
@@ -711,6 +722,16 @@ const fetchCategories = () => {
             <h2 style={{ marginLeft: '10px' }}>
                 ({cart.reduce((acc, item) => acc + item.quantity, 0)})
             </h2>
+            {/* แสดง order_number หากมี */}
+            {orderNumber ? (
+                <span style={{ marginLeft: '150px', fontSize: '12px', color: '#555', fontWeight: 'bold' }}>
+                    เลขที่ออเดอร์: {orderNumber}
+                </span>
+            ) : (
+                <span style={{ marginLeft: '150px', fontSize: '12px', color: '#888' }}>
+                    ยังไม่มีเลขที่ออเดอร์
+                </span>
+            )}
         </div>
         <button onClick={clearCart} style={styles.clearCartButton}>
             <FaTrash />
