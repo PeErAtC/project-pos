@@ -260,7 +260,13 @@ const fetchCategories = () => {
     
         return vatAmount || 0; // คืนค่า 0 หากไม่มีการคำนวณ
     };
-    
+    const handleAmountInput = (amount) => {
+        setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
+    };
+    const calculateChange = () => {
+        const totalDue = calculateTotalWithBillDiscountAndVAT();
+        return Math.max(receivedAmount - totalDue, 0).toFixed(2); // คืนเงินทอนหรือ 0.00
+    };
 
     const handlePayment = () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
@@ -295,9 +301,9 @@ const fetchCategories = () => {
             return;
         }
     
-        // แสดงบิล (ไม่มีการบันทึกข้อมูลใด ๆ)
-        setShowReceipt(true);
+        setShowReceipt(true); // แสดงบิลสำหรับการบันทึก
     };
+    
     
     const calculateTotalWithBillDiscount = () => {
         const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
@@ -409,48 +415,72 @@ const fetchCategories = () => {
     const receiveOrder = async () => {
         try {
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
-    
+        
             // คำนวณยอดรวมก่อน VAT
-            const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // แปลงค่าให้เป็นตัวเลขเสมอ
-            console.log("Base Total:", baseTotal);
+            const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมสินค้า
+            console.log("Base Total (ก่อน VAT):", baseTotal);
     
-            // คำนวณ VAT
-            const vatAmount = Number(calculateVAT()) || 0; // คำนวณจำนวน VAT
-            console.log("VAT Amount:", vatAmount);
+            // คำนวณ VAT และยอดรวมหลัง VAT
+            let vatAmount = 0;
+            let totalAmountWithVAT = baseTotal;
     
-            // คำนวณยอดรวมหลัง VAT
-            const totalWithVAT = Number(baseTotal + vatAmount); // แปลงค่าให้เป็นตัวเลข
-            console.log("Total with VAT:", totalWithVAT);
+            if (vatType === 'includeVat7') {
+                vatAmount = baseTotal * (7 / 107); // VAT รวมอยู่ในยอดแล้ว
+                totalAmountWithVAT = baseTotal; // ยอดรวมนี้มี VAT แล้ว
+            } else if (vatType === 'includeVat3') {
+                vatAmount = baseTotal * (3 / 103); // VAT รวมอยู่ในยอดแล้ว
+                totalAmountWithVAT = baseTotal; // ยอดรวมนี้มี VAT แล้ว
+            } else if (vatType === 'excludeVat7') {
+                vatAmount = baseTotal * 0.07; // เพิ่ม VAT 7%
+                totalAmountWithVAT = baseTotal + vatAmount; // รวม VAT เข้าไป
+            } else if (vatType === 'excludeVat3') {
+                vatAmount = baseTotal * 0.03; // เพิ่ม VAT 3%
+                totalAmountWithVAT = baseTotal + vatAmount; // รวม VAT เข้าไป
+            }
     
+            // ตรวจสอบ % VAT
+            const vatPercentage = 
+                vatType === 'includeVat7' || vatType === 'excludeVat7' ? 7 :
+                vatType === 'includeVat3' || vatType === 'excludeVat3' ? 3 : 0;
+    
+            // ** เลือกยอดรวมที่ต้องส่งตามประเภท VAT **
+            const totalAmount = totalAmountWithVAT.toFixed(2); // กรณีไม่รวม VAT ต้องส่งยอดรวมที่รวม VAT เข้าไป
+    
+            // สร้างข้อมูลที่ต้องการส่งไปฐานข้อมูล
             const orderData = {
-                total_amount: baseTotal.toFixed(2), // ยอดรวมก่อน VAT
-                vat_per: vatType === 'includeVat7' || vatType === 'excludeVat7' ? 7 : vatType === 'includeVat3' || vatType === 'excludeVat3' ? 3 : 0, // เปอร์เซ็นต์ VAT
+                total_amount: totalAmount, // ส่งยอดรวมที่รวม VAT
+                vat_per: vatPercentage, // เปอร์เซ็นต์ VAT
                 vat_amt: vatAmount.toFixed(2), // จำนวน VAT
-                total_amount_with_vat: totalWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
+                total_amount_with_vat: totalAmountWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
                 discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลด
                 discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // เปอร์เซ็นต์ส่วนลด
-                net_amount: (totalWithVAT - billDiscount).toFixed(2), // จำนวนรวมสุทธิหลังส่วนลดและ VAT
-                status: 'N', // สถานะออร์เดอร์ (N = New)
-                tables_id: tableCode || null, // ID โต๊ะ (ถ้ามี)
-                created_by: userId, // ผู้สร้างออร์เดอร์
+                net_amount: (totalAmountWithVAT - billDiscount).toFixed(2), // ยอดสุทธิหลังส่วนลด
+                status: 'N', // สถานะบิล (N = ยังไม่ชำระเงิน)
+                tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
+                created_by: userId, // ผู้สร้างคำสั่งซื้อ
                 vatType, // ประเภท VAT ที่เลือก
                 items: cart.map((item) => ({
                     product_id: item.id || 0,
                     p_name: item.p_name || 'Unnamed Product',
                     quantity: Number(item.quantity) || 0,
                     price: Number(item.price) || 0,
-                    total: calculateDiscountedPrice(Number(item.price), Number(item.discount), item.discountType) * Number(item.quantity) || 0,
+                    total: calculateDiscountedPrice(
+                        Number(item.price),
+                        Number(item.discount),
+                        item.discountType
+                    ) * Number(item.quantity) || 0,
                 })),
             };
-            console.log("Order Data to Send:", orderData); // ดูข้อมูลออร์เดอร์ที่จะส่งไป
-
-            // ส่งข้อมูลออร์เดอร์ไปยังเซิร์ฟเวอร์
-            const newOrder = await sendOrder(orderData); // ฟังก์ชันสำหรับส่งข้อมูลออร์เดอร์
-            setOrderNumber(newOrder.order_number); // รับหมายเลขออร์เดอร์จากการตอบกลับ
-            setOrderId(newOrder.id); // เก็บ ID ออร์เดอร์
-            setOrderReceived(true); // เปิดการเลือกชำระเงิน
+    
+            console.log("ข้อมูลออเดอร์ที่ส่ง:", orderData);
+    
+            // ส่งข้อมูลออเดอร์ไปเซิร์ฟเวอร์
+            const newOrder = await sendOrder(orderData); // ส่งออเดอร์ไปยังฟังก์ชัน `sendOrder`
+            setOrderNumber(newOrder.order_number); // เก็บหมายเลขออเดอร์
+            setOrderId(newOrder.id); // เก็บรหัสออเดอร์
+            setOrderReceived(true); // อนุญาตให้เลือกวิธีการชำระเงิน
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการรับออร์เดอร์:', error);
+            console.error('เกิดข้อผิดพลาดในการรับออเดอร์:', error);
             Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
         }
     };
@@ -529,9 +559,8 @@ const fetchCategories = () => {
     // ฟังก์ชันอัปเดตจำนวนเงินด้วยปุ่ม
     const handleAmountButton = (amount) => {
         setReceivedAmount((prevAmount) => {
-            const totalDue = calculateTotalWithBillDiscountAndVAT(); // คำนวณยอดรวมหลังส่วนลดและ VAT
             const updatedAmount = prevAmount + amount; // เพิ่มจำนวนเงินที่กดปุ่ม
-            return updatedAmount > totalDue ? totalDue : updatedAmount; // ไม่ให้เกินยอดรวมที่ต้องชำระ
+            return updatedAmount; // อนุญาตให้ยอดรับเงินเกินยอดรวมได้
         });
     };
 
@@ -1123,18 +1152,28 @@ const fetchCategories = () => {
                         gap: '3px', // เพิ่มช่องว่างระหว่างองค์ประกอบ
                     }}
                 >
-                    <input
-                        type="number"
-                        placeholder="รับเงิน"
-                        value={receivedAmount || ''}
-                        onChange={(e) => setReceivedAmount(parseFloat(e.target.value) || 0)}
-                        style={{
-                            ...styles.amountInputHalf,
-                            flex: 2, // ปรับให้ input มีพื้นที่ใหญ่กว่า
-                        }}
-                    />
-                    <button
-                    onClick={handleFullAmount}
+                    {/* Input ช่องรับเงิน */}
+                <input
+                    type="number"
+                    placeholder="รับเงิน"
+                    value={receivedAmount || ''}
+                    onChange={(e) => {
+                        const inputAmount = parseFloat(e.target.value) || 0;
+                        setReceivedAmount(inputAmount); // อนุญาตให้กรอกจำนวนเงินเกินยอดรวมได้
+                    }}
+                    style={{
+                        ...styles.amountInputHalf,
+                        flex: 2, // ปรับให้ input มีพื้นที่ใหญ่กว่า
+                    }}
+                />
+
+
+                {/* ปุ่มรับเงินเต็มจำนวน */}
+                <button
+                    onClick={() => {
+                        const totalDue = calculateTotalWithBillDiscountAndVAT();
+                        setReceivedAmount(totalDue); // ตั้งค่าให้ตรงกับยอดรวมทั้งหมด
+                    }}
                     style={{
                         ...styles.amountButton,
                         background: '#5fd78b', // สีพื้นหลังแบบสีเขียวธรรมดา
@@ -1172,7 +1211,7 @@ const fetchCategories = () => {
             </div>
             {/* การแสดงเงินทอน */}
             <div style={styles.changeDisplay}>
-                เงินทอน: {(receivedAmount ? (receivedAmount - calculateTotalWithBillDiscount()).toFixed(2) : '0.00')} บาท
+                เงินทอน: {calculateChange()} บาท
             </div>
         </>
     ) : null}
@@ -1268,10 +1307,31 @@ const fetchCategories = () => {
             </div>
             <div style={styles.receiptSummary}>
                 <p>โต๊ะ: {tableCode}</p>
-                <p>ยอดบิล: <span style={styles.summaryValue}>{Number(calculateTotalWithBillDiscountAndVAT()).toFixed(2)} บาท</span></p>
-                <p>ยอดภาษีมูลค่าเพิ่ม (VAT): <span style={styles.summaryValue}>{calculateVAT().toFixed(2)} บาท</span></p>
-                <p>รับเงิน: <span style={styles.summaryValue}>{receivedAmount.toFixed(2)} บาท</span></p>
-                <p>เงินทอน: <span style={styles.summaryValue}>{(receivedAmount - calculateTotalWithBillDiscountAndVAT()).toFixed(2)} บาท</span></p>
+                <p>
+                    ยอดบิล: 
+                    <span style={styles.summaryValue}>
+                        {Number(calculateTotalWithBillDiscountAndVAT()).toFixed(2)} บาท
+                    </span>
+                </p>
+                <p>
+                    ยอดภาษีมูลค่าเพิ่ม ({vatType.includes('7') ? '7%' : vatType.includes('3') ? '3%' : '0%'} 
+                    {vatType.includes('include') ? ' รวม' : vatType.includes('exclude') ? ' ไม่รวม' : ''}): 
+                    <span style={styles.summaryValue}>
+                        {calculateVAT().toFixed(2)} บาท
+                    </span>
+                </p>
+                <p>
+                    รับเงิน: 
+                    <span style={styles.summaryValue}>
+                        {receivedAmount.toFixed(2)} บาท
+                    </span>
+                </p>
+                <p>
+                    เงินทอน: 
+                    <span style={styles.summaryValue}>
+                        {(receivedAmount - calculateTotalWithBillDiscountAndVAT()).toFixed(2)} บาท
+                    </span>
+                </p>
             </div>
             <div style={styles.receiptItem}>
                 <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
