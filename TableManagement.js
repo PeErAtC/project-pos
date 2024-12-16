@@ -227,30 +227,33 @@ export default function TableManagement() {
                                         <th style={styles.thActions}>ดำเนินการ</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                {tables
-                                    .filter((table) => table.table_code.toLowerCase().includes(searchQuery.toLowerCase()))
-                                    .map((table, index) => (
-                                        <tr
-                                            key={table.id}
-                                            style={{
-                                                ...styles.tr,
-                                                backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0',
-                                            }}
-                                        >
-                                            <td style={styles.td}>{table.table_code}</td>
-                                            <td style={styles.td}>{table.seats}</td>
-                                            {/* เงื่อนไขพิเศษสำหรับ CT001 */}
-                                            <td style={{ ...styles.td, color: table.table_code === 'CT001' ? '#FF5733' : table.status === 'Y' ? 'black' : 'red' }}>
-                                                {table.table_code === 'CT001' ? 'พิเศษ' : table.status === 'Y' ? 'เปิด' : 'ปิด'}
-                                            </td>
-                                            <td style={styles.tdActions}>
-                                                <button onClick={() => handleEditTable(table)} style={{ ...styles.editButton, marginRight: '10px' }}>แก้ไข</button>
-                                                <button onClick={() => handleDeleteTable(table.id)} style={styles.deleteButton}>ลบ</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                            </tbody>
+                                    <tbody>
+                                    {tables
+                                        .filter((table) => table.table_code.toLowerCase().includes(searchQuery.toLowerCase()))
+                                        .map((table, index) => (
+                                            <tr
+                                                key={table.id}
+                                                style={{
+                                                    ...styles.tr,
+                                                    backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0',
+                                                }}
+                                            >
+                                                <td style={styles.td}>{table.table_code}</td>
+                                                <td style={styles.td}>{table.seats}</td>
+                                                <td style={{
+                                                    ...styles.td,
+                                                    color: table.table_code === 'CT001' ? 'green' : table.status === 'Y' ? 'black' : 'red',
+                                                    fontWeight: table.table_code === 'CT001' ? '' : 'normal',
+                                                }}>
+                                                    {table.table_code === 'CT001' ? 'พิเศษ' : table.status === 'Y' ? 'เปิด' : 'ปิด'}
+                                                </td>
+                                                <td style={styles.tdActions}>
+                                                    <button onClick={() => handleEditTable(table)} style={{ ...styles.editButton, marginRight: '10px' }}>แก้ไข</button>
+                                                    <button onClick={() => handleDeleteTable(table.id)} style={styles.deleteButton}>ลบ</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                </tbody>
                             </table>
                         </div>
                     )}
