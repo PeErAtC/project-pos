@@ -223,17 +223,18 @@ const fetchCategories = () => {
 
     // ฟังก์ชันคำนวณยอดรวมที่ต้องชำระ
     const calculateTotalWithBillDiscountAndVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts();
-        const discountedTotal = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType);
+        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
+        const discountedTotal = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดรวม
     
         let vatAmount = 0;
         if (vatType === 'excludeVat7') {
-            vatAmount = discountedTotal * 0.07;
+            vatAmount = discountedTotal * 0.07; // เพิ่ม VAT 7%
         } else if (vatType === 'excludeVat3') {
-            vatAmount = discountedTotal * 0.03;
+            vatAmount = discountedTotal * 0.03; // เพิ่ม VAT 3%
         }
     
-        return Number((discountedTotal + vatAmount).toFixed(2)); // ตัดทศนิยมให้ไม่เกิน 2 ตำแหน่ง
+        // Return ยอดรวมหลังส่วนลด + VAT
+        return Number((discountedTotal + vatAmount).toFixed(2));
     };
     
 
@@ -330,45 +331,45 @@ const fetchCategories = () => {
     
     const sendOrder = async (orderData) => {
         try {
-            // คำนวณ VAT
-            const baseTotal = Number(orderData.total_amount) || 0; // แปลงค่าให้เป็นตัวเลขเสมอ
+            const baseTotal = Number(orderData.total_amount) || 0; // Convert total_amount to a number
             console.log("Base Total:", baseTotal);
     
             let vatAmount = 0;
     
-            // ตรวจสอบประเภท VAT และคำนวณ
+            // Determine VAT type and calculate VAT
             switch (vatType) {
                 case 'includeVat7':
-                    vatAmount = baseTotal * (7 / 107);
+                    vatAmount = baseTotal * (7 / 107); // VAT 7% already included
                     break;
                 case 'excludeVat7':
-                    vatAmount = baseTotal * 0.07;
+                    vatAmount = baseTotal * 0.07; // Add 7% VAT
                     break;
                 case 'includeVat3':
-                    vatAmount = baseTotal * (3 / 103);
+                    vatAmount = baseTotal * (3 / 103); // VAT 3% already included
                     break;
                 case 'excludeVat3':
-                    vatAmount = baseTotal * 0.03;
+                    vatAmount = baseTotal * 0.03; // Add 3% VAT
                     break;
                 default:
-                    vatAmount = 0;
+                    vatAmount = 0; // No VAT
                     break;
             }
             console.log("VAT Amount:", vatAmount);
     
-            // ตรวจสอบค่าก่อนบันทึก
-            console.log("Total Amount with VAT:", baseTotal + vatAmount);
+            // Log the calculated total with VAT
+            const totalWithVAT = baseTotal + (vatType.includes('exclude') ? vatAmount : 0);
+            console.log("Total Amount with VAT:", totalWithVAT);
     
-            // อัปเดตข้อมูลออร์เดอร์ให้รวม VAT
+            // Update the order data with VAT details
             const updatedOrderData = {
                 ...orderData,
-                vatType, // ประเภท VAT ที่เลือก
-                vatAmount: Number(vatAmount.toFixed(2)), // ยอด VAT ที่คำนวณได้
-                total_amount_with_vat: Number((baseTotal + vatAmount).toFixed(2)), // ยอดรวมพร้อม VAT
-                total_amount_before_vat: Number(baseTotal.toFixed(2)), // ยอดรวมก่อน VAT
+                vatType, // VAT type selected
+                vatAmount: Number(vatAmount.toFixed(2)), // Calculated VAT amount
+                total_amount_with_vat: Number(totalWithVAT.toFixed(2)), // Total amount including VAT
+                total_amount_before_vat: Number(baseTotal.toFixed(2)), // Total amount before VAT
             };
     
-            // ส่งข้อมูลออร์เดอร์ไปยัง API
+            // Send the updated order data to the API
             const response = await axios.post(`${api_url}/api/${slug}/orders`, updatedOrderData, {
                 headers: {
                     'Accept': 'application/json',
@@ -376,18 +377,19 @@ const fetchCategories = () => {
                 },
             });
     
-            // ตรวจสอบผลลัพธ์จาก API
+            // Check API response
             if (response.data && response.data.order) {
                 console.log('Order sent successfully:', response.data.order);
-                return response.data.order; // ส่งกลับข้อมูลออร์เดอร์
+                return response.data.order; // Return the created order
             } else {
-                throw new Error('รูปแบบการตอบกลับจาก API ไม่ถูกต้อง');
+                throw new Error('API response format is invalid');
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการสร้างออร์เดอร์:', error.response?.data || error.message);
-            throw new Error(`ไม่สามารถสร้างออร์เดอร์ได้: ${error.response?.data?.message || error.message}`);
+            console.error('Error creating order:', error.response?.data || error.message);
+            throw new Error(`Unable to create order: ${error.response?.data?.message || error.message}`);
         }
     };
+    
     
     
     
@@ -438,7 +440,7 @@ const fetchCategories = () => {
                 total_amount_with_vat: totalAmountWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
                 discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลด
                 discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // เปอร์เซ็นต์ส่วนลด
-                net_amount: (totalAmountWithVAT - billDiscount).toFixed(2), // ยอดสุทธิหลังส่วนลด
+                net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิไม่ลดซ้ำ
                 status: 'N', // สถานะบิล (N = ยังไม่ชำระเงิน)
                 tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
                 created_by: userId, // ผู้สร้างคำสั่งซื้อ
@@ -606,8 +608,7 @@ const fetchCategories = () => {
     };
     // ฟังก์ชันคำนวณยอดสุทธิ
     const calculateNetAmount = (totalDue, billDiscount) => {
-        let netAmount = totalDue - (billDiscountType === 'THB' ? billDiscount : (totalDue * billDiscount) / 100);
-        return Number(netAmount.toFixed(2)); // ตัดทศนิยม
+        return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
     };
 
     
