@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -23,6 +23,41 @@ export default function SalesReport({ initialReportData, initialError }) {
     const [error, setError] = useState(initialError || null);
     const [dateFilter, setDateFilter] = useState('');
     const [currentItems, setCurrentItems] = useState([]);
+    
+    const formatDateTimeToThai = (utcDateTime) => {
+        if (!utcDateTime) return 'N/A'; // หากไม่มีข้อมูล ให้แสดง "N/A"
+        const date = new Date(`${utcDateTime}Z`); // เพิ่ม "Z" เพื่อบอกว่าเป็น UTC
+        return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }); // แปลงเป็นเวลาประเทศไทย
+    };
+
+    const calculateVatDetails = (item) => {
+        if (!item || !item.vat_per || item.vat_per === 0) {
+            return { vatAmount: '0.00', vatLabel: 'Non VAT', priceWithVat: item?.total_amount || '0.00' };
+        }
+
+        const vatPercentage = item.vat_per;
+        const totalAmount = parseFloat(item.total_amount);
+        let vatAmount = 0;
+        let priceWithVat = totalAmount;
+        let vatLabel = '';
+
+        if (item.include_vat) {
+            // VAT ภายใน
+            vatAmount = totalAmount * vatPercentage / (100 + vatPercentage);
+            vatLabel = `${vatPercentage}% (Exclude VAT)`;
+        } else {
+            // VAT ภายนอก
+            vatAmount = totalAmount * (vatPercentage / 100);
+            priceWithVat += vatAmount;
+            vatLabel = `${vatPercentage}% (Include VAT)`;
+        }
+
+        return {
+            vatAmount: vatAmount.toFixed(2),
+            vatLabel,
+            priceWithVat: priceWithVat.toFixed(2),
+        };
+    };
 
     const fetchReportData = async () => {
         try {
@@ -94,35 +129,6 @@ export default function SalesReport({ initialReportData, initialError }) {
             });
             return null;
         }
-    };
-
-    const calculateVatAmount = (item) => {
-        if (!item || !item.vat_per || !item.total_amount) {
-            return { vatAmount: '0.00', vatLabel: 'ไม่มีภาษี', priceWithVat: item?.total_amount || '0.00' };
-        }
-    
-        let vatAmount = 0;
-        let vatLabel = '';
-        let priceWithVat = item.total_amount;
-    
-        if (item.vat_per > 0) {
-            if (item.include_vat) { // VAT ใน
-                vatLabel = `${item.vat_per}% (VAT ใน)`;
-                vatAmount = item.total_amount * item.vat_per / (100 + item.vat_per);
-            } else { // VAT นอก
-                vatLabel = `${item.vat_per}% (VAT นอก)`;
-                vatAmount = item.total_amount * (item.vat_per / 100);
-                priceWithVat = parseFloat(item.total_amount) + vatAmount;
-            }
-        } else {
-            vatLabel = 'ไม่มีภาษี';
-        }
-    
-        return { 
-            vatAmount: vatAmount.toFixed(2), 
-            vatLabel, 
-            priceWithVat: priceWithVat.toFixed(2) 
-        };
     };
     
 
@@ -276,20 +282,16 @@ export default function SalesReport({ initialReportData, initialError }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {pendingOrders.map((order, index) => (
+                            {pendingOrders.map((order, index) => {
+                            const vatDetails = calculateVatDetails(order);
+                            return (
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
                                     <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                    <td style={styles.td}>
-                                        {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} />
-                                        {new Date(order.created_at).toLocaleTimeString('th-TH', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </td>
+                                    <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
-                                    <td style={styles.td}>{order.vat_per && order.vat_per > 0 ? `${order.vat_amt} ฿ (${order.vat_per}% VAT)`: 'ไม่มีภาษี'}</td>
+                                    <td style={styles.td}>{`${vatDetails.vatAmount} ฿ (${vatDetails.vatLabel})`}</td>
                                     <td style={styles.td}>{order.net_amount} ฿</td>
                                     <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Check if payment_method exists */}
                                     <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
@@ -299,7 +301,8 @@ export default function SalesReport({ initialReportData, initialError }) {
                                         <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
                                     </td>
                                 </tr>
-                            ))}
+                            );
+                            })}
                         </tbody>
 
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
@@ -338,13 +341,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
                                     <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                    <td style={styles.td}>
-                                        {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} />
-                                        {new Date(order.created_at).toLocaleTimeString('th-TH', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </td>
+                                    <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
                                     <td style={styles.td}>{order.vat_per && order.vat_per > 0 ? `${order.vat_amt} ฿ (${order.vat_per}% VAT)`: 'ไม่มีภาษี'}</td>
