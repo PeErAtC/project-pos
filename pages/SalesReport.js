@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -95,6 +95,35 @@ export default function SalesReport({ initialReportData, initialError }) {
             return null;
         }
     };
+
+    const calculateVatAmount = (item) => {
+        if (!item || !item.vat_per || !item.total_amount) {
+            return { vatAmount: '0.00', vatLabel: 'ไม่มีภาษี', priceWithVat: item?.total_amount || '0.00' };
+        }
+    
+        let vatAmount = 0;
+        let vatLabel = '';
+        let priceWithVat = item.total_amount;
+    
+        if (item.vat_per > 0) {
+            if (item.include_vat) { // VAT ใน
+                vatLabel = `${item.vat_per}% (VAT ใน)`;
+                vatAmount = item.total_amount * item.vat_per / (100 + item.vat_per);
+            } else { // VAT นอก
+                vatLabel = `${item.vat_per}% (VAT นอก)`;
+                vatAmount = item.total_amount * (item.vat_per / 100);
+                priceWithVat = parseFloat(item.total_amount) + vatAmount;
+            }
+        } else {
+            vatLabel = 'ไม่มีภาษี';
+        }
+    
+        return { 
+            vatAmount: vatAmount.toFixed(2), 
+            vatLabel, 
+            priceWithVat: priceWithVat.toFixed(2) 
+        };
+    };
     
 
     const showOrderDetails = async (orderId) => {
@@ -109,7 +138,7 @@ export default function SalesReport({ initialReportData, initialError }) {
         }
     
         try {
-            const order = await fetchOrderDetails(orderId);
+    const order = await fetchOrderDetails(orderId);
     
             // เพิ่มการตรวจสอบว่าได้รับข้อมูลบิลหรือไม่
             if (!order || !order.items || order.items.length === 0) {
@@ -260,7 +289,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     </td>
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
-                                    <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
+                                    <td style={styles.td}>{order.vat_per && order.vat_per > 0 ? `${order.vat_amt} ฿ (${order.vat_per}% VAT)`: 'ไม่มีภาษี'}</td>
                                     <td style={styles.td}>{order.net_amount} ฿</td>
                                     <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Check if payment_method exists */}
                                     <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
@@ -318,7 +347,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     </td>
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
-                                    <td style={styles.td}>{order.vat_amt || 'N/A'}</td>
+                                    <td style={styles.td}>{order.vat_per && order.vat_per > 0 ? `${order.vat_amt} ฿ (${order.vat_per}% VAT)`: 'ไม่มีภาษี'}</td>
                                     <td style={styles.td}>{order.net_amount} ฿</td>
                                     <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Display Payment Method */}
                                     <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
@@ -328,7 +357,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 </tr>
                             ))}
                         </tbody>
-                        <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#f0fff4', zIndex: 1 }}>
+                        <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#fff', zIndex: 1 }}>
                             <tr>
                                 <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
@@ -359,8 +388,8 @@ const styles = {
     table: { width: '100%', borderCollapse: 'collapse' },
     th: { padding: '5px', backgroundColor: '#499cae', color: '#fff', textAlign: 'center', position: 'sticky', top: 0 },
     td: { padding: '5px', borderBottom: '1px solid #ddd', textAlign: 'center', color: '#333', fontSize: '14px' },
-    totalLabel: { textAlign: 'right', fontWeight: 'bold' },
+    totalLabel: { textAlign: 'right', fontWeight: 'bold'  },
     totalValue: { textAlign: 'center', fontWeight: 'bold' },
     detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', flex: 1 },
-    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#f0fff4', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
+    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fff', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
 };
