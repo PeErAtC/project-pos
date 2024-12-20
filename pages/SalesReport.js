@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsidebar';
+import BackendSidebar from './components/backendsideber';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -23,12 +23,6 @@ export default function SalesReport({ initialReportData, initialError }) {
     const [error, setError] = useState(initialError || null);
     const [dateFilter, setDateFilter] = useState('');
     const [currentItems, setCurrentItems] = useState([]);
-    
-    const formatDateTimeToThai = (utcDateTime) => {
-        if (!utcDateTime) return 'N/A'; // หากไม่มีข้อมูล ให้แสดง "N/A"
-        const date = new Date(`${utcDateTime}Z`); // เพิ่ม "Z" เพื่อบอกว่าเป็น UTC
-        return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }); // แปลงเป็นเวลาประเทศไทย
-    };
 
     const fetchReportData = async () => {
         try {
@@ -286,7 +280,13 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
                                     <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                    <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
+                                    <td style={styles.td}>
+                                        {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} />
+                                        {new Date(order.created_at).toLocaleTimeString('th-TH', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </td>
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
                                     <td style={styles.td}>{order.vat_per && order.vat_per > 0 ? `${order.vat_amt} ฿ (${order.vat_per}% VAT)`: 'ไม่มีภาษี'}</td>
@@ -338,7 +338,13 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <tr key={index}>
                                     <td style={styles.td}>{order.order_number}</td>
                                     <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                    <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
+                                    <td style={styles.td}>
+                                        {new Date(order.order_date).toLocaleDateString('th-TH')} <span style={{ marginLeft: '4px' }} />
+                                        {new Date(order.created_at).toLocaleTimeString('th-TH', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </td>
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
                                     <td style={styles.td}>{order.vat_per && order.vat_per > 0 ? `${order.vat_amt} ฿ (${order.vat_per}% VAT)`: 'ไม่มีภาษี'}</td>
