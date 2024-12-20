@@ -223,42 +223,42 @@ const fetchCategories = () => {
 
     // ฟังก์ชันคำนวณยอดรวมที่ต้องชำระ
     const calculateTotalWithBillDiscountAndVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
-        const discountedTotal = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดรวม
+        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมสินค้า
+        const discountedTotal = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดบิล
     
         let vatAmount = 0;
+    
         if (vatType === 'excludeVat7') {
             vatAmount = discountedTotal * 0.07; // เพิ่ม VAT 7%
         } else if (vatType === 'excludeVat3') {
             vatAmount = discountedTotal * 0.03; // เพิ่ม VAT 3%
         }
     
-        // Return ยอดรวมหลังส่วนลด + VAT
-        return Number((discountedTotal + vatAmount).toFixed(2));
+        return Number((discountedTotal + vatAmount).toFixed(2)); // รวม VAT (เฉพาะกรณีไม่รวม VAT)
     };
     
 
     const calculateVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts();
+        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมสินค้า
         let vatAmount = 0;
     
         switch (vatType) {
             case 'includeVat7':
-                vatAmount = baseTotal * (7 / 107); // VAT 7% รวมในยอดแล้ว
+                vatAmount = baseTotal * (7 / 107); // คำนวณ VAT 7% ที่รวมในยอดแล้ว
+                break;
+            case 'includeVat3':
+                vatAmount = baseTotal * (3 / 103); // คำนวณ VAT 3% ที่รวมในยอดแล้ว
                 break;
             case 'excludeVat7':
                 vatAmount = baseTotal * 0.07; // เพิ่ม VAT 7%
-                break;
-            case 'includeVat3':
-                vatAmount = baseTotal * (3 / 103); // VAT 3% รวมในยอดแล้ว
                 break;
             case 'excludeVat3':
                 vatAmount = baseTotal * 0.03; // เพิ่ม VAT 3%
                 break;
             default:
-                vatAmount = 0; // ไม่มีภาษี
+                vatAmount = 0; // ไม่มี VAT
         }
-        return vatAmount;
+        return vatAmount; // คืนค่าเป็น number
     };
     const handleAmountInput = (amount) => {
         setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
@@ -331,53 +331,13 @@ const fetchCategories = () => {
     
     const sendOrder = async (orderData) => {
         try {
-            const baseTotal = Number(orderData.total_amount) || 0; // Convert total_amount to a number
-            console.log("Base Total:", baseTotal);
-    
-            let vatAmount = 0;
-    
-            // Determine VAT type and calculate VAT
-            switch (vatType) {
-                case 'includeVat7':
-                    vatAmount = baseTotal * (7 / 107); // VAT 7% already included
-                    break;
-                case 'excludeVat7':
-                    vatAmount = baseTotal * 0.07; // Add 7% VAT
-                    break;
-                case 'includeVat3':
-                    vatAmount = baseTotal * (3 / 103); // VAT 3% already included
-                    break;
-                case 'excludeVat3':
-                    vatAmount = baseTotal * 0.03; // Add 3% VAT
-                    break;
-                default:
-                    vatAmount = 0; // No VAT
-                    break;
-            }
-            console.log("VAT Amount:", vatAmount);
-    
-            // Log the calculated total with VAT
-            const totalWithVAT = baseTotal + (vatType.includes('exclude') ? vatAmount : 0);
-            console.log("Total Amount with VAT:", totalWithVAT);
-    
-            // Update the order data with VAT details
-            const updatedOrderData = {
-                ...orderData,
-                vatType, // VAT type selected
-                vatAmount: Number(vatAmount.toFixed(2)), // Calculated VAT amount
-                total_amount_with_vat: Number(totalWithVAT.toFixed(2)), // Total amount including VAT
-                total_amount_before_vat: Number(baseTotal.toFixed(2)), // Total amount before VAT
-            };
-    
-            // Send the updated order data to the API
-            const response = await axios.post(`${api_url}/api/${slug}/orders`, updatedOrderData, {
+            const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
     
-            // Check API response
             if (response.data && response.data.order) {
                 console.log('Order sent successfully:', response.data.order);
                 return response.data.order; // Return the created order
@@ -393,6 +353,7 @@ const fetchCategories = () => {
     
     
     
+    
     useEffect(() => {
         calculateTotalWithVAT();
     }, [vatType]); // ใช้ useEffect ติดตามค่า vatType
@@ -401,7 +362,7 @@ const fetchCategories = () => {
     const receiveOrder = async () => {
         try {
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
-        
+    
             // คำนวณยอดรวมก่อน VAT
             const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมสินค้า
             console.log("Base Total (ก่อน VAT):", baseTotal);
@@ -426,21 +387,20 @@ const fetchCategories = () => {
     
             // ตรวจสอบ % VAT
             const vatPercentage = 
-                vatType === 'includeVat7' || vatType === 'excludeVat7' ? 7 :
-                vatType === 'includeVat3' || vatType === 'excludeVat3' ? 3 : 0;
-    
-            // ** เลือกยอดรวมที่ต้องส่งตามประเภท VAT **
-            const totalAmount = totalAmountWithVAT.toFixed(2); // กรณีไม่รวม VAT ต้องส่งยอดรวมที่รวม VAT เข้าไป
+                vatType === 'excludeVat7' ? 7 :
+                vatType === 'excludeVat3' ? 3 : 0;
     
             // สร้างข้อมูลที่ต้องการส่งไปฐานข้อมูล
             const orderData = {
-                total_amount: totalAmount, // ส่งยอดรวมที่รวม VAT
-                vat_per: vatPercentage, // เปอร์เซ็นต์ VAT
-                vat_amt: vatAmount.toFixed(2), // จำนวน VAT
+                total_amount: baseTotal.toFixed(2), // ส่งยอดรวมก่อน VAT
+                ...(vatType.includes('exclude') && { // เฉพาะกรณี "ไม่รวม VAT" เท่านั้นที่ส่ง VAT ข้อมูลนี้
+                    vat_per: vatPercentage, // เปอร์เซ็นต์ VAT
+                    vat_amt: vatAmount.toFixed(2), // จำนวน VAT
+                }),
                 total_amount_with_vat: totalAmountWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
                 discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลด
                 discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // เปอร์เซ็นต์ส่วนลด
-                net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิไม่ลดซ้ำ
+                net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิ
                 status: 'N', // สถานะบิล (N = ยังไม่ชำระเงิน)
                 tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
                 created_by: userId, // ผู้สร้างคำสั่งซื้อ
@@ -470,7 +430,6 @@ const fetchCategories = () => {
             Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
         }
     };
-    
     
     
     
@@ -560,7 +519,7 @@ const fetchCategories = () => {
     };
 
     const closeReceipt = async () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระหลังส่วนลดและภาษี
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
     
         if (receivedAmount < totalDue) {
             Swal.fire({
@@ -572,15 +531,22 @@ const fetchCategories = () => {
         }
     
         try {
-            // 1. บันทึกข้อมูลการชำระเงิน
-            console.log('บันทึกการชำระเงิน...');
+            // คำนวณยอดสุทธิ (net_amount)
+            const vatAmount = vatType.includes('exclude') ? parseFloat(calculateVAT().toFixed(2)) : 0; // เพิ่ม VAT เฉพาะกรณีไม่รวม
+            const netAmount = totalDue; // ยอดรวมที่มี VAT
+    
+            // บันทึกข้อมูลการชำระเงิน
             await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
     
-            // 2. อัปเดตสถานะบิลเป็น Y
-            console.log('อัปเดตสถานะบิล...');
+            // อัปเดตข้อมูลบิล
             await axios.put(
                 `${api_url}/api/${slug}/orders/${orderId}`,
-                { status: 'Y' },
+                {
+                    status: 'Y',
+                    vat_amt: vatType.includes('exclude') ? vatAmount : "", // กรอก VAT เฉพาะกรณีไม่รวม
+                    net_amount: netAmount, // ยอดสุทธิหลังรวม VAT
+                    vat_per: vatType.includes('exclude') ? (vatType.includes('7') ? 7 : 3) : 0, // กรอก % VAT
+                },
                 {
                     headers: {
                         'Accept': 'application/json',
@@ -589,14 +555,10 @@ const fetchCategories = () => {
                 }
             );
     
-            // คำนวณยอดสุทธิ (net_amount)
-            const netAmount = calculateNetAmount(totalDue, billDiscount).toFixed(2);
-    
-            // แสดงข้อความบันทึกบิลสำเร็จพร้อม net_amount
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกบิลสำเร็จ',
-                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount} บาท`,
+                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount.toFixed(2)} บาท`,
                 confirmButtonText: 'ตกลง',
             }).then(() => {
                 resetStateAfterSuccess();
