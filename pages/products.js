@@ -205,13 +205,14 @@ const fetchCategories = () => {
     };
 
     const calculateDiscountedPrice = (price, discount, discountType) => {
-        if (discountType === "THB") {
+        if (discountType === 'THB') {
             return Math.max(price - discount, 0);
-        } else if (discountType === "%") {
+        } else if (discountType === '%') {
             return Math.max(price - (price * discount) / 100, 0);
         }
         return price;
     };
+    
 
     const calculateTotalAfterItemDiscounts = () => {
         return cart.reduce((acc, item) => 
@@ -398,8 +399,8 @@ const fetchCategories = () => {
                     vat_amt: vatAmount.toFixed(2), // จำนวน VAT
                 }),
                 total_amount_with_vat: totalAmountWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
-                discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลด
-                discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // เปอร์เซ็นต์ส่วนลด
+                discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นจำนวนเงิน
+                discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นเปอร์เซ็นต์
                 net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิ
                 status: 'N', // สถานะบิล (N = ยังไม่ชำระเงิน)
                 tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
@@ -410,6 +411,8 @@ const fetchCategories = () => {
                     p_name: item.p_name || 'Unnamed Product',
                     quantity: Number(item.quantity) || 0,
                     price: Number(item.price) || 0,
+                    discount: item.discount || 0, // เพิ่มฟิลด์ส่วนลด
+                    discountType: item.discountType || 'THB', // เพิ่มฟิลด์ประเภทส่วนลด
                     total: calculateDiscountedPrice(
                         Number(item.price),
                         Number(item.discount),
@@ -531,21 +534,39 @@ const fetchCategories = () => {
         }
     
         try {
-            // คำนวณยอดสุทธิ (net_amount)
-            const vatAmount = vatType.includes('exclude') ? parseFloat(calculateVAT().toFixed(2)) : 0; // เพิ่ม VAT เฉพาะกรณีไม่รวม
-            const netAmount = totalDue; // ยอดรวมที่มี VAT
+            // คำนวณส่วนลดรวมต่อสินค้า
+            const totalItemDiscount = cart.reduce((acc, item) => {
+                const itemDiscountAmount = (item.discountType === 'THB') 
+                    ? item.discount * item.quantity 
+                    : (item.price * item.discount / 100) * item.quantity;
+                return acc + itemDiscountAmount;
+            }, 0);
+    
+            // คำนวณส่วนลดรวมทั้งบิล
+            const totalBillDiscount = (billDiscountType === 'THB') 
+                ? billDiscount 
+                : totalDue * (billDiscount / 100);
+    
+            const totalDiscount = totalItemDiscount + totalBillDiscount; // รวมส่วนลดทั้งหมด
+    
+            // คำนวณ VAT
+            const vatAmount = vatType.includes('exclude') ? parseFloat(calculateVAT().toFixed(2)) : 0;
+    
+            // ยอดสุทธิ
+            const netAmount = totalDue;
     
             // บันทึกข้อมูลการชำระเงิน
             await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
     
-            // อัปเดตข้อมูลบิล
+            // อัปเดตข้อมูลบิลในฐานข้อมูล
             await axios.put(
                 `${api_url}/api/${slug}/orders/${orderId}`,
                 {
-                    status: 'Y',
-                    vat_amt: vatType.includes('exclude') ? vatAmount : "", // กรอก VAT เฉพาะกรณีไม่รวม
-                    net_amount: netAmount, // ยอดสุทธิหลังรวม VAT
-                    vat_per: vatType.includes('exclude') ? (vatType.includes('7') ? 7 : 3) : 0, // กรอก % VAT
+                    status: 'Y', // บิลชำระแล้ว
+                    vat_amt: vatType.includes('exclude') ? vatAmount : "", // จำนวน VAT
+                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, // เปอร์เซ็นต์ VAT
+                    net_amount: netAmount, // ยอดสุทธิ
+                    discount: totalDiscount.toFixed(2), // บันทึกส่วนลดรวมในฟิลด์เดียว
                 },
                 {
                     headers: {
@@ -568,6 +589,7 @@ const fetchCategories = () => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
+    
     // ฟังก์ชันคำนวณยอดสุทธิ
     const calculateNetAmount = (totalDue, billDiscount) => {
         return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
