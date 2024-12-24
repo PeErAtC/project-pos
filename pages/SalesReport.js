@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -31,16 +31,16 @@ export default function SalesReport({ initialReportData, initialError }) {
     };
 
     const calculateVatDetails = (item) => {
-        if (!item || !item.vat_per || item.vat_per === 0) {
+        if (!item || !item.vat_per || item.vat_per === 0 || !item.total_amount) {
             return { vatAmount: '0.00', vatLabel: 'Non VAT', priceWithVat: item?.total_amount || '0.00' };
         }
-
-        const vatPercentage = item.vat_per;
-        const totalAmount = parseFloat(item.total_amount);
+    
+        const vatPercentage = parseFloat(item.vat_per) || 0; // ตรวจสอบ vat_per
+        const totalAmount = parseFloat(item.total_amount) || 0; // ตรวจสอบ total_amount
         let vatAmount = 0;
         let priceWithVat = totalAmount;
         let vatLabel = '';
-
+    
         if (item.include_vat) {
             // VAT ภายใน
             vatAmount = totalAmount * vatPercentage / (100 + vatPercentage);
@@ -51,7 +51,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             priceWithVat += vatAmount;
             vatLabel = `${vatPercentage}% (Include VAT)`;
         }
-
+    
         return {
             vatAmount: vatAmount.toFixed(2),
             vatLabel,
@@ -158,6 +158,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             }
     
             console.log('Order details:', order);  // ตรวจสอบข้อมูลที่ดึงมา
+            
     
             // แสดงรายละเอียดในรูปแบบตาราง
             console.log(order.order_number); // ตรวจสอบค่าหมายเลขบิล
