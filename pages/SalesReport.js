@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsidebar';
+import BackendSidebar from './components/backendsideber';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -31,33 +31,54 @@ export default function SalesReport({ initialReportData, initialError }) {
     };
 
     const calculateVatDetails = (item) => {
-        if (!item || !item.vat_per || item.vat_per === 0 || !item.total_amount) {
-            return { vatAmount: '0.00', vatLabel: 'Non VAT', priceWithVat: item?.total_amount || '0.00' };
+        if (!item || item.vat_per === null || item.vat_per === undefined || parseFloat(item.vat_per) === 0) {
+            // กรณีไม่มี VAT หรือ VAT เป็น 0%
+            return {
+                vatAmount: '0.00',
+                vatLabel: 'ไม่มีภาษีมูลค่าเพิ่ม',
+            };
         }
     
-        const vatPercentage = parseFloat(item.vat_per) || 0; // ตรวจสอบ vat_per
-        const totalAmount = parseFloat(item.total_amount) || 0; // ตรวจสอบ total_amount
+        const vatPercentage = parseFloat(item.vat_per); // เปลี่ยนค่า vat_per ให้เป็นตัวเลข
+        const totalAmount = parseFloat(item.total_amount || 0); // ตรวจสอบว่า total_amount เป็นตัวเลข
+        const discount = parseFloat(item.discount || 0); // ตรวจสอบส่วนลด
+        const netAmount = parseFloat(item.net_amount || 0); // ตรวจสอบยอดสุทธิ
+        const totalAfterDiscount = totalAmount - discount; // ยอดรวมหลังลบส่วนลด
         let vatAmount = 0;
-        let priceWithVat = totalAmount;
         let vatLabel = '';
     
         if (item.include_vat) {
-            // VAT ภายใน
-            vatAmount = totalAmount * vatPercentage / (100 + vatPercentage);
-            vatLabel = `${vatPercentage}% (Exclude VAT)`;
+            // กรณี VAT รวมในยอดแล้ว (Including VAT)
+            vatAmount = totalAfterDiscount * vatPercentage / (100 + vatPercentage);
+    
+            // ตรวจสอบว่ายอดสุทธิรวม VAT หรือไม่
+            if (netAmount === totalAfterDiscount) {
+                vatLabel = `${vatAmount.toFixed(2)} ฿ (${vatPercentage.toFixed(2)}% Including VAT)`;
+            } else {
+                vatLabel = `${vatAmount.toFixed(2)} ฿ (${vatPercentage.toFixed(2)}% Exclude VAT)`;
+            }
         } else {
-            // VAT ภายนอก
-            vatAmount = totalAmount * (vatPercentage / 100);
-            priceWithVat += vatAmount;
-            vatLabel = `${vatPercentage}% (Include VAT)`;
+            // กรณี VAT แยกออกจากยอด (Exclude VAT)
+            vatAmount = totalAfterDiscount * (vatPercentage / 100);
+    
+            // ตรวจสอบว่ายอดสุทธิรวม VAT หรือไม่
+            if (netAmount === totalAfterDiscount + vatAmount) {
+                vatLabel = `${vatAmount.toFixed(2)} ฿ (${vatPercentage.toFixed(2)}% Exclude VAT)`;
+            } else {
+                vatLabel = `${vatAmount.toFixed(2)} ฿ (${vatPercentage.toFixed(2)}% Including VAT)`;
+            }
         }
     
         return {
             vatAmount: vatAmount.toFixed(2),
             vatLabel,
-            priceWithVat: priceWithVat.toFixed(2),
         };
     };
+    
+    
+    
+    
+    
 
     const fetchReportData = async () => {
         try {
@@ -158,7 +179,6 @@ export default function SalesReport({ initialReportData, initialError }) {
             }
     
             console.log('Order details:', order);  // ตรวจสอบข้อมูลที่ดึงมา
-            
     
             // แสดงรายละเอียดในรูปแบบตาราง
             console.log(order.order_number); // ตรวจสอบค่าหมายเลขบิล
@@ -166,7 +186,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             Swal.fire({
                 html: `
                     <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
-                        <h4 style="margin-top: 15px; font-size: 20px; font-weight: bold;">รายการสินค้า</span></h4>
+                        <h4 style="margin-top: 15px; font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
                         <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead style="position: sticky; top: -1; background-color: #499cae; z-index: 1;">
@@ -177,6 +197,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ชื่อสินค้า</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">จำนวน</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคา</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ส่วนลด</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -188,6 +209,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.quantity}</td>
                                             <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.price} ฿</td>
+                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.discount || '0.00'} ฿</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -215,6 +237,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                     confirmButton.style.padding = '14px 40px';
                 }
             });
+            
             
             
         } catch (error) {
@@ -292,7 +315,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                     <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
                                     <td style={styles.td}>{order.total_amount}</td>
                                     <td style={styles.td}>{order.discount}</td>
-                                    <td style={styles.td}>{`${vatDetails.vatAmount} ฿ (${vatDetails.vatLabel})`}</td>
+                                    <td style={styles.td}>{vatDetails.vatLabel}</td> {/* ใช้ค่าจากฟังก์ชัน */}
                                     <td style={styles.td}>{order.net_amount} ฿</td>
                                     <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Check if payment_method exists */}
                                     <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
@@ -312,61 +335,81 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalAmount : "0.00"}</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalDiscount : "0.00"}</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalVat : "0.00"}</td>
-                                <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalNet : "0.00"} ฿</td>
+                                <td style={styles.totalValue}>
+                                    {pendingOrders.length > 0
+                                        ? (
+                                            parseFloat(pendingTotals.totalAmount) -
+                                            parseFloat(pendingTotals.totalDiscount) +
+                                            parseFloat(pendingTotals.totalVat)
+                                        ).toFixed(2)
+                                        : "0.00"} ฿
+                                </td>
                                 <td colSpan="2"></td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
                 <h2 style={styles.subTitle}>
-                    รายการที่ชำระแล้ว <span style={styles.itemCount}>({paidOrders.length} รายการ)</span>
-                </h2>
-                <div style={{ ...styles.tableContainer, backgroundColor: '#f0fff4' }}>
-                    <table style={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
-                                <th style={styles.th}><FaTable /> โต๊ะ</th>
-                                <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
-                                <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
-                                <th style={styles.th}><FaTag /> ส่วนลด</th>
-                                <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
-                                <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
-                                <th style={styles.th}>ชำระเงินด้วย</th> {/* New Column */}
-                                <th style={styles.th}><FaCheckCircle /> สถานะ</th>
-                                <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paidOrders.map((order, index) => (
-                                <tr key={index}>
-                                    <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                    <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
-                                    <td style={styles.td}>{order.total_amount}</td>
-                                    <td style={styles.td}>{order.discount}</td>
-                                    <td style={styles.td}>{order.vat_per && order.vat_per > 0 ? `${order.vat_amt} ฿ (${order.vat_per}% VAT)`: 'ไม่มีภาษี'}</td>
-                                    <td style={styles.td}>{order.net_amount} ฿</td>
-                                    <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Display Payment Method */}
-                                    <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
-                                    <td style={styles.td}>
-                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#fff', zIndex: 1 }}>
-                            <tr>
-                                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
-                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
-                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalDiscount : "0.00"}</td>
-                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalVat : "0.00"}</td>
-                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalNet : "0.00"} ฿</td>
-                                <td colSpan="2"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+    รายการที่ชำระแล้ว <span style={styles.itemCount}>({paidOrders.length} รายการ)</span>
+</h2>
+<div style={{ ...styles.tableContainer, backgroundColor: '#f0fff4' }}>
+    <table style={styles.table}>
+        <thead>
+            <tr>
+                <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
+                <th style={styles.th}><FaTable /> โต๊ะ</th>
+                <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
+                <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
+                <th style={styles.th}><FaTag /> ส่วนลด</th>
+                <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
+                <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
+                <th style={styles.th}>ชำระเงินด้วย</th>
+                <th style={styles.th}><FaCheckCircle /> สถานะ</th>
+                <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
+            </tr>
+        </thead>
+        <tbody>
+            {paidOrders.map((order, index) => {
+                const vatDetails = calculateVatDetails(order); // Updated function
+                return (
+                    <tr key={index}>
+                        <td style={styles.td}>{order.order_number}</td>
+                        <td style={styles.td}>{order.tables_id || 'N/A'}</td>
+                        <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
+                        <td style={styles.td}>{order.total_amount}</td>
+                        <td style={styles.td}>{order.discount}</td>
+                        <td style={styles.td}>{vatDetails.vatLabel}</td> {/* Updated VAT column */}
+                        <td style={styles.td}>{order.net_amount} ฿</td>
+                        <td style={styles.td}>{order.payment_method || 'N/A'}</td>
+                        <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
+                        <td style={styles.td}>
+                            <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
+                        </td>
+                    </tr>
+                );
+            })}
+        </tbody>
+        <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#fff', zIndex: 1 }}>
+            <tr>
+                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
+                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
+                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalDiscount : "0.00"}</td>
+                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalVat : "0.00"}</td>
+                <td style={styles.totalValue}>
+                    {paidOrders.length > 0
+                        ? (
+                            parseFloat(paidTotals.totalAmount) - 
+                            parseFloat(paidTotals.totalDiscount) + 
+                            parseFloat(paidTotals.totalVat)
+                        ).toFixed(2)
+                        : "0.00"} ฿
+                </td>
+                <td colSpan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
             </div>
         </div>
     );
