@@ -316,7 +316,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                         <td style={styles.td}>{vatDetails.vatLabel}</td> {/* ใช้ค่าจากฟังก์ชัน */}
                                         <td style={styles.td}>{order.net_amount} ฿</td>
                                         <td style={styles.td}>
-                                            {order.payment_method === 'N/A' ? 'รออัพเดท' : order.payment_method}
+                                            {order.payment_method === 'N/A' ? 'รอชำระ' : order.payment_method}
                                         </td>
                                         <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
                                             {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
