@@ -136,10 +136,16 @@ export default function SalesReport({ initialReportData, initialError }) {
             const response = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
                 headers: {
                     Accept: 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
+                    Authorization: `Bearer ${authToken}`,
                 },
             });
-            return response.data;  // ข้อมูลจะต้องอยู่ในรูปของอาเรย์หรือออบเจ็กต์
+    
+            // ตรวจสอบว่า response มีฟิลด์ที่ต้องการ
+            if (response.data && response.data.items) {
+                return response.data; // ส่งข้อมูลทั้งหมด (รวมส่วนลดสินค้า) กลับ
+            } else {
+                throw new Error('ไม่พบข้อมูลรายการสินค้าของออเดอร์นี้');
+            }
         } catch (error) {
             console.error('Error fetching order details:', error);
             Swal.fire({
@@ -151,6 +157,7 @@ export default function SalesReport({ initialReportData, initialError }) {
             return null;
         }
     };
+    
     
 
     const showOrderDetails = async (orderId) => {
@@ -165,9 +172,8 @@ export default function SalesReport({ initialReportData, initialError }) {
         }
     
         try {
-    const order = await fetchOrderDetails(orderId);
+            const order = await fetchOrderDetails(orderId);
     
-            // เพิ่มการตรวจสอบว่าได้รับข้อมูลบิลหรือไม่
             if (!order || !order.items || order.items.length === 0) {
                 Swal.fire({
                     title: 'ไม่มีข้อมูล',
@@ -178,11 +184,14 @@ export default function SalesReport({ initialReportData, initialError }) {
                 return;
             }
     
-            console.log('Order details:', order);  // ตรวจสอบข้อมูลที่ดึงมา
+            // คำนวณราคารวม
+            const totalPrice = order.items.reduce((sum, item) => {
+                const price = parseFloat(item.price) || 0; // ตรวจสอบและแปลง item.price เป็นตัวเลข
+                const discount = parseFloat(item.discount) || 0; // ตรวจสอบและแปลง item.discount เป็นตัวเลข
+                const itemTotal = (price - discount) * item.quantity;
+                return sum + itemTotal;
+            }, 0);
     
-            // แสดงรายละเอียดในรูปแบบตาราง
-            console.log(order.order_number); // ตรวจสอบค่าหมายเลขบิล
-
             Swal.fire({
                 html: `
                     <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
@@ -191,32 +200,34 @@ export default function SalesReport({ initialReportData, initialError }) {
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead style="position: sticky; top: -1; background-color: #499cae; z-index: 1;">
                                     <tr>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">หมายเลขบิล</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">รหัสรายการอาหาร</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">รายการ</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ลำดับ</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ชื่อสินค้า</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">จำนวน</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคา</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ส่วนลด</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคารวม</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${order.items.map((item, index) => `
-                                        <tr>
-                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.order_id}</td>
-                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.product_id}</td>
-                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${index + 1}</td>
-                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
-                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.quantity}</td>
-                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.price} ฿</td>
-                                            <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.discount || '0.00'} ฿</td>
-                                        </tr>
-                                    `).join('')}
+                                    ${order.items.map((item, index) => {
+                                        const price = parseFloat(item.price) || 0; // ตรวจสอบและแปลงราคา
+                                        const quantity = parseInt(item.quantity) || 0; // จำนวนสินค้า
+                                        const totalPrice = price * quantity; // คำนวณราคารวม
+            
+                                        return `
+                                            <tr>
+                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${index + 1}</td>
+                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
+                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${quantity}</td>
+                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${price.toFixed(2)} ฿</td>
+                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${totalPrice.toFixed(2)} ฿</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>
                         <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
-                            <p>ราคารวม: ${order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)} ฿</p>
+                            <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
                         </div>
                     </div>
                 `,
@@ -224,33 +235,20 @@ export default function SalesReport({ initialReportData, initialError }) {
                 width: '900px',
                 padding: '20px',
                 background: '#fff',
-                customClass: {
-                    container: 'custom-swal-container',
-                    title: 'custom-swal-title',
-                    htmlContainer: 'custom-swal-html',
-                    confirmButton: 'custom-swal-btn',
-                    closeButton: 'custom-swal-close-btn'
-                },
-                didOpen: () => {
-                    const confirmButton = document.querySelector('.swal2-confirm');
-                    confirmButton.style.fontSize = '14px';
-                    confirmButton.style.padding = '14px 40px';
-                }
             });
             
             
-            
         } catch (error) {
-            console.error('Error fetching order details:', error);
+            console.error('Error showing order details:', error);
             Swal.fire({
                 title: 'เกิดข้อผิดพลาด',
                 text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
                 icon: 'error',
                 confirmButtonText: 'ปิด',
-                
             });
         }
     };
+    
     
 
     const calculateTotals = (orders) => {
@@ -307,28 +305,29 @@ export default function SalesReport({ initialReportData, initialError }) {
                         </thead>
                         <tbody>
                             {pendingOrders.map((order, index) => {
-                            const vatDetails = calculateVatDetails(order);
-                            return (
-                                <tr key={index}>
-                                    <td style={styles.td}>{order.order_number}</td>
-                                    <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                    <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
-                                    <td style={styles.td}>{order.total_amount}</td>
-                                    <td style={styles.td}>{order.discount}</td>
-                                    <td style={styles.td}>{vatDetails.vatLabel}</td> {/* ใช้ค่าจากฟังก์ชัน */}
-                                    <td style={styles.td}>{order.net_amount} ฿</td>
-                                    <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* Check if payment_method exists */}
-                                    <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
-                                        {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
-                                    </td>
-                                    <td style={styles.td}>
-                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
-                                    </td>
-                                </tr>
-                            );
+                                const vatDetails = calculateVatDetails(order);
+                                return (
+                                    <tr key={index}>
+                                        <td style={styles.td}>{order.order_number}</td>
+                                        <td style={styles.td}>{order.tables_id || 'N/A'}</td>
+                                        <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
+                                        <td style={styles.td}>{order.total_amount}</td>
+                                        <td style={styles.td}>{order.discount}</td>
+                                        <td style={styles.td}>{vatDetails.vatLabel}</td> {/* ใช้ค่าจากฟังก์ชัน */}
+                                        <td style={styles.td}>{order.net_amount} ฿</td>
+                                        <td style={styles.td}>
+                                            {order.payment_method === 'N/A' ? 'รออัพเดท' : order.payment_method}
+                                        </td>
+                                        <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
+                                            {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
+                                        </td>
+                                        <td style={styles.td}>
+                                            <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
+                                        </td>
+                                    </tr>
+                                );
                             })}
                         </tbody>
-
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
                             <tr>
                                 <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
