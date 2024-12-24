@@ -364,44 +364,35 @@ const fetchCategories = () => {
         try {
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
     
-            // คำนวณยอดรวมก่อน VAT
-            const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมสินค้า
-            console.log("Base Total (ก่อน VAT):", baseTotal);
+            // ยอดรวมที่กำหนดไว้ (สมมติว่า 100 บาท)
+            const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมสินค้า
+            console.log("Total Amount with VAT (ยอดรวม):", totalAmountWithVAT);
     
-            // คำนวณ VAT และยอดรวมหลัง VAT
+            // คำนวณ VAT โดยไม่กระทบยอดรวม
             let vatAmount = 0;
-            let totalAmountWithVAT = baseTotal;
     
             if (vatType === 'includeVat7') {
-                vatAmount = baseTotal * (7 / 107); // VAT รวมอยู่ในยอดแล้ว
-                totalAmountWithVAT = baseTotal; // ยอดรวมนี้มี VAT แล้ว
+                vatAmount = totalAmountWithVAT * (7 / 107); // คำนวณ VAT ที่รวมอยู่ในยอด
             } else if (vatType === 'includeVat3') {
-                vatAmount = baseTotal * (3 / 103); // VAT รวมอยู่ในยอดแล้ว
-                totalAmountWithVAT = baseTotal; // ยอดรวมนี้มี VAT แล้ว
+                vatAmount = totalAmountWithVAT * (3 / 103); // คำนวณ VAT ที่รวมอยู่ในยอด
             } else if (vatType === 'excludeVat7') {
-                vatAmount = baseTotal * 0.07; // เพิ่ม VAT 7%
-                totalAmountWithVAT = baseTotal + vatAmount; // รวม VAT เข้าไป
+                vatAmount = totalAmountWithVAT * 0.07; // เพิ่ม VAT 7%
             } else if (vatType === 'excludeVat3') {
-                vatAmount = baseTotal * 0.03; // เพิ่ม VAT 3%
-                totalAmountWithVAT = baseTotal + vatAmount; // รวม VAT เข้าไป
+                vatAmount = totalAmountWithVAT * 0.03; // เพิ่ม VAT 3%
             }
     
             // ตรวจสอบ % VAT
-            const vatPercentage = 
-                vatType === 'excludeVat7' ? 7 :
-                vatType === 'excludeVat3' ? 3 : 0;
+            const vatPercentage = vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0;
     
             // สร้างข้อมูลที่ต้องการส่งไปฐานข้อมูล
             const orderData = {
-                total_amount: baseTotal.toFixed(2), // ส่งยอดรวมก่อน VAT
-                ...(vatType.includes('exclude') && { // เฉพาะกรณี "ไม่รวม VAT" เท่านั้นที่ส่ง VAT ข้อมูลนี้
-                    vat_per: vatPercentage, // เปอร์เซ็นต์ VAT
-                    vat_amt: vatAmount.toFixed(2), // จำนวน VAT
-                }),
+                total_amount: totalAmountWithVAT.toFixed(2), // ยอดรวม (ไม่เปลี่ยนแปลง)
+                vat_per: vatPercentage, // เปอร์เซ็นต์ VAT
+                vat_amt: vatAmount.toFixed(2), // จำนวน VAT ที่คำนวณ
                 total_amount_with_vat: totalAmountWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
                 discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นจำนวนเงิน
                 discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นเปอร์เซ็นต์
-                net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิ
+                net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิ (เท่ากับยอดรวม)
                 status: 'N', // สถานะบิล (N = ยังไม่ชำระเงิน)
                 tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
                 created_by: userId, // ผู้สร้างคำสั่งซื้อ
@@ -433,6 +424,8 @@ const fetchCategories = () => {
             Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
         }
     };
+    
+    
     
     
     
