@@ -433,10 +433,12 @@ const fetchCategories = () => {
     
     const addOrderItems = async () => {
         if (!orderId) {
-            // ถ้ายังไม่มียอดสั่งซื้อ ให้เรียกใช้ฟังก์ชันรับคำสั่งซื้อใหม่
-            await receiveOrder();
+            // ถ้ายังไม่มี orderId หมายความว่าไม่มีการสร้างออเดอร์
+            // ดังนั้นต้องสร้างคำสั่งซื้อใหม่
+            await receiveOrder(); // สร้างคำสั่งซื้อใหม่
         }
-
+    
+        // เตรียมรายการสินค้าที่จะเพิ่มเข้าไปในออเดอร์
         const newItems = cart.map((item) => ({
             product_id: item.id || 0,
             p_name: item.p_name || 'ไม่มีชื่อสินค้า',
@@ -444,9 +446,26 @@ const fetchCategories = () => {
             price: item.price || 0,
             total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
         }));
-        console.log('New Items:', newItems); // ตรวจสอบข้อมูลที่ส่งไป
-
+    
+        // เรียกใช้ฟังก์ชัน addToOrder เพื่อเพิ่มรายการสินค้าลงในออเดอร์ที่มีอยู่
+        await addToOrder(orderId, newItems);
+    };
+    
+    const addToOrder = async (orderId, newItems) => {
         try {
+            // ตรวจสอบให้แน่ใจว่า newItems ไม่ว่าง และมีค่า product_id
+            if (!newItems || newItems.length === 0) {
+                throw new Error('ไม่มีรายการสินค้าที่จะเพิ่ม');
+            }
+    
+            // ตรวจสอบว่าแต่ละรายการใน newItems มี product_id
+            for (let item of newItems) {
+                if (!item.product_id) {
+                    throw new Error(`สินค้า ${item.p_name || 'Unnamed Product'} ไม่มี product_id`);
+                }
+            }
+    
+            // ส่งข้อมูลสินค้าใหม่ไปยัง API เพื่อเพิ่มลงในออเดอร์ที่มีอยู่
             const response = await axios.post(
                 `${api_url}/api/${slug}/orders/${orderId}/addItem`,
                 { items: newItems },
@@ -457,8 +476,9 @@ const fetchCategories = () => {
                     },
                 }
             );
-
-            if (response.data && response.data.success) {
+    
+            // ตรวจสอบว่า response มี success หรือไม่
+            if (response.data.success) {
                 Swal.fire({
                     icon: 'success',
                     title: 'เพิ่มรายการสินค้าเรียบร้อย',
@@ -466,14 +486,21 @@ const fetchCategories = () => {
                     confirmButtonText: 'ตกลง',
                 });
             } else {
-                throw new Error(response.data.message || 'เกิดข้อผิดพลาดในการเพิ่มรายการสินค้า');
+                throw new Error('ไม่สามารถเพิ่มรายการสินค้าได้');
             }
         } catch (error) {
             console.error('Error adding order items:', error);
-            Swal.fire('ผิดพลาด', `ไม่สามารถเพิ่มรายการสินค้าได้: ${error.message}`, 'error');
+            Swal.fire(
+                'ผิดพลาด',
+                `ไม่สามารถเพิ่มรายการสินค้าได้: ${error.response?.data?.message || error.message}`,
+                'error'
+            );
         }
     };
+    
+    
 
+    
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
         try {
@@ -1181,43 +1208,42 @@ const fetchCategories = () => {
 
     {/* ปุ่มการทำงาน */}
     <div style={styles.paymentRow}>
-        {orderReceived ? (
-            <button
-                style={{
-                    ...styles.receiveOrderButton,
-                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
-                }}
-                onClick={handlePartialPayment} // เรียกฟังก์ชันแยกชำระเงิน
-                disabled={cart.length === 0}
-            >
-                แยกชำระในบิลนี้
-            </button>
-        ) : (
-            <button
-                style={{
-                    ...styles.receiveOrderButton,
-                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
-                }}
-                onClick={receiveOrder} // เรียกฟังก์ชันรับออเดอร์
-                disabled={cart.length === 0}
-            >
-                รับออเดอร์
-            </button>
-        )}
-
+    {orderReceived ? (
         <button
             style={{
-                ...styles.paymentButton,
-                ...(orderReceived && cart.length > 0 && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
-                    ? {} 
-                    : styles.paymentButtonDisabled),
+                ...styles.receiveOrderButton,
+                ...(cart.length === 0 ? styles.buttonDisabled : {}),
             }}
-            onClick={handlePayment} // ฟังก์ชันการชำระเงิน
-            disabled={!orderReceived || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+            onClick={addOrderItems} // เรียกฟังก์ชันเพิ่มรายการ
+            disabled={cart.length === 0}
         >
-            ชำระเงิน
+            อัพเดทรายการอาหาร
         </button>
-        </div>
+    ) : (
+        <button
+            style={{
+                ...styles.receiveOrderButton,
+                ...(cart.length === 0 ? styles.buttonDisabled : {}),
+            }}
+            onClick={receiveOrder} // ฟังก์ชันรับออเดอร์
+            disabled={cart.length === 0}
+        >
+            รับออเดอร์
+        </button>
+    )}
+    <button
+        style={{
+            ...styles.paymentButton,
+            ...(orderReceived && cart.length > 0 && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
+                ? {} 
+                : styles.paymentButtonDisabled),
+        }}
+        onClick={handlePayment} // ฟังก์ชันการชำระเงิน
+        disabled={!orderReceived || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+    >
+        ชำระเงิน
+    </button>
+</div>
     </div>
     </div>
     
