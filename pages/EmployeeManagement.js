@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import BackendSidebar from './components/backendsidebar';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -18,6 +18,24 @@ export default function EmployeeManagement() {
   const [editIndex, setEditIndex] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Fetch users from API
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/abc/users');
+        if (!response.ok) {
+          throw new Error('Failed to fetch employees');
+        }
+        const data = await response.json();
+        setEmployees(data);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -245,7 +263,7 @@ export default function EmployeeManagement() {
 }
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'row', height: '96vh', fontFamily: '"Kanit", sans-serif', backgroundColor: '#f9f9f9' },
+  container: { display: 'flex', flexDirection: 'row', height: '100vh', fontFamily: '"Kanit", sans-serif', backgroundColor: '#f9f9f9' },
   mainContent: { width: 'calc(100% - 100px)', marginLeft: '100px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', backgroundColor: '#ffffff' },
   tableSection: { width: '80%', backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
   tableContainer: { maxHeight: '400px', overflowY: 'scroll', border: '1px solid #ddd', borderRadius: '5px' },
