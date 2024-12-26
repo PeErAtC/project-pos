@@ -114,6 +114,8 @@ export default function EmployeeManagement() {
             placeholder="ค้นหาพนักงาน"
             style={styles.searchInput}
           />
+          {/* Employee Summary */}
+          <p style={styles.summaryText}> {employees.length} จำนวนพนักงานทั้งหมด</p>
           <table style={styles.table}>
             <thead>
               <tr>
@@ -260,7 +262,7 @@ const styles = {
     table: { width: '100%', borderCollapse: 'collapse' },
     tableHeader: { borderBottom: '2px solid #ddd', padding: '10px', textAlign: 'center', backgroundColor: '#499cae', fontWeight: 'bold', color: '#ffffff' },
     tableRow: { textAlign: 'center' },
-    tableCell: { borderBottom: '1px solid #ddd', padding: '10px', textAlign: 'center', fontSize: '14px', color: '#555555' },
+    tableCell: { borderBottom: '1px solid #ddd', padding: '10px', textAlign: 'center', fontSize: '14px', color: '#000' },
     activeStatus: { borderBottom: '1px solid #ddd', padding: '10px', textAlign: 'center', fontSize: '14px', color: '#28a745' },
     inactiveStatus: { borderBottom: '1px solid #ddd', padding: '10px', textAlign: 'center', fontSize: '14px', color: '#dc3545' },
     noData: { textAlign: 'center', padding: '20px', color: '#999999', fontStyle: 'italic' },
@@ -273,8 +275,8 @@ const styles = {
     activeButton: { backgroundColor: '#499cae', color: '#fff', padding: '10px', width: '100%', border: 'none', borderRadius: '5px', cursor: 'pointer', textAlign: 'center' },
     inactiveButton: { backgroundColor: '#ddd', color: '#888', padding: '10px', width: '100%', border: 'none', borderRadius: '5px', cursor: 'pointer', textAlign: 'center' },
     statusButtonsRow: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '80%', margin: '0 auto', gap: '10px', marginBottom: '20px' },
-    statusTitle: { marginBottom: '10px', fontWeight: 'bold', color: '#333333', textAlign: 'center' },
+    statusTitle: { marginBottom: '10px', fontWeight: 'bold', color: '#000', textAlign: 'center' },
     editButton: { padding: '5px 10px', backgroundColor: '#FFC137', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold' },
     deleteButton: { padding: '5px 15px', backgroundColor: '#ff6b6b', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
-  };
-  
+    summaryText: { fontSize: '16px', marginBottom: '10px', color: '#000',  textAlign: 'left' },
+};
