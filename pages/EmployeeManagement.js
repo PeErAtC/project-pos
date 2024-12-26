@@ -245,7 +245,7 @@ export default function EmployeeManagement() {
 }
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'row', height: '100vh', fontFamily: '"Kanit", sans-serif', backgroundColor: '#f9f9f9' },
+  container: { display: 'flex', flexDirection: 'row', height: '96vh', fontFamily: '"Kanit", sans-serif', backgroundColor: '#f9f9f9' },
   mainContent: { width: 'calc(100% - 100px)', marginLeft: '100px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', backgroundColor: '#ffffff' },
   tableSection: { width: '80%', backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
   tableContainer: { maxHeight: '400px', overflowY: 'scroll', border: '1px solid #ddd', borderRadius: '5px' },
