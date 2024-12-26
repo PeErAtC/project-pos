@@ -68,7 +68,6 @@ export default function EmployeeManagement() {
   const handleEdit = (index) => {
     setFormData(employees[index]);
     setEditIndex(index);
-    Swal.fire('โหมดแก้ไข', 'คุณกำลังแก้ไขข้อมูลพนักงาน', 'info');
   };
 
   const handleDelete = (index) => {
@@ -232,7 +231,6 @@ export default function EmployeeManagement() {
                 onClick={() => {
                   setFormData({ username: '', name: '', email: '', password: '', slug: '', owner: 'N', status: 'active' });
                   setEditIndex(null);
-                  Swal.fire('ยกเลิกสำเร็จ!', 'การแก้ไขถูกยกเลิกเรียบร้อยแล้ว', 'info');
                 }}
                 style={styles.cancelButton}
               >
@@ -250,14 +248,14 @@ const styles = {
   container: { display: 'flex', flexDirection: 'row', height: '100vh', fontFamily: '"Kanit", sans-serif', backgroundColor: '#f9f9f9' },
   mainContent: { width: 'calc(100% - 100px)', marginLeft: '100px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', backgroundColor: '#ffffff' },
   tableSection: { width: '80%', backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
-  tableContainer: { maxHeight: '460px', overflowY: 'scroll', border: '1px solid #ddd', borderRadius: '5px' },
+  tableContainer: { maxHeight: '400px', overflowY: 'scroll', border: '1px solid #ddd', borderRadius: '5px' },
   stickyHeader: { position: 'sticky', top: 0, backgroundColor: '#499cae', zIndex: 1 },
   formSection: { width: '40%', backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
-  title: { textAlign: 'center', marginBottom: '20px', fontSize: '24px', fontWeight: 'bold', color: '#333333' },
-  titleLeft: { textAlign: 'left', marginBottom: '20px', fontSize: '24px', fontWeight: 'bold', color: '#333333' },
+  title: { textAlign: 'center', marginBottom: '20px', fontSize: '24px', fontWeight: 'bold', color: '#000' },
+  titleLeft: { textAlign: 'left', marginBottom: '20px', fontSize: '24px', fontWeight: 'bold', color: '#000' },
   searchInput: { width: '97%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  tableHeader: { borderBottom: '2px solid #ddd', padding: '10px', textAlign: 'center', backgroundColor: '#499cae', fontWeight: 'bold', color: '#ffffff' },
+  tableHeader: { padding: '10px', textAlign: 'center', backgroundColor: '#499cae', color: '#ffffff', fontSize: '14px' },
   tableRowEven: { textAlign: 'center', backgroundColor: '#f9f9f9' },
   tableRowOdd: { textAlign: 'center', backgroundColor: '#ffffff' },
   tableCellNoBorder: { padding: '10px', textAlign: 'center', fontSize: '14px', color: '#000' },
