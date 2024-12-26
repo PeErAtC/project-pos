@@ -258,7 +258,7 @@ const styles = {
     formSection: { width: '40%', backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
     title: { textAlign: 'center', marginBottom: '20px', fontSize: '24px', fontWeight: 'bold', color: '#333333' },
     titleLeft: { textAlign: 'left', marginBottom: '20px', fontSize: '24px', fontWeight: 'bold', color: '#333333' },
-    searchInput: { width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' },
+    searchInput: { width: '97%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' },
     table: { width: '100%', borderCollapse: 'collapse' },
     tableHeader: { borderBottom: '2px solid #ddd', padding: '10px', textAlign: 'center', backgroundColor: '#499cae', fontWeight: 'bold', color: '#ffffff' },
     tableRow: { textAlign: 'center' },
