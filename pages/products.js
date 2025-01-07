@@ -389,50 +389,51 @@ const fetchCategories = () => {
     }, [vatType]); // ใช้ useEffect ติดตามค่า vatType
     
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
+    // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
     
-            // ยอดรวมที่กำหนดไว้ (สมมติว่า 100 บาท)
-            const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมสินค้า
+            // คำนวณยอดรวม (Total Amount)
+            const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0;
             console.log("Total Amount with VAT (ยอดรวม):", totalAmountWithVAT);
     
-            // คำนวณ VAT โดยไม่กระทบยอดรวม
+            // คำนวณ VAT
             let vatAmount = 0;
     
             if (vatType === 'includeVat7') {
-                vatAmount = totalAmountWithVAT * (7 / 107); // คำนวณ VAT ที่รวมอยู่ในยอด
+                vatAmount = totalAmountWithVAT * (7 / 107);
             } else if (vatType === 'includeVat3') {
-                vatAmount = totalAmountWithVAT * (3 / 103); // คำนวณ VAT ที่รวมอยู่ในยอด
+                vatAmount = totalAmountWithVAT * (3 / 103);
             } else if (vatType === 'excludeVat7') {
-                vatAmount = totalAmountWithVAT * 0.07; // เพิ่ม VAT 7%
+                vatAmount = totalAmountWithVAT * 0.07;
             } else if (vatType === 'excludeVat3') {
-                vatAmount = totalAmountWithVAT * 0.03; // เพิ่ม VAT 3%
+                vatAmount = totalAmountWithVAT * 0.03;
             }
     
             // ตรวจสอบ % VAT
             const vatPercentage = vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0;
     
-            // สร้างข้อมูลที่ต้องการส่งไปฐานข้อมูล
+            // สร้างข้อมูลสำหรับการส่งคำสั่งซื้อ
             const orderData = {
-                total_amount: totalAmountWithVAT.toFixed(2), // ยอดรวม (ไม่เปลี่ยนแปลง)
-                vat_per: vatPercentage, // เปอร์เซ็นต์ VAT
-                vat_amt: vatAmount.toFixed(2), // จำนวน VAT ที่คำนวณ
-                total_amount_with_vat: totalAmountWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
-                discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นจำนวนเงิน
-                discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นเปอร์เซ็นต์
-                net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิ (เท่ากับยอดรวม)
-                status: 'N', // สถานะบิล (N = ยังไม่ชำระเงิน)
-                tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
-                created_by: userId, // ผู้สร้างคำสั่งซื้อ
-                vatType, // ประเภท VAT ที่เลือก
+                total_amount: totalAmountWithVAT.toFixed(2),
+                vat_per: vatPercentage,
+                vat_amt: vatAmount.toFixed(2),
+                total_amount_with_vat: totalAmountWithVAT.toFixed(2),
+                discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2),
+                discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2),
+                net_amount: totalAmountWithVAT.toFixed(2),
+                status: 'N',
+                tables_id: tableCode || null,
+                created_by: userId,
+                vatType,
                 items: cart.map((item) => ({
                     product_id: item.id || 0,
                     p_name: item.p_name || 'Unnamed Product',
                     quantity: Number(item.quantity) || 0,
                     price: Number(item.price) || 0,
-                    discount: item.discount || 0, // เพิ่มฟิลด์ส่วนลด
-                    discountType: item.discountType || 'THB', // เพิ่มฟิลด์ประเภทส่วนลด
+                    discount: item.discount || 0,
+                    discountType: item.discountType || 'THB',
                     total: calculateDiscountedPrice(
                         Number(item.price),
                         Number(item.discount),
@@ -441,21 +442,59 @@ const fetchCategories = () => {
                 })),
             };
     
-            // เพิ่มวิธีการชำระเงินใน orderData
-            orderData.payment_method = paymentMethod || 'cash'; // ตั้งค่าเริ่มต้นเป็นเงินสด
+            orderData.payment_method = paymentMethod || 'cash';
     
             console.log("ข้อมูลออเดอร์ที่ส่ง:", orderData);
     
-            // ส่งข้อมูลออเดอร์ไปเซิร์ฟเวอร์
-            const newOrder = await sendOrder(orderData); // ส่งออเดอร์ไปยังฟังก์ชัน `sendOrder`
-            setOrderNumber(newOrder.order_number); // เก็บหมายเลขออเดอร์
-            setOrderId(newOrder.id); // เก็บรหัสออเดอร์
-            setOrderReceived(true); // อนุญาตให้เลือกวิธีการชำระเงิน
+            // ส่งข้อมูลคำสั่งซื้อไปยัง API
+            const newOrder = await sendOrder(orderData);
+            setOrderNumber(newOrder.order_number);
+            setOrderId(newOrder.id);
+            setOrderReceived(true);
+    
+            // อัปเดตสถานะของโต๊ะ
+            if (tableCode) {
+                const tableUpdateData = { status: 'N' };
+                const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
+    
+                console.log("Updating table status with URL:", url);
+    
+                try {
+                    const response = await axios.put(url, tableUpdateData, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                        },
+                    });
+    
+                    if (response.status === 200 || response.status === 204) {
+                        console.log(`สถานะโต๊ะ ${tableCode} ถูกอัปเดตเป็น "ไม่ว่าง"`);
+                    } else {
+                        throw new Error(`Unexpected response status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`);
+                    Swal.fire(
+                        'เกิดข้อผิดพลาด',
+                        `ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`,
+                        'error'
+                    );
+                }
+            }
         } catch (error) {
             console.error('เกิดข้อผิดพลาดในการรับออเดอร์:', error);
-            Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+    
+            // ตรวจสอบรายละเอียดข้อผิดพลาด
+            if (error.response) {
+                console.error("Response Data:", error.response.data);
+                console.error("Response Status:", error.response.status);
+            }
+    
+            Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถรับออเดอร์ได้: ${error.message}`, 'error');
         }
     };
+    
+    
     
     
     
@@ -653,8 +692,6 @@ const fetchCategories = () => {
     const closeReceipt = async () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
     
-        
-    
         try {
             // คำนวณส่วนลดรวมต่อสินค้า
             const totalItemDiscount = cart.reduce((acc, item) => {
@@ -697,6 +734,38 @@ const fetchCategories = () => {
                     },
                 }
             );
+    
+            // เปลี่ยนสถานะโต๊ะเป็นว่าง
+            // เปลี่ยนสถานะโต๊ะเป็น "ว่าง" (Y)
+            if (tableCode) {
+                const tableUpdateData = { status: 'Y' }; // กำหนดสถานะโต๊ะเป็น "ว่าง"
+                const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
+
+                try {
+                    console.log('กำลังอัปเดตสถานะโต๊ะ:', tableCode, 'เป็น "ว่าง" ด้วยข้อมูล:', tableUpdateData);
+
+                    const response = await axios.patch(url, tableUpdateData, { // ใช้ PATCH เพื่ออัปเดตเฉพาะสถานะ
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                        },
+                    });
+
+                    if (response.status === 200 || response.status === 204) {
+                        console.log(`สถานะโต๊ะ ${tableCode} ถูกอัปเดตเป็น "ว่าง" สำเร็จ`);
+                    } else {
+                        throw new Error(`Unexpected response status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`);
+                    Swal.fire(
+                        'เกิดข้อผิดพลาด',
+                        `ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`,
+                        'error'
+                    );
+                }
+            }
+
     
             Swal.fire({
                 icon: 'success',
@@ -1313,7 +1382,7 @@ const fetchCategories = () => {
             </div>
             </div>
             {/* การแสดงเงินทอน */}
-            <div style={styles.changeDisplay}>
+            <div style={styles.changeDi}>
             ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท
             </div>
             <div style={styles.changeDisplay}>
@@ -1353,7 +1422,7 @@ const fetchCategories = () => {
     style={{
         ...styles.paymentButton,
         backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#f39c12', // สีเขียวเมื่อยอดคงเหลือ 0, สีส้มเมื่อยังมีคงเหลือ
-        ...(orderReceived && (receivedAmount > 0 || calculateRemainingDue() === 0) ? {} : styles.paymentButtonDisabled), // ปิดการใช้งานถ้าไม่มีการรับออเดอร์
+        ...(orderReceived && paymentMethod && (receivedAmount > 0 || calculateRemainingDue() === 0) ? {} : styles.paymentButtonDisabled), // ปิดการใช้งานถ้าไม่มีการรับออเดอร์ หรือไม่เลือกวิธีชำระเงิน
     }}
     onClick={() => {
         if (orderReceived && calculateRemainingDue() === 0) {
@@ -1362,25 +1431,24 @@ const fetchCategories = () => {
             handlePartialPayment(); // ดำเนินการแยกชำระเงิน
         }
     }}
-    disabled={!orderReceived || (receivedAmount <= 0 && calculateRemainingDue() !== 0)} // ปิดการใช้งานถ้าไม่มีการรับออเดอร์
+    disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)} // ปิดการใช้งานถ้าไม่มีการรับออเดอร์หรือไม่เลือกวิธีชำระเงิน
 >
     {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'แยกชำระเงิน'}
 </button>
 
+<button
+    style={{
+        ...styles.paymentButton,
+        ...(orderReceived && cart.length > 0 && paymentMethod && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
+            ? {} 
+            : styles.paymentButtonDisabled),
+    }}
+    onClick={handlePayment}
+    disabled={!orderReceived || !paymentMethod || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+>
+    ชำระเงิน
+</button>
 
-
-    <button
-        style={{
-            ...styles.paymentButton,
-            ...(orderReceived && cart.length > 0 && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
-                ? {} 
-                : styles.paymentButtonDisabled),
-        }}
-        onClick={handlePayment}
-        disabled={!orderReceived || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
-    >
-        ชำระเงิน
-    </button>
 </div>
     </div>
     </div>
@@ -1599,8 +1667,9 @@ const styles = {
     amountInput: { placeholder: 'รับเงิน', width: '100%', padding: '6px', marginTop: '10px', border: '1px solid #ddd', borderRadius: '5px' },
     amountButtons: {display: 'grid',gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',gap: '5px',},    
     amountButton: {padding: '10px',borderRadius: '4px',backgroundColor: '#f0f0f0',color: '#333',fontWeight: 'bold',cursor: 'pointer',textAlign: 'center',boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',border: '2px solid #ddd',transition: 'all 0.3s ease',},
-    changeDisplay: {fontSize: '1.3rem',fontWeight: 'bold',textAlign: 'center',margin: '15px 0',color: '#2ecc71',},
+    changeDi: {fontSize: '1.2rem',fontWeight: 'bold',textAlign: 'center',margin: '5px 0',color: '#0ec159',},
     buttonContainer: { display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center' },
+    changeDisplay: {fontSize: '1rem',fontWeight: 'bold',textAlign: 'center',margin: '10px 0',color: '#0d1b13',},
     actionButton: { flex: 1, padding: '8px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#0f0e0e', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' },
