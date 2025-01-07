@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -201,6 +201,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <thead style="position: sticky; top: -1; background-color: #499cae; z-index: 1;">
                                     <tr>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ลำดับ</th>
+                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">เลขบิล</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ชื่อสินค้า</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">จำนวน</th>
                                         <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคา</th>
@@ -216,6 +217,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                         return `
                                             <tr>
                                                 <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${index + 1}</td>
+                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.order_id}</td>
                                                 <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
                                                 <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${quantity}</td>
                                                 <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${price.toFixed(2)} ฿</td>
@@ -224,7 +226,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                         `;
                                     }).join('')}
                                 </tbody>
-                            </table>
+                                </table>
                         </div>
                         <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
                             <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
@@ -237,7 +239,6 @@ export default function SalesReport({ initialReportData, initialError }) {
                 background: '#fff',
             });
             
-            
         } catch (error) {
             console.error('Error showing order details:', error);
             Swal.fire({
@@ -248,7 +249,6 @@ export default function SalesReport({ initialReportData, initialError }) {
             });
         }
     };
-    
     
 
     const calculateTotals = (orders) => {
