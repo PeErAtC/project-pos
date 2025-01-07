@@ -35,6 +35,8 @@ export default function SalesPage() {
     const [qrCode, setQrCode] = useState(null); // เก็บข้อมูล QR Code
     const [vatType, setVatType] = useState('noTax'); // ค่าเริ่มต้นเป็นไม่มีภาษี
     const [totalWithVAT, setTotalWithVAT] = useState(0);
+    const [payments, setPayments] = useState([]); // State เก็บข้อมูลการชำระเงินที่ทำไปแล้ว
+    const [temporaryPayments, setTemporaryPayments] = useState([]); // เก็บข้อมูลการแยกชำระเงินชั่วคราว
 
 
 
@@ -51,13 +53,14 @@ export default function SalesPage() {
             setProducts(response.data);
         } catch (error) {
             if (error.response && error.response.status === 404) {
-                console.warn('ไม่พบเส้นทาง API:', error.response.config.url);
+                console.error('API endpoint ไม่พบ:', error.response.config.url);
             } else {
-                console.warn('เกิดข้อผิดพลาด:', error.message);
+                console.error('เกิดข้อผิดพลาด:', error.message);
             }
-            setProducts([]); // UI จะไม่แสดงสินค้า
+            setProducts([]); // ตั้งค่า products เป็นค่าว่างหาก API ล้มเหลว
         }
     };
+    
     
 
 // ฟังก์ชัน fetchCategories
@@ -203,7 +206,12 @@ const fetchCategories = () => {
             }
         });
     };
-
+    const calculateTotalPaid = () => {
+        return temporaryPayments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดชำระจากทุกการแยกจ่าย
+    };
+    
+    
+    
     const calculateDiscountedPrice = (price, discount, discountType) => {
         if (discountType === 'THB') {
             return Math.max(price - discount, 0);
@@ -213,7 +221,38 @@ const fetchCategories = () => {
         return price;
     };
     
-
+    const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
+        try {
+            const url = `${api_url}/api/${slug}/partial-payments`;
+            const paymentData = {
+                order_id: orderId,
+                pay_channel_id: paymentMethod === 'cash' ? 1 : 2,
+                payment_date: formatDateTime(new Date()),
+                amount,
+                status: 'PARTIAL', // กำหนดสถานะเป็น Partial Payment
+            };
+    
+            const response = await axios.post(url, paymentData, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            if (response.data && response.data.success) {
+                console.log('บันทึกข้อมูลการชำระเงินบางส่วนสำเร็จ:', response.data);
+    
+                // เพิ่มการชำระเงินใหม่เข้าใน state `payments`
+                setPayments((prevPayments) => [...prevPayments, paymentData]);
+            } else {
+                throw new Error(response.data.message || 'การบันทึกล้มเหลว');
+            }
+        } catch (error) {
+            console.error('เกิดข้อผิดพลาดในการบันทึกการชำระเงินบางส่วน:', error.response?.data || error.message);
+            throw new Error('ไม่สามารถบันทึกข้อมูลการชำระเงินบางส่วนได้');
+        }
+    };
+    
     const calculateTotalAfterItemDiscounts = () => {
         return cart.reduce((acc, item) => 
             acc + calculateDiscountedPrice(Number(item.price), Number(item.discount), item.discountType) * Number(item.quantity)
@@ -224,7 +263,7 @@ const fetchCategories = () => {
 
     // ฟังก์ชันคำนวณยอดรวมที่ต้องชำระ
     const calculateTotalWithBillDiscountAndVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมสินค้า
+        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
         const discountedTotal = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดบิล
     
         let vatAmount = 0;
@@ -235,32 +274,39 @@ const fetchCategories = () => {
             vatAmount = discountedTotal * 0.03; // เพิ่ม VAT 3%
         }
     
-        return Number((discountedTotal + vatAmount).toFixed(2)); // รวม VAT (เฉพาะกรณีไม่รวม VAT)
+        return Number((discountedTotal + vatAmount).toFixed(2)); // รวม VAT (กรณีไม่รวม VAT)
     };
+    
+    
     
 
     const calculateVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมสินค้า
+        const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ตรวจสอบว่า baseTotal เป็นตัวเลข
         let vatAmount = 0;
     
         switch (vatType) {
             case 'includeVat7':
-                vatAmount = baseTotal * (7 / 107); // คำนวณ VAT 7% ที่รวมในยอดแล้ว
-                break;
-            case 'includeVat3':
-                vatAmount = baseTotal * (3 / 103); // คำนวณ VAT 3% ที่รวมในยอดแล้ว
+                vatAmount = baseTotal * (7 / 107); // คำนวณ VAT กรณีรวมในยอดแล้ว
                 break;
             case 'excludeVat7':
-                vatAmount = baseTotal * 0.07; // เพิ่ม VAT 7%
+                vatAmount = baseTotal * 0.07; // คำนวณ VAT 7%
+                break;
+            case 'includeVat3':
+                vatAmount = baseTotal * (3 / 103); // คำนวณ VAT กรณีรวมในยอดแล้ว
                 break;
             case 'excludeVat3':
-                vatAmount = baseTotal * 0.03; // เพิ่ม VAT 3%
+                vatAmount = baseTotal * 0.03; // คำนวณ VAT 3%
                 break;
             default:
                 vatAmount = 0; // ไม่มี VAT
         }
-        return vatAmount; // คืนค่าเป็น number
+    
+        return parseFloat(vatAmount.toFixed(2)) || 0; // คืนค่า VAT เป็นตัวเลข หรือ 0 หากมีปัญหา
     };
+    
+    
+    
+    
     const handleAmountInput = (amount) => {
         setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
     };
@@ -271,39 +317,22 @@ const fetchCategories = () => {
 
     const handlePayment = () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
+        const totalPaid = calculateTotalPaid() + receivedAmount; // รวมยอดที่ชำระทั้งหมด
     
-        if (paymentMethod === '') {
+        if (totalPaid < totalDue) {
             Swal.fire({
-                icon: 'warning',
-                title: 'กรุณาเลือกวิธีการชำระเงิน',
-                text: 'กรุณาเลือกวิธีการชำระเงินก่อนทำการชำระ',
-                confirmButtonText: 'ตกลง',
+                icon: 'error',
+                title: 'ยอดเงินไม่เพียงพอ',
+                text: `กรุณาชำระเงินให้ครบ: ${(totalDue - totalPaid).toFixed(2)} บาท`,
             });
             return;
         }
     
-        if (cart.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'ไม่มีสินค้าในตะกร้า',
-                text: 'กรุณาเพิ่มสินค้าในตะกร้าก่อนทำการชำระเงิน',
-                confirmButtonText: 'ตกลง',
-            });
-            return;
-        }
-    
-        if (receivedAmount < totalDue) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'ยอดชำระเงินไม่เพียงพอ',
-                text: `กรุณารับเงินมาไม่น้อยกว่าหรือเท่ากับยอดรวม ${totalDue.toFixed(2)} บาท`,
-                confirmButtonText: 'ตกลง',
-            });
-            return;
-        }
-    
-        setShowReceipt(true); // แสดงบิลสำหรับการบันทึก
+        setShowReceipt(true); // เปิดหน้าต่างแสดงบิล โดยไม่บันทึกข้อมูล
     };
+    
+    
+    
     
     
     const calculateTotalWithBillDiscount = () => {
@@ -412,6 +441,9 @@ const fetchCategories = () => {
                 })),
             };
     
+            // เพิ่มวิธีการชำระเงินใน orderData
+            orderData.payment_method = paymentMethod || 'cash'; // ตั้งค่าเริ่มต้นเป็นเงินสด
+    
             console.log("ข้อมูลออเดอร์ที่ส่ง:", orderData);
     
             // ส่งข้อมูลออเดอร์ไปเซิร์ฟเวอร์
@@ -427,6 +459,80 @@ const fetchCategories = () => {
     
     
     
+    const saveOrderData = async (orderId, paymentMethod, receivedAmount, cart, billDiscount, billDiscountType, vatType, calculateTotalWithBillDiscountAndVAT, calculateVAT) => {
+        try {
+            // คำนวณส่วนลดรวมต่อสินค้า
+            const totalItemDiscount = cart.reduce((acc, item) => {
+                const itemDiscountAmount = (item.discountType === 'THB') 
+                    ? item.discount * item.quantity 
+                    : (item.price * item.discount / 100) * item.quantity;
+                return acc + itemDiscountAmount;
+            }, 0);
+    
+            // คำนวณส่วนลดรวมทั้งบิล
+            const totalBillDiscount = (billDiscountType === 'THB') 
+                ? billDiscount 
+                : calculateTotalWithBillDiscountAndVAT() * (billDiscount / 100);
+    
+            const totalDiscount = totalItemDiscount + totalBillDiscount; // รวมส่วนลดทั้งหมด
+    
+            // คำนวณ VAT
+            const vatAmount = vatType.includes('exclude') ? parseFloat(calculateVAT().toFixed(2)) : 0;
+    
+            // ยอดสุทธิ
+            const netAmount = calculateTotalWithBillDiscountAndVAT();
+    
+            // บันทึกข้อมูลการชำระเงิน
+            await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
+    
+            // อัปเดตข้อมูลบิลในฐานข้อมูล
+            const response = await axios.put(
+                `${api_url}/api/${slug}/orders/${orderId}`,
+                {
+                    status: 'Y', // บิลชำระแล้ว
+                    vat_amt: vatType.includes('exclude') ? vatAmount : "", // จำนวน VAT
+                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, // เปอร์เซ็นต์ VAT
+                    net_amount: netAmount, // ยอดสุทธิ
+                    discount: totalDiscount.toFixed(2), // บันทึกส่วนลดรวมในฟิลด์เดียว
+                },
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                }
+            );
+    
+            if (response.data && response.data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกบิลสำเร็จ',
+                    text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount.toFixed(2)} บาท`,
+                    confirmButtonText: 'ตกลง',
+                });
+            } else {
+                throw new Error('การตอบกลับจาก API ไม่ถูกต้อง');
+            }
+        } catch (error) {
+            console.error('เกิดข้อผิดพลาด:', error.message);
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
+        }
+    };
+    
+    const handleSaveReceipt = async () => {
+        await saveOrderData(
+            orderId,
+            paymentMethod,
+            receivedAmount,
+            cart,
+            billDiscount,
+            billDiscountType,
+            vatType,
+            calculateTotalWithBillDiscountAndVAT,
+            calculateVAT
+        );
+        resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
+    };
     
     
     
@@ -538,20 +644,16 @@ const fetchCategories = () => {
 
     // ฟังก์ชันอัปเดตจำนวนเงินเต็ม
     const handleFullAmount = () => {
-        setReceivedAmount(calculateTotalWithBillDiscountAndVAT()); // รับเงินเท่ากับยอดรวมที่ต้องชำระ
+        const remainingDue = calculateRemainingDue(); // คำนวณยอดคงเหลือ
+        setReceivedAmount(remainingDue); // ตั้งยอดรับเงินให้เท่ากับยอดคงเหลือ
     };
-
+    
+    
+    
     const closeReceipt = async () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
     
-        if (receivedAmount < totalDue) {
-            Swal.fire({
-                icon: 'error',
-                title: 'ยอดเงินไม่เพียงพอ',
-                text: `กรุณาชำระเงินให้ครบ: ${totalDue.toFixed(2)} บาท`,
-            });
-            return;
-        }
+        
     
         try {
             // คำนวณส่วนลดรวมต่อสินค้า
@@ -610,6 +712,10 @@ const fetchCategories = () => {
         }
     };
     
+    
+    
+    
+    
     // ฟังก์ชันคำนวณยอดสุทธิ
     const calculateNetAmount = (totalDue, billDiscount) => {
         return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
@@ -618,16 +724,17 @@ const fetchCategories = () => {
     
     // ฟังก์ชันรีเซ็ตสถานะหลังชำระเงินสำเร็จ
     const resetStateAfterSuccess = () => {
+        setTemporaryPayments([]); // ล้างข้อมูลการแยกชำระเงิน
         setShowReceipt(false);
         setOrderReceived(false);
         setOrderId(null);
         setOrderNumber(null); // รีเซ็ตเลขที่ออร์เดอร์
-        setCart([]);
-        setReceivedAmount(0);
-        setBillDiscount(0);
+        setCart([]); // ล้างตะกร้าสินค้า
+        setReceivedAmount(0); // รีเซ็ตยอดเงินรับ
+        setBillDiscount(0); // รีเซ็ตส่วนลด
         setBillDiscountType("THB");
-        setVatType("includeVat7"); // ตั้ง VAT กลับเป็นค่าเริ่มต้น
-        setIsBillPaused(false);
+        setVatType("noTax"); // ตั้ง VAT กลับเป็นค่าเริ่มต้น
+        setIsBillPaused(false); // ปิดสถานะพักบิล
     };
     
     
@@ -635,7 +742,14 @@ const fetchCategories = () => {
         setShowReceipt(false);
         setIsBillPaused(true);
     };
-
+    const calculateRemainingDue = () => {
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
+        const totalPaid = calculateTotalPaid(); // รวมยอดที่ชำระแล้วทั้งหมด
+        return Math.max(totalDue - totalPaid, 0); // คืนยอดคงเหลือ (ไม่ต่ำกว่า 0)
+    };
+    
+    
+    
     const handleItemDiscountChange = (id, discount, discountType) => {
         setCart((prevCart) => 
             prevCart.map((item) => 
@@ -653,36 +767,37 @@ const fetchCategories = () => {
         const seconds = pad(date.getSeconds());
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
-   const savePaymentToDatabase = async (orderId, paymentMethod, amount) => {
+    const savePaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
             const url = `${api_url}/api/${slug}/payments`;
             const paymentData = {
                 order_id: orderId,
-                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, // เงินสด หรือ QR Code
-                payment_date: formatDateTime(new Date()), // ใช้ฟอร์แมตวันที่ที่ถูกต้อง
-                amount,
-                status: 'Y',
+                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, // เปลี่ยน ID ตามวิธีชำระเงิน
+                payment_date: formatDateTime(new Date()), // วันที่ชำระเงิน
+                amount, // ยอดเงินชำระ
+                status: 'Y', // ชำระเงินเสร็จสมบูรณ์
             };
-
-            console.log('Sending payment data:', paymentData); // Debugging
-
+    
             const response = await axios.post(url, paymentData, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-
+    
             if (response.data && response.data.success) {
-                console.log('บันทึกข้อมูลลงใน payments สำเร็จ:', response.data);
+                console.log('บันทึกข้อมูลการชำระเงินสำเร็จ:', response.data);
             } else {
-                console.error('บันทึกข้อมูล payments ล้มเหลว:', response.data.message || 'ไม่ทราบข้อผิดพลาด');
+                console.error('บันทึกข้อมูลการชำระเงินล้มเหลว:', response.data.message);
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลลงใน payments:', error.response?.data || error.message);
-            throw new Error('ไม่สามารถบันทึกข้อมูลลงใน payments ได้');
+            console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลการชำระเงิน:', error.response?.data || error.message);
+            throw new Error('ไม่สามารถบันทึกข้อมูลการชำระเงินได้');
         }
     };
+    
+    
+    
     const fetchPaymentChannels = async () => {
         try {
             const response = await axios.get(`${api_url}/api/${slug}/payChannels`, {
@@ -709,39 +824,39 @@ const fetchCategories = () => {
         }
     };
     const handlePartialPayment = () => {
-        const totalDue = calculateTotalWithBillDiscount(); // ยอดที่ต้องชำระทั้งหมด
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมต้องชำระทั้งหมด
+        const totalPaid = calculateTotalPaid(); // ยอดที่ชำระแล้วในหลายครั้ง
+        const remainingDue = totalDue - totalPaid; // ยอดที่เหลืออยู่
     
-        if (receivedAmount <= 0 || receivedAmount > totalDue) {
+        if (receivedAmount <= 0 || receivedAmount > remainingDue) {
             Swal.fire({
                 icon: 'error',
                 title: 'ยอดเงินไม่ถูกต้อง',
-                text: `กรุณาระบุยอดเงินที่ถูกต้อง (ไม่เกิน ${totalDue.toFixed(2)} บาท)`,
+                text: `กรุณาระบุยอดเงินที่ถูกต้อง (ไม่เกิน ${remainingDue.toFixed(2)} บาท)`,
             });
             return;
         }
     
-        const remainingTotal = totalDue - receivedAmount; // คำนวณยอดที่เหลือหลังแยกชำระ
+        // เพิ่มข้อมูลการแยกชำระเงินใน state ชั่วคราว
+        const newPayment = {
+            amount: receivedAmount,
+            paymentMethod,
+            timestamp: new Date(),
+        };
     
-        // อัปเดตสถานะการแยกชำระ
+        setTemporaryPayments((prevPayments) => [...prevPayments, newPayment]);
+    
+        // อัปเดตยอดคงเหลือหลังจากกดแยกชำระ
+        const updatedRemainingDue = remainingDue - receivedAmount;
+    
         Swal.fire({
             icon: 'success',
             title: 'แยกชำระเรียบร้อย',
-            text: `ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nยอดคงเหลือ: ${remainingTotal.toFixed(2)} บาท`,
+            text: `ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nยอดคงเหลือ: ${updatedRemainingDue.toFixed(2)} บาท`,
         });
     
-        // อัปเดตยอดรวมใหม่
-        setBillDiscountType("THB"); // ตรวจสอบว่าส่วนลดเป็นแบบไหน
-        setBillDiscount((prevDiscount) => prevDiscount + receivedAmount); // อัปเดตส่วนลดที่ใช้จ่ายไปแล้ว
-    
         setReceivedAmount(0); // รีเซ็ตยอดรับเงิน
-    
-        // หากยอดรวมเหลือ 0 บาท ให้ปิดบิลโดยอัตโนมัติ
-        if (remainingTotal <= 0) {
-            closeReceipt(); // เรียกฟังก์ชันปิดบิล
-        }
     };
-    
-    
     
     
     
@@ -1019,7 +1134,7 @@ const fetchCategories = () => {
                 letterSpacing: '2px',
             }}
         >
-        รวม: {totalWithVAT.toFixed(2)} ฿
+        รวม: {calculateTotalWithBillDiscountAndVAT().toFixed(2)} ฿
     </h3>
         <div style={{ width: '220px', marginRight: '-70px' }}>
             <select
@@ -1160,27 +1275,25 @@ const fetchCategories = () => {
 
                 {/* ปุ่มรับเงินเต็มจำนวน */}
                 <button
-                    onClick={() => {
-                        const totalDue = calculateTotalWithBillDiscountAndVAT();
-                        setReceivedAmount(totalDue); // ตั้งค่าให้ตรงกับยอดรวมทั้งหมด
-                    }}
+                    onClick={handleFullAmount}
                     style={{
                         ...styles.amountButton,
                         background: '#5fd78b', // สีพื้นหลังแบบสีเขียวธรรมดา
                         color: '#ffffff',
-                        fontWeight: 'bold', // ตัวหนา
-                        borderRadius: '8px', // มุมโค้งมน
-                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)', // เพิ่มเงาให้ปุ่มเด่นขึ้น
-                        cursor: 'pointer', // เมื่อโฮเวอร์แสดงมือ
-                        transition: 'all 0.3s ease', // เพิ่มเอฟเฟกต์การเปลี่ยนแปลง
-                        width: 'auto', // ให้ขนาดกว้างตามข้อความ
-                        padding: '8px 25px', // เพิ่ม padding ให้ปุ่มใหญ่ขึ้น
-                        whiteSpace: 'nowrap', // ป้องกันข้อความขึ้นบรรทัดใหม่
-                        textAlign: 'center', // จัดข้อความให้อยู่ตรงกลาง
+                        fontWeight: 'bold',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        width: 'auto',
+                        padding: '8px 25px',
+                        whiteSpace: 'nowrap',
+                        textAlign: 'center',
                     }}
                 >
                     รับเงินเต็มจำนวน
                 </button>
+
                     <button
                         onClick={resetAmount}
                         style={{
@@ -1201,6 +1314,9 @@ const fetchCategories = () => {
             </div>
             {/* การแสดงเงินทอน */}
             <div style={styles.changeDisplay}>
+            ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท
+            </div>
+            <div style={styles.changeDisplay}>
                 เงินทอน: {calculateChange()} บาท
             </div>
         </>
@@ -1214,10 +1330,10 @@ const fetchCategories = () => {
                 ...styles.receiveOrderButton,
                 ...(cart.length === 0 ? styles.buttonDisabled : {}),
             }}
-            onClick={addOrderItems} // เรียกฟังก์ชันเพิ่มรายการ
+            onClick={addOrderItems}
             disabled={cart.length === 0}
         >
-            อัพเดทรายการอาหาร
+            อัพเดทอาหาร
         </button>
     ) : (
         <button
@@ -1225,12 +1341,34 @@ const fetchCategories = () => {
                 ...styles.receiveOrderButton,
                 ...(cart.length === 0 ? styles.buttonDisabled : {}),
             }}
-            onClick={receiveOrder} // ฟังก์ชันรับออเดอร์
+            onClick={receiveOrder}
             disabled={cart.length === 0}
         >
             รับออเดอร์
         </button>
     )}
+
+    {/* ปุ่มแยกชำระเงิน */}
+<button
+    style={{
+        ...styles.paymentButton,
+        backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#f39c12', // สีเขียวเมื่อยอดคงเหลือ 0, สีส้มเมื่อยังมีคงเหลือ
+        ...(orderReceived && (receivedAmount > 0 || calculateRemainingDue() === 0) ? {} : styles.paymentButtonDisabled), // ปิดการใช้งานถ้าไม่มีการรับออเดอร์
+    }}
+    onClick={() => {
+        if (orderReceived && calculateRemainingDue() === 0) {
+            setShowReceipt(true); // เปิดหน้าต่างแสดงบิล
+        } else if (orderReceived) {
+            handlePartialPayment(); // ดำเนินการแยกชำระเงิน
+        }
+    }}
+    disabled={!orderReceived || (receivedAmount <= 0 && calculateRemainingDue() !== 0)} // ปิดการใช้งานถ้าไม่มีการรับออเดอร์
+>
+    {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'แยกชำระเงิน'}
+</button>
+
+
+
     <button
         style={{
             ...styles.paymentButton,
@@ -1238,7 +1376,7 @@ const fetchCategories = () => {
                 ? {} 
                 : styles.paymentButtonDisabled),
         }}
-        onClick={handlePayment} // ฟังก์ชันการชำระเงิน
+        onClick={handlePayment}
         disabled={!orderReceived || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
     >
         ชำระเงิน
@@ -1248,130 +1386,125 @@ const fetchCategories = () => {
     </div>
     
     {showReceipt && (
-    <div style={styles.receiptOverlay}>
-        <div style={styles.receiptContainer}>
-            <div style={styles.header}>
-                <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
-                <h2 style={styles.shopName}>Easy PÖS</h2>
-                <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
-            </div>
-            <div style={styles.info}>
-                <p style={styles.billId}>No: {orderNumber}</p>
-                <p style={styles.date}>{new Date().toLocaleString()}</p>
-            </div>
-            <div style={styles.tableHeader}>
-                <p style={styles.tableColumn}>รายการ</p>
-                <p style={styles.tableColumn}>จำนวน</p>
-                <p style={styles.tableColumn}>ราคา</p>
-            </div>
-            <div className="receiptItems" style={styles.receiptItems}>
-                {cart.map((item) => (
-                    <div key={item.id} style={styles.receiptItem}>
-                        <p style={styles.itemName}>{item.p_name}</p>
-                        <p style={styles.itemQuantity}>{item.quantity}</p>
-                        <p style={styles.itemPrice}>
-                            <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
-                                {item.price.toFixed(2)}
-                            </span>
-                            {item.discount > 0 && (
-                                <>
-                                    <br />
-                                    <span>{`ลด ${item.discountType === 'THB' ? item.discount.toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
-                                    <br />
-                                    <span>{`${calculateDiscountedPrice(item.price, item.discount, item.discountType).toFixed(2)} บาท`}</span>
-                                </>
-                            )}
-                        </p>
-                    </div>
-                ))}
-            </div>
-            <div style={styles.receiptItem}>
-                <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
-                <p style={styles.itemQuantity}></p>
-                <p style={styles.itemPrice}>
-                    <strong>
-                        {billDiscountType === 'THB' ? `${billDiscount.toFixed(2)} บาท` : `${billDiscount}%`}
-                    </strong>
-                </p>
-            </div>
-            <div style={styles.receiptSummary}>
-                <p>โต๊ะ: {tableCode}</p>
-                <p>
-                    ยอดบิล: 
-                    <span style={styles.summaryValue}>
-                        {Number(calculateTotalWithBillDiscountAndVAT()).toFixed(2)} บาท
-                    </span>
-                </p>
-                <p>
-                    ยอดภาษีมูลค่าเพิ่ม ({vatType.includes('7') ? '7%' : vatType.includes('3') ? '3%' : '0%'} 
-                    {vatType.includes('include') ? ' รวม' : vatType.includes('exclude') ? ' ไม่รวม' : ''}): 
-                    <span style={styles.summaryValue}>
-                        {calculateVAT().toFixed(2)} บาท
-                    </span>
-                </p>
-                <p>
-                    รับเงิน: 
-                    <span style={styles.summaryValue}>
-                        {receivedAmount.toFixed(2)} บาท
-                    </span>
-                </p>
-                <p>
-                    เงินทอน: 
-                    <span style={styles.summaryValue}>
-                        {(receivedAmount - calculateTotalWithBillDiscountAndVAT()).toFixed(2)} บาท
-                    </span>
-                </p>
-            </div>
-            <div style={styles.receiptItem}>
-                <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
-                <p style={styles.itemQuantity}></p>
-                <p style={styles.itemPrice}>
-                    <strong>
-                        {paymentMethod === 'cash' ? 'เงินสด' : 
-                        paymentMethod === 'qr' ? 'QR Code พร้อมเพย์' : 
-                        'ยังไม่ได้เลือก'}
-                    </strong>
-                </p>
-            </div>
-            <div style={styles.buttonContainer}>
-                {calculateTotalWithBillDiscount() === 0 ? (
-                    <button
-                        style={styles.actionButton}
-                        onClick={() => {
-                            setShowReceipt(false);
-                            setOrderReceived(false);
-                            setOrderId(null);
-                            setCart([]);
-                            setReceivedAmount(0);
-                            setBillDiscount(0);
-                            setBillDiscountType("THB");
-                            setIsBillPaused(false);
-                        }}
-                    >
-                        ตกลง
-                    </button>
-                ) : (
-                    <>
+        <div style={styles.receiptOverlay}>
+            <div style={styles.receiptContainer}>
+                <div style={styles.header}>
+                    <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
+                    <h2 style={styles.shopName}>Easy PÖS</h2>
+                    <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
+                </div>
+                <div style={styles.info}>
+                    <p style={styles.billId}>No: {orderNumber}</p>
+                    <p style={styles.date}>{new Date().toLocaleString()}</p>
+                </div>
+                <div style={styles.tableHeader}>
+                    <p style={styles.tableColumn}>รายการ</p>
+                    <p style={styles.tableColumn}>จำนวน</p>
+                    <p style={styles.tableColumn}>ราคา</p>
+                </div>
+                <div className="receiptItems" style={styles.receiptItems}>
+                    {cart.map((item) => (
+                        <div key={item.id} style={styles.receiptItem}>
+                            <p style={styles.itemName}>{item.p_name}</p>
+                            <p style={styles.itemQuantity}>{item.quantity}</p>
+                            <p style={styles.itemPrice}>
+                                <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
+                                    {item.price.toFixed(2)}
+                                </span>
+                                {item.discount > 0 && (
+                                    <>
+                                        <br />
+                                        <span>{`ลด ${item.discountType === 'THB' ? item.discount.toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
+                                        <br />
+                                        <span>{`${calculateDiscountedPrice(item.price, item.discount, item.discountType).toFixed(2)} บาท`}</span>
+                                    </>
+                                )}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+                <div style={styles.receiptItem}>
+                    <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
+                    <p style={styles.itemQuantity}></p>
+                    <p style={styles.itemPrice}>
+                        <strong>
+                            {billDiscountType === 'THB' ? `${billDiscount.toFixed(2)} บาท` : `${billDiscount}%`}
+                        </strong>
+                    </p>
+                </div>
+                <div style={styles.receiptSummary}>
+                    <p>โต๊ะ: {tableCode}</p>
+                    <p>
+                        ยอดบิล: 
+                        <span style={styles.summaryValue}>
+                            {calculateTotalWithBillDiscountAndVAT().toFixed(2)} บาท
+                        </span>
+                    </p>
+                    <p>
+                        ยอดภาษีมูลค่าเพิ่ม ({vatType.includes('7') ? '7%' : vatType.includes('3') ? '3%' : '0%'} 
+                        {vatType.includes('include') ? ' รวม' : vatType.includes('exclude') ? ' ไม่รวม' : ''}): 
+                        <span style={styles.summaryValue}>
+                            {calculateVAT().toFixed(2)} บาท
+                        </span>
+                    </p>
+                    <p>
+                        รับเงิน: 
+                        <span style={styles.summaryValue}>
+                            {(receivedAmount + calculateTotalPaid()).toFixed(2)} บาท
+                        </span>
+                    </p>
+                    <p>
+                        เงินทอน: 
+                        <span style={styles.summaryValue}>
+                            {Math.max(receivedAmount + calculateTotalPaid() - calculateTotalWithBillDiscountAndVAT(), 0).toFixed(2)} บาท
+                        </span>
+                    </p>
+                </div>
+                <div style={styles.receiptItem}>
+                    <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
+                    <p style={styles.itemQuantity}></p>
+                    <p style={styles.itemPrice}>
+                        <strong>
+                            {paymentMethod === 'cash' ? 'เงินสด' : 
+                            paymentMethod === 'qr' ? 'QR Code พร้อมเพย์' : 
+                            'ยังไม่ได้เลือก'}
+                        </strong>
+                    </p>
+                </div>
+                <div style={styles.buttonContainer}>
+                    {calculateTotalWithBillDiscount() === 0 ? (
                         <button
-                            style={{
-                                ...styles.actionButton,
-                                ...(receivedAmount < calculateTotalWithBillDiscount() ? styles.buttonDisabled : {}),
+                            style={styles.actionButton}
+                            onClick={() => {
+                                setShowReceipt(false);
+                                setOrderReceived(false);
+                                setOrderId(null);
+                                setCart([]);
+                                setReceivedAmount(0);
+                                setBillDiscount(0);
+                                setBillDiscountType("THB");
+                                setIsBillPaused(false);
                             }}
-                            onClick={closeReceipt}
-                            disabled={receivedAmount < calculateTotalWithBillDiscount()}
                         >
-                            บันทึกบิล
-
+                            ตกลง
                         </button>
-                        <button style={styles.pauseButton} onClick={handlePauseBill}>
-                            พักพ์บิล
-                        </button>
-                    </>
-                )}
+                    ) : (
+                        <>
+                            <button
+                                style={styles.actionButton}
+                                onClick={closeReceipt} // บันทึกบิลโดยไม่มีเงื่อนไข
+                            >
+                                บันทึกบิล
+                            </button>
+                            <button style={styles.pauseButton} onClick={handlePauseBill}>
+                                พักพ์บิล
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
-    </div>
-)}
+    )}
 
         </div>
     );
