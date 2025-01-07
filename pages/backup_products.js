@@ -205,13 +205,14 @@ const fetchCategories = () => {
     };
 
     const calculateDiscountedPrice = (price, discount, discountType) => {
-        if (discountType === "THB") {
+        if (discountType === 'THB') {
             return Math.max(price - discount, 0);
-        } else if (discountType === "%") {
+        } else if (discountType === '%') {
             return Math.max(price - (price * discount) / 100, 0);
         }
         return price;
     };
+    
 
     const calculateTotalAfterItemDiscounts = () => {
         return cart.reduce((acc, item) => 
@@ -223,42 +224,42 @@ const fetchCategories = () => {
 
     // ฟังก์ชันคำนวณยอดรวมที่ต้องชำระ
     const calculateTotalWithBillDiscountAndVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
-        const totalWithBillDiscount = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดบิล
+        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมสินค้า
+        const discountedTotal = calculateDiscountedPrice(baseTotal, billDiscount, billDiscountType); // ยอดรวมหลังส่วนลดบิล
     
-        // หากเลือก "รวม VAT" จะไม่เพิ่ม VAT ซ้ำในยอดรวม
-        if (vatType === 'includeVat7' || vatType === 'includeVat3') {
-            return totalWithBillDiscount; // ยอดรวมพร้อม VAT อยู่แล้ว
+        let vatAmount = 0;
+    
+        if (vatType === 'excludeVat7') {
+            vatAmount = discountedTotal * 0.07; // เพิ่ม VAT 7%
+        } else if (vatType === 'excludeVat3') {
+            vatAmount = discountedTotal * 0.03; // เพิ่ม VAT 3%
         }
     
-        // หากเลือก "ไม่รวม VAT" จะเพิ่ม VAT
-        const vatAmount = calculateVAT(); // คำนวณ VAT
-        return totalWithBillDiscount + vatAmount; // รวมยอดหลังส่วนลดและ VAT
+        return Number((discountedTotal + vatAmount).toFixed(2)); // รวม VAT (เฉพาะกรณีไม่รวม VAT)
     };
+    
 
     const calculateVAT = () => {
-        const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมก่อน VAT
+        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมสินค้า
         let vatAmount = 0;
     
         switch (vatType) {
-            case 'includeVat7': // รวม VAT 7% ในยอดแล้ว
-                vatAmount = baseTotal * (7 / 107);
+            case 'includeVat7':
+                vatAmount = baseTotal * (7 / 107); // คำนวณ VAT 7% ที่รวมในยอดแล้ว
                 break;
-            case 'excludeVat7': // ไม่รวม VAT 7%
-                vatAmount = baseTotal * 0.07;
+            case 'includeVat3':
+                vatAmount = baseTotal * (3 / 103); // คำนวณ VAT 3% ที่รวมในยอดแล้ว
                 break;
-            case 'includeVat3': // รวม VAT 3% ในยอดแล้ว
-                vatAmount = baseTotal * (3 / 103);
+            case 'excludeVat7':
+                vatAmount = baseTotal * 0.07; // เพิ่ม VAT 7%
                 break;
-            case 'excludeVat3': // ไม่รวม VAT 3%
-                vatAmount = baseTotal * 0.03;
+            case 'excludeVat3':
+                vatAmount = baseTotal * 0.03; // เพิ่ม VAT 3%
                 break;
-            default: // ไม่มี VAT
-                vatAmount = 0;
-                break;
+            default:
+                vatAmount = 0; // ไม่มี VAT
         }
-    
-        return vatAmount || 0; // คืนค่า 0 หากไม่มีการคำนวณ
+        return vatAmount; // คืนค่าเป็น number
     };
     const handleAmountInput = (amount) => {
         setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
@@ -311,32 +312,17 @@ const fetchCategories = () => {
     };
     
     const calculateTotalWithVAT = () => {
-        const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมก่อนภาษี
-        let vatAmount = 0;
+        const baseTotal = calculateTotalAfterItemDiscounts();
+        const vatAmount = calculateVAT();
     
-        switch (vatType) {
-            case 'includeVat7': // รวมภาษี 7%
-                vatAmount = baseTotal * (7 / 107); // ภาษีที่รวมอยู่แล้ว
-                return baseTotal; // รวม VAT ในยอดแล้ว
-            case 'excludeVat7': // ไม่รวมภาษี 7%
-                vatAmount = baseTotal * 0.07; // เพิ่ม VAT 7%
-                return baseTotal + vatAmount; // ยอดรวมพร้อม VAT
-            case 'includeVat3': // รวมภาษี 3%
-                vatAmount = baseTotal * (3 / 103); // ภาษีที่รวมอยู่แล้ว
-                return baseTotal; // รวม VAT ในยอดแล้ว
-            case 'excludeVat3': // ไม่รวมภาษี 3%
-                vatAmount = baseTotal * 0.03; // เพิ่ม VAT 3%
-                return baseTotal + vatAmount; // ยอดรวมพร้อม VAT
-            default: // ไม่มีภาษี
-                return baseTotal; // ไม่มีการเพิ่ม VAT
-        }
+        return vatType.includes('include') ? baseTotal : baseTotal + vatAmount;
     };
     
     
     useEffect(() => {
-        const updatedTotal = calculateTotalWithVAT();
+        const updatedTotal = calculateTotalWithBillDiscountAndVAT();
         setTotalWithVAT(updatedTotal);
-    }, [vatType, billDiscount]); // ติดตามการเปลี่ยนแปลงของ vatType และส่วนลด
+    }, [billDiscount, billDiscountType, vatType, cart]);
     
     
     const filteredProducts = products.filter(product =>
@@ -346,64 +332,26 @@ const fetchCategories = () => {
     
     const sendOrder = async (orderData) => {
         try {
-            // คำนวณ VAT
-            const baseTotal = Number(orderData.total_amount) || 0; // แปลงค่าให้เป็นตัวเลขเสมอ
-            console.log("Base Total:", baseTotal);
-    
-            let vatAmount = 0;
-    
-            // ตรวจสอบประเภท VAT และคำนวณ
-            switch (vatType) {
-                case 'includeVat7':
-                    vatAmount = baseTotal * (7 / 107);
-                    break;
-                case 'excludeVat7':
-                    vatAmount = baseTotal * 0.07;
-                    break;
-                case 'includeVat3':
-                    vatAmount = baseTotal * (3 / 103);
-                    break;
-                case 'excludeVat3':
-                    vatAmount = baseTotal * 0.03;
-                    break;
-                default:
-                    vatAmount = 0;
-                    break;
-            }
-            console.log("VAT Amount:", vatAmount);
-    
-            // ตรวจสอบค่าก่อนบันทึก
-            console.log("Total Amount with VAT:", baseTotal + vatAmount);
-    
-            // อัปเดตข้อมูลออร์เดอร์ให้รวม VAT
-            const updatedOrderData = {
-                ...orderData,
-                vatType, // ประเภท VAT ที่เลือก
-                vatAmount: Number(vatAmount.toFixed(2)), // ยอด VAT ที่คำนวณได้
-                total_amount_with_vat: Number((baseTotal + vatAmount).toFixed(2)), // ยอดรวมพร้อม VAT
-                total_amount_before_vat: Number(baseTotal.toFixed(2)), // ยอดรวมก่อน VAT
-            };
-    
-            // ส่งข้อมูลออร์เดอร์ไปยัง API
-            const response = await axios.post(`${api_url}/api/${slug}/orders`, updatedOrderData, {
+            const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
     
-            // ตรวจสอบผลลัพธ์จาก API
             if (response.data && response.data.order) {
                 console.log('Order sent successfully:', response.data.order);
-                return response.data.order; // ส่งกลับข้อมูลออร์เดอร์
+                return response.data.order; // Return the created order
             } else {
-                throw new Error('รูปแบบการตอบกลับจาก API ไม่ถูกต้อง');
+                throw new Error('API response format is invalid');
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการสร้างออร์เดอร์:', error.response?.data || error.message);
-            throw new Error(`ไม่สามารถสร้างออร์เดอร์ได้: ${error.response?.data?.message || error.message}`);
+            console.error('Error creating order:', error.response?.data || error.message);
+            throw new Error(`Unable to create order: ${error.response?.data?.message || error.message}`);
         }
     };
+    
+    
     
     
     
@@ -415,46 +363,36 @@ const fetchCategories = () => {
     const receiveOrder = async () => {
         try {
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
-        
-            // คำนวณยอดรวมก่อน VAT
-            const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมสินค้า
-            console.log("Base Total (ก่อน VAT):", baseTotal);
     
-            // คำนวณ VAT และยอดรวมหลัง VAT
+            // ยอดรวมที่กำหนดไว้ (สมมติว่า 100 บาท)
+            const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0; // ยอดรวมสินค้า
+            console.log("Total Amount with VAT (ยอดรวม):", totalAmountWithVAT);
+    
+            // คำนวณ VAT โดยไม่กระทบยอดรวม
             let vatAmount = 0;
-            let totalAmountWithVAT = baseTotal;
     
             if (vatType === 'includeVat7') {
-                vatAmount = baseTotal * (7 / 107); // VAT รวมอยู่ในยอดแล้ว
-                totalAmountWithVAT = baseTotal; // ยอดรวมนี้มี VAT แล้ว
+                vatAmount = totalAmountWithVAT * (7 / 107); // คำนวณ VAT ที่รวมอยู่ในยอด
             } else if (vatType === 'includeVat3') {
-                vatAmount = baseTotal * (3 / 103); // VAT รวมอยู่ในยอดแล้ว
-                totalAmountWithVAT = baseTotal; // ยอดรวมนี้มี VAT แล้ว
+                vatAmount = totalAmountWithVAT * (3 / 103); // คำนวณ VAT ที่รวมอยู่ในยอด
             } else if (vatType === 'excludeVat7') {
-                vatAmount = baseTotal * 0.07; // เพิ่ม VAT 7%
-                totalAmountWithVAT = baseTotal + vatAmount; // รวม VAT เข้าไป
+                vatAmount = totalAmountWithVAT * 0.07; // เพิ่ม VAT 7%
             } else if (vatType === 'excludeVat3') {
-                vatAmount = baseTotal * 0.03; // เพิ่ม VAT 3%
-                totalAmountWithVAT = baseTotal + vatAmount; // รวม VAT เข้าไป
+                vatAmount = totalAmountWithVAT * 0.03; // เพิ่ม VAT 3%
             }
     
             // ตรวจสอบ % VAT
-            const vatPercentage = 
-                vatType === 'includeVat7' || vatType === 'excludeVat7' ? 7 :
-                vatType === 'includeVat3' || vatType === 'excludeVat3' ? 3 : 0;
-    
-            // ** เลือกยอดรวมที่ต้องส่งตามประเภท VAT **
-            const totalAmount = totalAmountWithVAT.toFixed(2); // กรณีไม่รวม VAT ต้องส่งยอดรวมที่รวม VAT เข้าไป
+            const vatPercentage = vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0;
     
             // สร้างข้อมูลที่ต้องการส่งไปฐานข้อมูล
             const orderData = {
-                total_amount: totalAmount, // ส่งยอดรวมที่รวม VAT
+                total_amount: totalAmountWithVAT.toFixed(2), // ยอดรวม (ไม่เปลี่ยนแปลง)
                 vat_per: vatPercentage, // เปอร์เซ็นต์ VAT
-                vat_amt: vatAmount.toFixed(2), // จำนวน VAT
+                vat_amt: vatAmount.toFixed(2), // จำนวน VAT ที่คำนวณ
                 total_amount_with_vat: totalAmountWithVAT.toFixed(2), // ยอดรวมพร้อม VAT
-                discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลด
-                discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // เปอร์เซ็นต์ส่วนลด
-                net_amount: (totalAmountWithVAT - billDiscount).toFixed(2), // ยอดสุทธิหลังส่วนลด
+                discount: Number(billDiscountType === 'THB' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นจำนวนเงิน
+                discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2), // ส่วนลดเป็นเปอร์เซ็นต์
+                net_amount: totalAmountWithVAT.toFixed(2), // ยอดสุทธิ (เท่ากับยอดรวม)
                 status: 'N', // สถานะบิล (N = ยังไม่ชำระเงิน)
                 tables_id: tableCode || null, // รหัสโต๊ะ (ถ้ามี)
                 created_by: userId, // ผู้สร้างคำสั่งซื้อ
@@ -464,6 +402,8 @@ const fetchCategories = () => {
                     p_name: item.p_name || 'Unnamed Product',
                     quantity: Number(item.quantity) || 0,
                     price: Number(item.price) || 0,
+                    discount: item.discount || 0, // เพิ่มฟิลด์ส่วนลด
+                    discountType: item.discountType || 'THB', // เพิ่มฟิลด์ประเภทส่วนลด
                     total: calculateDiscountedPrice(
                         Number(item.price),
                         Number(item.discount),
@@ -490,12 +430,15 @@ const fetchCategories = () => {
     
     
     
+    
     const addOrderItems = async () => {
         if (!orderId) {
-            // ถ้ายังไม่มียอดสั่งซื้อ ให้เรียกใช้ฟังก์ชันรับคำสั่งซื้อใหม่
-            await receiveOrder();
+            // ถ้ายังไม่มี orderId หมายความว่าไม่มีการสร้างออเดอร์
+            // ดังนั้นต้องสร้างคำสั่งซื้อใหม่
+            await receiveOrder(); // สร้างคำสั่งซื้อใหม่
         }
-
+    
+        // เตรียมรายการสินค้าที่จะเพิ่มเข้าไปในออเดอร์
         const newItems = cart.map((item) => ({
             product_id: item.id || 0,
             p_name: item.p_name || 'ไม่มีชื่อสินค้า',
@@ -503,9 +446,26 @@ const fetchCategories = () => {
             price: item.price || 0,
             total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
         }));
-        console.log('New Items:', newItems); // ตรวจสอบข้อมูลที่ส่งไป
-
+    
+        // เรียกใช้ฟังก์ชัน addToOrder เพื่อเพิ่มรายการสินค้าลงในออเดอร์ที่มีอยู่
+        await addToOrder(orderId, newItems);
+    };
+    
+    const addToOrder = async (orderId, newItems) => {
         try {
+            // ตรวจสอบให้แน่ใจว่า newItems ไม่ว่าง และมีค่า product_id
+            if (!newItems || newItems.length === 0) {
+                throw new Error('ไม่มีรายการสินค้าที่จะเพิ่ม');
+            }
+    
+            // ตรวจสอบว่าแต่ละรายการใน newItems มี product_id
+            for (let item of newItems) {
+                if (!item.product_id) {
+                    throw new Error(`สินค้า ${item.p_name || 'Unnamed Product'} ไม่มี product_id`);
+                }
+            }
+    
+            // ส่งข้อมูลสินค้าใหม่ไปยัง API เพื่อเพิ่มลงในออเดอร์ที่มีอยู่
             const response = await axios.post(
                 `${api_url}/api/${slug}/orders/${orderId}/addItem`,
                 { items: newItems },
@@ -516,8 +476,9 @@ const fetchCategories = () => {
                     },
                 }
             );
-
-            if (response.data && response.data.success) {
+    
+            // ตรวจสอบว่า response มี success หรือไม่
+            if (response.data.success) {
                 Swal.fire({
                     icon: 'success',
                     title: 'เพิ่มรายการสินค้าเรียบร้อย',
@@ -525,14 +486,21 @@ const fetchCategories = () => {
                     confirmButtonText: 'ตกลง',
                 });
             } else {
-                throw new Error(response.data.message || 'เกิดข้อผิดพลาดในการเพิ่มรายการสินค้า');
+                throw new Error('ไม่สามารถเพิ่มรายการสินค้าได้');
             }
         } catch (error) {
             console.error('Error adding order items:', error);
-            Swal.fire('ผิดพลาด', `ไม่สามารถเพิ่มรายการสินค้าได้: ${error.message}`, 'error');
+            Swal.fire(
+                'ผิดพลาด',
+                `ไม่สามารถเพิ่มรายการสินค้าได้: ${error.response?.data?.message || error.message}`,
+                'error'
+            );
         }
     };
+    
+    
 
+    
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
         try {
@@ -574,7 +542,7 @@ const fetchCategories = () => {
     };
 
     const closeReceipt = async () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระหลังส่วนลดและภาษี
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
     
         if (receivedAmount < totalDue) {
             Swal.fire({
@@ -586,15 +554,40 @@ const fetchCategories = () => {
         }
     
         try {
-            // 1. บันทึกข้อมูลการชำระเงิน
-            console.log('บันทึกการชำระเงิน...');
+            // คำนวณส่วนลดรวมต่อสินค้า
+            const totalItemDiscount = cart.reduce((acc, item) => {
+                const itemDiscountAmount = (item.discountType === 'THB') 
+                    ? item.discount * item.quantity 
+                    : (item.price * item.discount / 100) * item.quantity;
+                return acc + itemDiscountAmount;
+            }, 0);
+    
+            // คำนวณส่วนลดรวมทั้งบิล
+            const totalBillDiscount = (billDiscountType === 'THB') 
+                ? billDiscount 
+                : totalDue * (billDiscount / 100);
+    
+            const totalDiscount = totalItemDiscount + totalBillDiscount; // รวมส่วนลดทั้งหมด
+    
+            // คำนวณ VAT
+            const vatAmount = vatType.includes('exclude') ? parseFloat(calculateVAT().toFixed(2)) : 0;
+    
+            // ยอดสุทธิ
+            const netAmount = totalDue;
+    
+            // บันทึกข้อมูลการชำระเงิน
             await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
     
-            // 2. อัปเดตสถานะบิลเป็น Y
-            console.log('อัปเดตสถานะบิล...');
+            // อัปเดตข้อมูลบิลในฐานข้อมูล
             await axios.put(
                 `${api_url}/api/${slug}/orders/${orderId}`,
-                { status: 'Y' },
+                {
+                    status: 'Y', // บิลชำระแล้ว
+                    vat_amt: vatType.includes('exclude') ? vatAmount : "", // จำนวน VAT
+                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, // เปอร์เซ็นต์ VAT
+                    net_amount: netAmount, // ยอดสุทธิ
+                    discount: totalDiscount.toFixed(2), // บันทึกส่วนลดรวมในฟิลด์เดียว
+                },
                 {
                     headers: {
                         'Accept': 'application/json',
@@ -603,14 +596,10 @@ const fetchCategories = () => {
                 }
             );
     
-            // คำนวณยอดสุทธิ (net_amount)
-            const netAmount = calculateNetAmount(totalDue, billDiscount).toFixed(2);
-    
-            // แสดงข้อความบันทึกบิลสำเร็จพร้อม net_amount
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกบิลสำเร็จ',
-                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount} บาท`,
+                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount.toFixed(2)} บาท`,
                 confirmButtonText: 'ตกลง',
             }).then(() => {
                 resetStateAfterSuccess();
@@ -620,9 +609,10 @@ const fetchCategories = () => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
+    
     // ฟังก์ชันคำนวณยอดสุทธิ
     const calculateNetAmount = (totalDue, billDiscount) => {
-        return totalDue - (billDiscountType === 'THB' ? billDiscount : (totalDue * billDiscount) / 100);
+        return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
     };
 
     
@@ -1029,7 +1019,7 @@ const fetchCategories = () => {
                 letterSpacing: '2px',
             }}
         >
-        รวม: {calculateTotalWithVAT().toFixed(2)} ฿
+        รวม: {totalWithVAT.toFixed(2)} ฿
     </h3>
         <div style={{ width: '220px', marginRight: '-70px' }}>
             <select
@@ -1218,43 +1208,42 @@ const fetchCategories = () => {
 
     {/* ปุ่มการทำงาน */}
     <div style={styles.paymentRow}>
-        {orderReceived ? (
-            <button
-                style={{
-                    ...styles.receiveOrderButton,
-                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
-                }}
-                onClick={handlePartialPayment} // เรียกฟังก์ชันแยกชำระเงิน
-                disabled={cart.length === 0}
-            >
-                แยกชำระในบิลนี้
-            </button>
-        ) : (
-            <button
-                style={{
-                    ...styles.receiveOrderButton,
-                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
-                }}
-                onClick={receiveOrder} // เรียกฟังก์ชันรับออเดอร์
-                disabled={cart.length === 0}
-            >
-                รับออเดอร์
-            </button>
-        )}
-
+    {orderReceived ? (
         <button
             style={{
-                ...styles.paymentButton,
-                ...(orderReceived && cart.length > 0 && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
-                    ? {} 
-                    : styles.paymentButtonDisabled),
+                ...styles.receiveOrderButton,
+                ...(cart.length === 0 ? styles.buttonDisabled : {}),
             }}
-            onClick={handlePayment} // ฟังก์ชันการชำระเงิน
-            disabled={!orderReceived || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+            onClick={addOrderItems} // เรียกฟังก์ชันเพิ่มรายการ
+            disabled={cart.length === 0}
         >
-            ชำระเงิน
+            อัพเดทรายการอาหาร
         </button>
-        </div>
+    ) : (
+        <button
+            style={{
+                ...styles.receiveOrderButton,
+                ...(cart.length === 0 ? styles.buttonDisabled : {}),
+            }}
+            onClick={receiveOrder} // ฟังก์ชันรับออเดอร์
+            disabled={cart.length === 0}
+        >
+            รับออเดอร์
+        </button>
+    )}
+    <button
+        style={{
+            ...styles.paymentButton,
+            ...(orderReceived && cart.length > 0 && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
+                ? {} 
+                : styles.paymentButtonDisabled),
+        }}
+        onClick={handlePayment} // ฟังก์ชันการชำระเงิน
+        disabled={!orderReceived || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+    >
+        ชำระเงิน
+    </button>
+</div>
     </div>
     </div>
     
