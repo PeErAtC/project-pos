@@ -137,13 +137,23 @@ const fetchCategories = () => {
     // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
     const addItemToDatabase = async (product) => {
         try {
+            // ตรวจสอบค่า product ก่อนใช้
+            if (!product || !product.id || !product.price) {
+                console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
+                throw new Error('ข้อมูลสินค้าไม่ครบถ้วน');
+            }
+    
+            // สร้างข้อมูลที่จะส่ง
             const orderData = {
                 product_id: product.id,
-                quantity: 1, // สมมุติว่าเพิ่มสินค้าจำนวน 1 ชิ้น
-                price: product.price,
-                total: product.price,
+                quantity: 1, // กำหนดจำนวนสินค้าเริ่มต้นเป็น 1
+                price: Number(product.price), // ตรวจสอบให้เป็นตัวเลข
+                total: Number(product.price), // ตรวจสอบให้เป็นตัวเลข
             };
     
+            console.log('Preparing to send orderData:', orderData);
+    
+            // ส่งข้อมูลไปยัง API
             const response = await axios.post(`${api_url}/api/${slug}/order-items`, orderData, {
                 headers: {
                     'Accept': 'application/json',
@@ -151,15 +161,23 @@ const fetchCategories = () => {
                 },
             });
     
-            if (response.data.success) {
-                console.log('สินค้าถูกเพิ่มในฐานข้อมูลออร์เดอร์ไอเท็มเรียบร้อยแล้ว');
+            // ตรวจสอบการตอบกลับ
+            if (response.data && response.data.success) {
+                console.log('สินค้าถูกเพิ่มในฐานข้อมูลออร์เดอร์ไอเท็มเรียบร้อยแล้ว:', response.data);
             } else {
-                console.error('เกิดข้อผิดพลาดในการเพิ่มสินค้าในฐานข้อมูล:', response.data.message);
+                console.error('เกิดข้อผิดพลาดในการเพิ่มสินค้าในฐานข้อมูล:', response.data?.message || 'Unknown error');
             }
         } catch (error) {
-            console.error('ไม่สามารถส่งข้อมูลไปที่ฐานข้อมูลได้:', error);
+            // Handle error อย่างละเอียด
+            if (error.response) {
+                console.error('API Error:', error.response.status, error.response.data);
+                console.error('URL:', `${api_url}/api/${slug}/order-items`);
+            } else {
+                console.error('Network Error:', error.message);
+            }
         }
     };
+    
     
     
     
@@ -311,9 +329,10 @@ const fetchCategories = () => {
         setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
     };
     const calculateChange = () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT();
-        return Math.max(receivedAmount - totalDue, 0).toFixed(2); // คืนเงินทอนหรือ 0.00
+        const remainingDue = calculateRemainingDue(); // ยอดคงเหลือที่ต้องชำระ
+        return Math.max(receivedAmount - remainingDue, 0).toFixed(2); // เงินทอน = รับเงิน - ยอดคงเหลือ
     };
+    
 
     const handlePayment = () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
@@ -812,10 +831,11 @@ const fetchCategories = () => {
         setIsBillPaused(true);
     };
     const calculateRemainingDue = () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
-        const totalPaid = calculateTotalPaid(); // รวมยอดที่ชำระแล้วทั้งหมด
-        return Math.max(totalDue - totalPaid, 0); // คืนยอดคงเหลือ (ไม่ต่ำกว่า 0)
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมทั้งหมดที่ต้องชำระ
+        const totalPaid = calculateTotalPaid(); // ยอดรวมที่ชำระไปแล้ว
+        return Math.max(totalDue - totalPaid, 0); // ยอดคงเหลือ = ยอดรวม - ยอดที่ชำระไปแล้ว
     };
+    
     
     
     
@@ -892,16 +912,29 @@ const fetchCategories = () => {
             Swal.fire('ผิดพลาด', 'ไม่สามารถดึงข้อมูลช่องทางการชำระเงินได้', 'error');
         }
     };
+
+    const calculateTotalPaidWithChange = () => {
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
+        const totalPaid = calculateTotalPaid(); // ยอดเงินที่ชำระทั้งหมด (รวมจากทุกการแยกชำระ)
+        const change = Math.max(totalPaid - totalDue, 0); // เงินทอนรวม
+    
+        return {
+            totalPaid,
+            change,
+        };
+    };
+    
     const handlePartialPayment = () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมต้องชำระทั้งหมด
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระทั้งหมด
         const totalPaid = calculateTotalPaid(); // ยอดที่ชำระแล้วในหลายครั้ง
         const remainingDue = totalDue - totalPaid; // ยอดที่เหลืออยู่
+        const change = Math.max(receivedAmount - remainingDue, 0); // คำนวณเงินทอน
     
-        if (receivedAmount <= 0 || receivedAmount > remainingDue) {
+        if (receivedAmount <= 0) {
             Swal.fire({
                 icon: 'error',
                 title: 'ยอดเงินไม่ถูกต้อง',
-                text: `กรุณาระบุยอดเงินที่ถูกต้อง (ไม่เกิน ${remainingDue.toFixed(2)} บาท)`,
+                text: `กรุณาระบุยอดเงินที่ถูกต้อง (ยอดเงินต้องมากกว่า 0 บาท)`,
             });
             return;
         }
@@ -916,16 +949,21 @@ const fetchCategories = () => {
         setTemporaryPayments((prevPayments) => [...prevPayments, newPayment]);
     
         // อัปเดตยอดคงเหลือหลังจากกดแยกชำระ
-        const updatedRemainingDue = remainingDue - receivedAmount;
+        const updatedRemainingDue = Math.max(remainingDue - receivedAmount, 0);
     
         Swal.fire({
             icon: 'success',
             title: 'แยกชำระเรียบร้อย',
-            text: `ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท\nยอดคงเหลือ: ${updatedRemainingDue.toFixed(2)} บาท`,
+            html: `
+                ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท<br>
+                ยอดคงเหลือ: ${updatedRemainingDue.toFixed(2)} บาท<br>
+                ${change > 0 ? `เงินทอน: ${change.toFixed(2)} บาท` : ''}
+            `,
         });
     
         setReceivedAmount(0); // รีเซ็ตยอดรับเงิน
     };
+    
     
     
     
@@ -1524,7 +1562,7 @@ const fetchCategories = () => {
                     <p>
                         เงินทอน: 
                         <span style={styles.summaryValue}>
-                            {Math.max(receivedAmount + calculateTotalPaid() - calculateTotalWithBillDiscountAndVAT(), 0).toFixed(2)} บาท
+                            {calculateTotalPaidWithChange().change.toFixed(2)} บาท
                         </span>
                     </p>
                 </div>
@@ -1667,7 +1705,7 @@ const styles = {
     amountInput: { placeholder: 'รับเงิน', width: '100%', padding: '6px', marginTop: '10px', border: '1px solid #ddd', borderRadius: '5px' },
     amountButtons: {display: 'grid',gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',gap: '5px',},    
     amountButton: {padding: '10px',borderRadius: '4px',backgroundColor: '#f0f0f0',color: '#333',fontWeight: 'bold',cursor: 'pointer',textAlign: 'center',boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',border: '2px solid #ddd',transition: 'all 0.3s ease',},
-    changeDi: {fontSize: '1.2rem',fontWeight: 'bold',textAlign: 'center',margin: '5px 0',color: '#0ec159',},
+    changeDi: {fontSize: '1.2rem',fontWeight: 'bold',textAlign: 'center',margin: '5px 0',color: '#ef0c0c',},
     buttonContainer: { display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center' },
     changeDisplay: {fontSize: '1rem',fontWeight: 'bold',textAlign: 'center',margin: '10px 0',color: '#0d1b13',},
     actionButton: { flex: 1, padding: '8px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
