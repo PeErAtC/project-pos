@@ -21,7 +21,7 @@ const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 export default function SalesReport({ initialReportData, initialError }) {
     const [reportData, setReportData] = useState(initialReportData || []);
     const [error, setError] = useState(initialError || null);
-    const [dateFilter, setDateFilter] = useState('');
+    const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]); // Set initial date to current date
     const [currentItems, setCurrentItems] = useState([]);
     
     const formatDateTimeToThai = (utcDateTime) => {
