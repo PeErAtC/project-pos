@@ -30,6 +30,24 @@ export default function SalesReport({ initialReportData, initialError }) {
         return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }); // แปลงเป็นเวลาประเทศไทย
     };
 
+        // เพิ่มฟังก์ชันสำหรับดึงข้อมูลประวัติการชำระเงิน
+        const fetchPaymentHistory = async (orderId) => {
+            try {
+                const response = await axios.get(`${api_url}/${slug}/payments`, {
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                });
+    
+                const payments = response.data || [];
+                return payments.filter(payment => payment.order_id === orderId);
+            } catch (error) {
+                console.error('Error fetching payment history:', error);
+                return [];
+            }
+        };
+
     const calculateVatDetails = (item) => {
         if (!item || item.vat_per === null || item.vat_per === undefined || parseFloat(item.vat_per) === 0) {
             // กรณีไม่มี VAT หรือ VAT เป็น 0%
@@ -76,10 +94,6 @@ export default function SalesReport({ initialReportData, initialError }) {
     };
     
     
-    
-    
-    
-
     const fetchReportData = async () => {
         try {
             const ordersResponse = await axios.get(`${api_url}/${slug}/orders`, {
@@ -158,8 +172,6 @@ export default function SalesReport({ initialReportData, initialError }) {
         }
     };
     
-    
-
     const showOrderDetails = async (orderId) => {
         if (!orderId) {
             Swal.fire({
@@ -184,52 +196,95 @@ export default function SalesReport({ initialReportData, initialError }) {
                 return;
             }
     
-            // คำนวณราคารวม
+            // คำนวณราคารวมสินค้า
             const totalPrice = order.items.reduce((sum, item) => {
-                const price = parseFloat(item.price) || 0; // ตรวจสอบและแปลง item.price เป็นตัวเลข
-                const discount = parseFloat(item.discount) || 0; // ตรวจสอบและแปลง item.discount เป็นตัวเลข
+                const price = parseFloat(item.price) || 0;
+                const discount = parseFloat(item.discount) || 0;
                 const itemTotal = (price - discount) * item.quantity;
                 return sum + itemTotal;
             }, 0);
     
+            // สร้างตารางสินค้า
+            const itemsTableHTML = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
+                        <tr>
+                            <th style="padding: 5px; border: 1px solid #ddd;">ลำดับ</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">เลขบิล</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">ชื่อสินค้า</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">จำนวน</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">ราคา</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">ราคารวม</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${order.items.map((item, index) => {
+                            const price = parseFloat(item.price) || 0;
+                            const quantity = parseInt(item.quantity) || 0;
+                            const totalPrice = price * quantity;
+    
+                            return `
+                                <tr>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${index + 1}</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${item.order_id}</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${item.p_name}</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${quantity}</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${price.toFixed(2)} ฿</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${totalPrice.toFixed(2)} ฿</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+    
+            // สร้างตารางประวัติการชำระเงิน (พร้อมแสดงโครงสร้างตารางเสมอ)
+            const payments = order.payments || [];
+            const paymentHistoryTableHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
+                        <tr>
+                            <th style="padding: 5px; border: 1px solid #ddd;">วันที่ชำระ</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">วิธีการชำระ</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">ยอดชำระ</th>
+                            <th style="padding: 5px; border: 1px solid #ddd;">หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${payments.length > 0
+                            ? payments.map((payment) => `
+                                <tr>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'null'}</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${payment.method ? (payment.method === 'split' ? 'แยกชำระ' : 'ชำระเงินปกติ') : 'null'}</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? parseFloat(payment.amount).toFixed(2) : 'null'} ฿</td>
+                                    <td style="padding: 5px; border: 1px solid #ddd;">${payment.notes || 'null'}</td>
+                                </tr>
+                            `).join('')
+                            : `
+                                <tr>
+                                    <td colspan="4" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
+                                        ไม่มีข้อมูลการชำระเงิน
+                                    </td>
+                                </tr>
+                            `}
+                    </tbody>
+                </table>
+            `;
+    
+            // แสดงผลใน SweetAlert
             Swal.fire({
                 html: `
                     <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
-                        <h4 style="margin-top: 15px; font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
+                        <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
                         <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead style="position: sticky; top: -1; background-color: #499cae; z-index: 1;">
-                                    <tr>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ลำดับ</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">เลขบิล</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ชื่อสินค้า</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">จำนวน</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคา</th>
-                                        <th style="padding: 5px; color: #fff; border: 1px solid #ddd; font-size: 14px;">ราคารวม</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${order.items.map((item, index) => {
-                                        const price = parseFloat(item.price) || 0; // ตรวจสอบและแปลงราคา
-                                        const quantity = parseInt(item.quantity) || 0; // จำนวนสินค้า
-                                        const totalPrice = price * quantity; // คำนวณราคารวม
-            
-                                        return `
-                                            <tr>
-                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${index + 1}</td>
-                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.order_id}</td>
-                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${item.p_name}</td>
-                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${quantity}</td>
-                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${price.toFixed(2)} ฿</td>
-                                                <td style="padding: 5px; border: 1px solid #ddd; font-size: 14px;">${totalPrice.toFixed(2)} ฿</td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                                </table>
+                            ${itemsTableHTML}
                         </div>
                         <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
                             <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
+                        </div>
+                        <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
+                        <div style="max-height: 150px; overflow-y: auto;">
+                            ${paymentHistoryTableHTML}
                         </div>
                     </div>
                 `,
@@ -238,7 +293,6 @@ export default function SalesReport({ initialReportData, initialError }) {
                 padding: '20px',
                 background: '#fff',
             });
-            
         } catch (error) {
             console.error('Error showing order details:', error);
             Swal.fire({
@@ -349,66 +403,65 @@ export default function SalesReport({ initialReportData, initialError }) {
                     </table>
                 </div>
                 <h2 style={styles.subTitle}>
-    รายการที่ชำระแล้ว <span style={styles.itemCount}>({paidOrders.length} รายการ)</span>
-</h2>
-<div style={{ ...styles.tableContainer, backgroundColor: '#f0fff4' }}>
-    <table style={styles.table}>
-        <thead>
-            <tr>
-                <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
-                <th style={styles.th}><FaTable /> โต๊ะ</th>
-                <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
-                <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
-                <th style={styles.th}><FaTag /> ส่วนลด</th>
-                <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
-                <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
-                <th style={styles.th}>ชำระเงินด้วย</th>
-                <th style={styles.th}><FaCheckCircle /> สถานะ</th>
-                <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
-            </tr>
-        </thead>
-        <tbody>
-            {paidOrders.map((order, index) => {
-                const vatDetails = calculateVatDetails(order); // Updated function
-                return (
-                    <tr key={index}>
-                        <td style={styles.td}>{order.order_number}</td>
-                        <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                        <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
-                        <td style={styles.td}>{order.total_amount}</td>
-                        <td style={styles.td}>{order.discount}</td>
-                        <td style={styles.td}>{vatDetails.vatLabel}</td> {/* Updated VAT column */}
-                        <td style={styles.td}>{order.net_amount} ฿</td>
-                        <td style={styles.td}>{order.payment_method || 'N/A'}</td>
-                        <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
-                        <td style={styles.td}>
-                            <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
-                        </td>
-                    </tr>
-                );
-            })}
-        </tbody>
-        <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#fff', zIndex: 1 }}>
-            <tr>
-                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
-                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
-                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalDiscount : "0.00"}</td>
-                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalVat : "0.00"}</td>
-                <td style={styles.totalValue}>
-                    {paidOrders.length > 0
-                        ? (
-                            parseFloat(paidTotals.totalAmount) - 
-                            parseFloat(paidTotals.totalDiscount) + 
-                            parseFloat(paidTotals.totalVat)
-                        ).toFixed(2)
-                        : "0.00"} ฿
-                </td>
-                <td colSpan="2"></td>
-            </tr>
-        </tfoot>
-    </table>
-</div>
-
+                    รายการที่ชำระแล้ว <span style={styles.itemCount}>({paidOrders.length} รายการ)</span>
+                </h2>
+                <div style={{ ...styles.tableContainer, backgroundColor: '#f0fff4' }}>
+                    <table style={styles.table}>
+                        <thead>
+                            <tr>
+                                <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
+                                <th style={styles.th}><FaTable /> โต๊ะ</th>
+                                <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
+                                <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
+                                <th style={styles.th}><FaTag /> ส่วนลด</th>
+                                <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
+                                <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
+                                <th style={styles.th}>ชำระเงินด้วย</th>
+                                <th style={styles.th}><FaCheckCircle /> สถานะ</th>
+                                <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paidOrders.map((order, index) => {
+                                const vatDetails = calculateVatDetails(order); // Updated function
+                                return (
+                                    <tr key={index}>
+                                        <td style={styles.td}>{order.order_number}</td>
+                                        <td style={styles.td}>{order.tables_id || 'N/A'}</td>
+                                        <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
+                                        <td style={styles.td}>{order.total_amount}</td>
+                                        <td style={styles.td}>{order.discount}</td>
+                                        <td style={styles.td}>{vatDetails.vatLabel}</td> {/* Updated VAT column */}
+                                        <td style={styles.td}>{order.net_amount} ฿</td>
+                                        <td style={styles.td}>{order.payment_method || 'N/A'}</td>
+                                        <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
+                                        <td style={styles.td}>
+                                            <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#fff', zIndex: 1 }}>
+                            <tr>
+                                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
+                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
+                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalDiscount : "0.00"}</td>
+                                <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalVat : "0.00"}</td>
+                                <td style={styles.totalValue}>
+                                    {paidOrders.length > 0
+                                        ? (
+                                            parseFloat(paidTotals.totalAmount) - 
+                                            parseFloat(paidTotals.totalDiscount) + 
+                                            parseFloat(paidTotals.totalVat)
+                                        ).toFixed(2)
+                                        : "0.00"} ฿
+                                </td>
+                                <td colSpan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
     );
