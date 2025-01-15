@@ -96,41 +96,64 @@ export default function SalesReport({ initialReportData, initialError }) {
     
     const fetchReportData = async () => {
         try {
+            // ดึงข้อมูล orders
             const ordersResponse = await axios.get(`${api_url}/${slug}/orders`, {
                 headers: {
                     Accept: 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
+                    Authorization: `Bearer ${authToken}`,
                 },
             });
     
+            // ดึงข้อมูลโต๊ะ (tables)
+            const tablesResponse = await axios.get(`${api_url}/${slug}/table_codes`, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
+            });
+    
+            // ดึงข้อมูลการชำระเงิน (payments)
             const paymentsResponse = await axios.get(`${api_url}/${slug}/payments`, {
                 headers: {
                     Accept: 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
+                    Authorization: `Bearer ${authToken}`,
                 },
             });
     
             const orders = ordersResponse.data || [];
+            const tables = tablesResponse.data || [];
             const payments = paymentsResponse.data || [];
     
-            // เชื่อมโยง pay_channel_id กับ orders
-            const ordersWithPayments = orders.map((order) => {
+            // สร้าง mapping สำหรับ table_id -> table_code
+            const tableMapping = {};
+            tables.forEach((table) => {
+                tableMapping[table.id] = table.table_code;
+            });
+    
+            // เชื่อมโยงข้อมูล table_code และ payment_method กับ orders
+            const ordersWithDetails = orders.map((order) => {
                 const payment = payments.find((pay) => pay.order_id === order.id);
                 return {
                     ...order,
-                    payment_method: payment ? 
-                        (payment.pay_channel_id === 1 ? 'เงินสด' : 'QR Code พร้อมเพย์') 
-                        : 'N/A',
+                    table_code: tableMapping[order.tables_id] || `Unknown (${order.tables_id})`, // เพิ่ม table_code
+                    payment_method: payment
+                        ? payment.pay_channel_id === 1
+                            ? 'เงินสด'
+                            : payment.pay_channel_id === 2
+                            ? 'QR Code พร้อมเพย์'
+                            : 'อื่นๆ'
+                        : 'รอชำระ', // เพิ่ม payment_method
                 };
             });
     
-            setReportData(ordersWithPayments);
+            setReportData(ordersWithDetails);
             setError(null);
         } catch (err) {
             setError('ไม่สามารถเชื่อมต่อกับ API ได้');
-            console.error('Error fetching orders or payments:', err);
+            console.error('Error fetching orders, tables, or payments:', err);
         }
     };
+    
 
     useEffect(() => {
         fetchReportData();
@@ -357,31 +380,28 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {pendingOrders.map((order, index) => {
-                                const vatDetails = calculateVatDetails(order);
-                                return (
-                                    <tr key={index}>
-                                        <td style={styles.td}>{order.order_number}</td>
-                                        <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                        <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
-                                        <td style={styles.td}>{order.total_amount}</td>
-                                        <td style={styles.td}>{order.discount}</td>
-                                        <td style={styles.td}>{vatDetails.vatLabel}</td> {/* ใช้ค่าจากฟังก์ชัน */}
-                                        <td style={styles.td}>{order.net_amount} ฿</td>
-                                        <td style={styles.td}>
-                                            {order.payment_method === 'N/A' ? 'รอชำระ' : order.payment_method}
-                                        </td>
-                                        <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>
-                                            {order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
-                                        </td>
-                                        <td style={styles.td}>
-                                            <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
+                        {pendingOrders.length === 0 ? (
+                            <tr>
+                                <td colSpan="10" style={{ textAlign: 'center', color: '#999' }}>ไม่มีบิลที่ตรงกับวันที่ที่เลือก</td>
+                            </tr>
+                        ) : (
+                            pendingOrders.map((order, index) => (
+                                <tr key={index}>
+                                    <td style={styles.td}>{order.order_number}</td>
+                                    <td style={styles.td}>{order.table_code || 'N/A'}</td>
+                                    <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
+                                    <td style={styles.td}>{order.total_amount}</td>
+                                    <td style={styles.td}>{order.discount}</td>
+                                    <td style={styles.td}>{calculateVatDetails(order).vatLabel}</td>
+                                    <td style={styles.td}>{order.net_amount} ฿</td>
+                                    <td style={styles.td}>{order.payment_method || 'N/A'}</td>
+                                    <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>{order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}</td>
+                                    <td style={styles.td}>
+                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
                             <tr>
                                 <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
@@ -422,25 +442,28 @@ export default function SalesReport({ initialReportData, initialError }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {paidOrders.map((order, index) => {
-                                const vatDetails = calculateVatDetails(order); // Updated function
-                                return (
+                            {paidOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan="10" style={{ textAlign: 'center', color: '#999' }}>ไม่มีบิลที่ตรงกับวันที่ที่เลือก</td>
+                                </tr>
+                            ) : (
+                                paidOrders.map((order, index) => (
                                     <tr key={index}>
                                         <td style={styles.td}>{order.order_number}</td>
-                                        <td style={styles.td}>{order.tables_id || 'N/A'}</td>
-                                        <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
+                                        <td style={styles.td}>{order.table_code || 'N/A'}</td> {/* ใช้ table_code */}
+                                        <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
                                         <td style={styles.td}>{order.total_amount}</td>
                                         <td style={styles.td}>{order.discount}</td>
-                                        <td style={styles.td}>{vatDetails.vatLabel}</td> {/* Updated VAT column */}
+                                        <td style={styles.td}>{calculateVatDetails(order).vatLabel}</td>
                                         <td style={styles.td}>{order.net_amount} ฿</td>
-                                        <td style={styles.td}>{order.payment_method || 'N/A'}</td>
+                                        <td style={styles.td}>{order.payment_method || 'N/A'}</td> {/* ใช้ payment_method */}
                                         <td style={{ ...styles.td, color: '#008000', fontWeight: 'bold' }}>ชำระแล้ว</td>
                                         <td style={styles.td}>
                                             <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
                                         </td>
                                     </tr>
-                                );
-                            })}
+                                ))
+                            )}
                         </tbody>
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#fff', zIndex: 1 }}>
                             <tr>
