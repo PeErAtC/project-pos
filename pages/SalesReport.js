@@ -380,6 +380,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
                             </tr>
                         </thead>
+                        <tbody>
                         {pendingOrders.length === 0 ? (
                             <tr>
                                 <td colSpan="10" style={{ textAlign: 'center', color: '#999' }}>ไม่มีบิลที่ตรงกับวันที่ที่เลือก</td>
@@ -402,6 +403,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                                 </tr>
                             ))
                         )}
+                        </tbody>
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
                             <tr>
                                 <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
