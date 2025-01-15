@@ -382,15 +382,34 @@ const fetchCategories = () => {
     
     const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
+            // ตรวจสอบ slug
+            if (!slug || typeof slug !== "string") {
+                console.error('Slug is not defined or invalid:', slug);
+                throw new Error('Slug is not defined or invalid.');
+            }
+    
+            // URL สำหรับเรียก API
             const url = `${api_url}/api/${slug}/partial-payments`;
+    
+            // ตรวจสอบค่าข้อมูลก่อนส่ง
+            if (!orderId || !paymentMethod || typeof amount !== "number" || amount <= 0) {
+                console.error('Invalid data:', { orderId, paymentMethod, amount });
+                throw new Error('Invalid payment data.');
+            }
+    
+            // สร้างข้อมูลการชำระเงิน
             const paymentData = {
                 order_id: orderId,
-                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, // เปลี่ยน ID ช่องทางชำระเงินตามจริง
-                payment_date: formatDateTime(new Date()), // เวลาปัจจุบัน
-                amount,
-                status: 'PARTIAL', // สถานะการแยกชำระ
+                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, // ตรวจสอบวิธีการชำระเงิน
+                payment_date: formatDateTime(new Date()), // วันที่ชำระเงิน
+                amount: parseFloat(amount).toFixed(2), // ยอดเงิน (ต้องเป็นตัวเลขและทศนิยม 2 ตำแหน่ง)
+                status: 'PARTIAL', // สถานะแยกชำระ
             };
     
+            console.log("API URL:", url);
+            console.log("Data being sent:", paymentData);
+    
+            // ส่งคำร้องไปยัง API
             const response = await axios.post(url, paymentData, {
                 headers: {
                     'Accept': 'application/json',
@@ -398,17 +417,29 @@ const fetchCategories = () => {
                 },
             });
     
+            // ตรวจสอบการตอบกลับ
             if (response.data && response.data.success) {
-                console.log('บันทึกข้อมูลการแยกชำระสำเร็จ:', response.data);
-                setPayments((prevPayments) => [...prevPayments, paymentData]); // เพิ่มข้อมูลใหม่ใน state
+                console.log('Partial payment saved successfully:', response.data);
             } else {
-                throw new Error(response.data.message || 'API Response Invalid');
+                console.error('API response invalid or unsuccessful:', response.data);
+                throw new Error(response.data?.message || 'API response format invalid.');
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล:', error.response?.data || error.message);
-            Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระเงินได้', 'error');
+            // จัดการข้อผิดพลาด
+            console.error('Error saving partial payment:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+            });
+    
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระเงินได้', 'error');
         }
     };
+    
+    
+    
+    
+    
     
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
@@ -421,17 +452,16 @@ const fetchCategories = () => {
                 },
             });
     
-            console.log('Partial Payments Response:', response.data); // Debug response data
-    
             if (response.data && Array.isArray(response.data)) {
-                setPayments(response.data); // Save payments to state
+                setPayments(response.data); // บันทึกใน state
             } else {
-                console.warn('Invalid response format for partial payments');
+                console.warn('รูปแบบข้อมูลไม่ถูกต้อง');
             }
         } catch (error) {
-            console.error('Error fetching partial payments:', error.response?.data || error.message);
+            console.error('เกิดข้อผิดพลาดในการดึงประวัติการแยกชำระ:', error.response?.data || error.message);
         }
     };
+    
     
     
     
@@ -1052,7 +1082,8 @@ const fetchCategories = () => {
     };
     
     
-    
+    const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
+
     
     
     // ฟังก์ชันคำนวณยอดสุทธิ
@@ -1191,7 +1222,7 @@ const fetchCategories = () => {
         }
     
         try {
-            // บันทึกข้อมูลการแยกชำระเงินลงในฐานข้อมูล
+            // **บันทึกข้อมูลการแยกชำระเงินลงในฐานข้อมูล**
             await savePartialPaymentToDatabase(orderId, paymentMethod, receivedAmount);
     
             // เพิ่มข้อมูลการแยกชำระใน state ชั่วคราว
@@ -1221,7 +1252,7 @@ const fetchCategories = () => {
             console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลการแยกชำระ:', error.message);
             Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระเงินได้', 'error');
         }
-    };
+    };    
     
     
     return (
@@ -1294,8 +1325,8 @@ const fetchCategories = () => {
             </div>
                         <div style={styles.searchAndTableCodeContainer}>
                             <div style={styles.searchContainer}>
-                                <h5 style={styles.tableCode}>โต๊ะ: {tableCode}</h5>
-                                <input 
+                                <h5 style={styles.tableCode}>โต๊ะ: {formattedTableCode}</h5>
+                            <input 
                                     type="text" 
                                     placeholder="ค้นหาชื่ออาหาร..." 
                                     style={styles.searchInput} 
@@ -1906,7 +1937,7 @@ const fetchCategories = () => {
                         </p>
                     </div>
                     <div style={styles.receiptSummary}>
-                        <p>โต๊ะ: {tableCode}</p>
+                        <p>โต๊ะ: {`T${String(tableCode).padStart(3, '0')}`}</p>
                         <p>
                             ยอดบิล: 
                             <span style={styles.summaryValue}>
