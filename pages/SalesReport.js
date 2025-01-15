@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsidebar';
+import BackendSidebar from './components/backendsideber';
 import Swal from 'sweetalert2';
 import {
     FaClipboardList,
@@ -406,7 +406,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                         </tbody>
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
                             <tr>
-                                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
+                                <td colSpan="3" style={styles.totalLabel}>รวมยอด:</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalAmount : "0.00"}</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalDiscount : "0.00"}</td>
                                 <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalVat : "0.00"}</td>
@@ -469,7 +469,7 @@ export default function SalesReport({ initialReportData, initialError }) {
                         </tbody>
                         <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, backgroundColor: '#fff', zIndex: 1 }}>
                             <tr>
-                                <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
+                                <td colSpan="3" style={styles.totalLabel}>รวมยอด:</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalAmount : "0.00"}</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalDiscount : "0.00"}</td>
                                 <td style={styles.totalValue}>{paidOrders.length > 0 ? paidTotals.totalVat : "0.00"}</td>
