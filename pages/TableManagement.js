@@ -47,7 +47,18 @@ export default function TableManagement() {
             Swal.fire('กรุณากรอกข้อมูลให้ครบถ้วน');
             return;
         }
-    
+        if (editMode && editTableId) {
+            const tableToEdit = tables.find(table => table.id === editTableId);
+            if (tableToEdit && tableToEdit.table_code === 'CT001' && tableCode !== 'CT001') {
+                Swal.fire({
+                    title: 'ไม่สามารถเปลี่ยนชื่อโต๊ะพิเศษได้',
+                    text: 'รหัสโต๊ะ CT001 ไม่สามารถเปลี่ยนแปลงได้',
+                    icon: 'error',
+                    confirmButtonText: 'ตกลง',
+                });
+                return;
+            }
+        }
         // ตรวจสอบว่า tableCode ซ้ำหรือไม่
         const isTableCodeExist = tables.some((table) => table.table_code.toLowerCase() === tableCode.toLowerCase());
     
@@ -128,6 +139,18 @@ export default function TableManagement() {
     };      
     
     const handleDeleteTable = async (id) => {
+        // ตรวจสอบว่าโต๊ะคือ CT001 หรือไม่
+        const tableToDelete = tables.find(table => table.id === id);
+        if (tableToDelete && tableToDelete.table_code === 'CT001') {
+            Swal.fire({
+                title: 'ไม่สามารถลบโต๊ะนี้ได้',
+                text: 'โต๊ะ CT001 เป็นโต๊ะพิเศษและไม่สามารถลบได้',
+                icon: 'error',
+                confirmButtonText: 'ตกลง',
+            });
+            return;
+        }
+    
         Swal.fire({
             title: 'คุณแน่ใจหรือไม่?',
             text: "คุณต้องการลบโต๊ะนี้จริง ๆ หรือไม่",
@@ -159,7 +182,7 @@ export default function TableManagement() {
                 }
             }
         });
-    };
+    };    
 
     const resetForm = () => {
         setTableCode('');
@@ -204,18 +227,32 @@ export default function TableManagement() {
                                         <th style={styles.thActions}>ดำเนินการ</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {tables.filter((table) => table.table_code.toLowerCase().includes(searchQuery.toLowerCase())).map((table, index) => (
-                                        <tr key={table.id} style={{ ...styles.tr, backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0' }}>
-                                            <td style={styles.td}>{table.table_code}</td>
-                                            <td style={styles.td}>{table.seats}</td>
-                                            <td style={{ ...styles.td, color: table.status === 'Y' ? 'black' : 'red' }}>{table.status === 'Y' ? 'เปิด' : 'ปิด'}</td>
-                                            <td style={styles.tdActions}>
-                                                <button onClick={() => handleEditTable(table)} style={{ ...styles.editButton, marginRight: '10px' }}>แก้ไข</button>
-                                                <button onClick={() => handleDeleteTable(table.id)} style={styles.deleteButton}>ลบ</button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    <tbody>
+                                    {tables
+                                        .filter((table) => table.table_code.toLowerCase().includes(searchQuery.toLowerCase()))
+                                        .map((table, index) => (
+                                            <tr
+                                                key={table.id}
+                                                style={{
+                                                    ...styles.tr,
+                                                    backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0',
+                                                }}
+                                            >
+                                                <td style={styles.td}>{table.table_code}</td>
+                                                <td style={styles.td}>{table.seats}</td>
+                                                <td style={{
+                                                    ...styles.td,
+                                                    color: table.table_code === 'CT001' ? 'green' : table.status === 'Y' ? 'black' : 'red',
+                                                    fontWeight: table.table_code === 'CT001' ? '' : 'normal',
+                                                }}>
+                                                    {table.table_code === 'CT001' ? 'พิเศษ' : table.status === 'Y' ? 'เปิด' : 'ปิด'}
+                                                </td>
+                                                <td style={styles.tdActions}>
+                                                    <button onClick={() => handleEditTable(table)} style={{ ...styles.editButton, marginRight: '10px' }}>แก้ไข</button>
+                                                    <button onClick={() => handleDeleteTable(table.id)} style={styles.deleteButton}>ลบ</button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                 </tbody>
                             </table>
                         </div>
@@ -275,8 +312,8 @@ export default function TableManagement() {
 const styles = {
     pageContainer: { display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8' },
     contentContainer: { display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', justifyContent: 'space-between', alignItems: 'flex-start', fontFamily: 'Arial, sans-serif', width: 'calc(100% - 100px)', marginLeft: '100px' },
-    listContainer: { flex: 6, backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', height: 'calc(90vh - 40px)' }, 
-    formContainer: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', textAlign: 'center', height: 'calc(90vh - 40px)' },
+    listContainer: { flex: 6, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', height: 'calc(90vh - 40px)' }, 
+    formContainer: { flex: 3, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', textAlign: 'center', height: 'calc(90vh - 40px)' },
     title: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px' },
     input: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
     searchInput: { padding: '12px', marginBottom: '15px', width: '850px', borderRadius: '5px', border: '1px solid #ccc' },
@@ -284,7 +321,7 @@ const styles = {
     select: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
     button: { width: '340px', padding: '12px', borderRadius: '5px', backgroundColor: '#499cae', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginBottom: '15px' },
     cancelButton: { width: '340px', padding: '12px', borderRadius: '5px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
-    listTitle: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'center', marginRight: '750px' },
+    listTitle: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'center', marginRight: '800px' },
     tableContainer: { overflowY: 'auto', maxHeight: 'calc(76vh - 120px)', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' },
     table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
     th: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
