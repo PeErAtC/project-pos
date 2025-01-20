@@ -364,7 +364,7 @@ export default function BackendPage() {
 
 const styles = {
   container: { display: 'flex' },
-  contentContainer: { display: 'flex', flex: 1, gap: '20px', padding: '17px 0 20px 120px', fontFamily: 'Arial, sans-serif' },
+  contentContainer: { display: 'flex', flex: 1, padding: '25px 0 20px 130px', fontFamily: 'Arial, sans-serif' },
   notification: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', padding: '15px 25px', color: '#fff', fontSize: '16px', borderRadius: '15px', zIndex: 1000 },
   formContainer: { flex: 1, backgroundColor: '#ffffff', borderRadius: '10px', alignItems: 'center', display: 'flex', flexDirection: 'column' },
   title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' },
@@ -389,4 +389,3 @@ const styles = {
   statusToggle: { display: 'flex', gap: '10px', marginBottom: '15px' },
   statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' }
 };
-
