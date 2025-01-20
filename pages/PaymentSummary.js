@@ -312,8 +312,8 @@ export default function PaymentSummary() {
 }
 
 const styles = {
-    pageContainer: {display: 'flex',minHeight: '100vh',overflowY: 'auto',overflowX: 'hidden', marginRight: '70px'},
-    content: { flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft:'65px' },
+    pageContainer: {display: 'flex',minHeight: '100vh',overflowY: 'auto',overflowX: 'hidden', marginRight: '60px'},
+    content: { flex: 1, padding: '25px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft:'20px' },
     titleWithHighlight: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textShadow: '2px 2px #ffe6e6' ,marginRight:'1150px' },
     filterContainer: { display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '20px', justifyContent: 'flex-start',  width: '100%', marginLeft: '89%' },
     label: { fontSize: '20px', color: '#4a4a4a',marginTop:'-11px' },
