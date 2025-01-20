@@ -40,8 +40,6 @@ export default function SalesPage() {
     const [isSplitPaymentPopupOpen, setIsSplitPaymentPopupOpen] = useState(false);
     const [splitPaymentCount, setSplitPaymentCount] = useState(0); // เก็บจำนวนรายการแยกชำระ
     
-
-
     // Fetch products from API
     // ฟังก์ชัน fetchProducts
     const fetchProducts = async () => {
@@ -62,8 +60,6 @@ export default function SalesPage() {
             setProducts([]); // ตั้งค่า products เป็นค่าว่างหาก API ล้มเหลว
         }
     };
-    
-
                                                                                 //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     const fetchOrdersByTable = async (tableCode) => {
         try {
@@ -93,10 +89,7 @@ export default function SalesPage() {
             console.error('เกิดข้อผิดพลาดในการดึงข้อมูลออเดอร์:', error.message);
             return [];
         }
-    };
-
-
-                                                                                
+    };                                                                         
 
     //  แสดงรายการ items ของออเดอร์
     const fetchOrderItems = async (orderId) => {
@@ -119,8 +112,6 @@ export default function SalesPage() {
             return [];
         }
     };
-    
-    
     
     useEffect(() => {
         const loadOrdersForTable = async () => {
@@ -153,8 +144,6 @@ export default function SalesPage() {
     
         loadOrdersForTable();
     }, [tableCode]);
-    
-    
 
     const toggleSplitPaymentPopup = () => {
         setIsSplitPaymentPopupOpen((prev) => !prev);
@@ -164,11 +153,7 @@ export default function SalesPage() {
         // อัปเดตจำนวนการแยกชำระเมื่อ `payments` เปลี่ยนแปลง
         setSplitPaymentCount(payments.length);
     }, [payments]);
-    
-
                                                                                    //******************** */
-
-
     const closeOrder = async (orderId) => {
         try {
             const response = await axios.put(
@@ -193,7 +178,6 @@ export default function SalesPage() {
         }
     };
     
-
 // ฟังก์ชัน fetchCategories
 const fetchCategories = () => {
     const url = `${api_url}/api/${slug}/category`;
@@ -219,7 +203,6 @@ const fetchCategories = () => {
         setCategories([]); // กำหนดหมวดหมู่ให้เป็นค่าว่าง
     });
 };
-
 
     useEffect(() => {
         fetchProducts();
@@ -274,7 +257,6 @@ const fetchCategories = () => {
         }
     };
     
-    
     // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
     const addItemToDatabase = async (product) => {
         try {
@@ -318,11 +300,7 @@ const fetchCategories = () => {
             }
         }
     };
-    
-    
-    
-    
-    
+      
     useEffect(() => {
         if (paymentMethod === 'qr') {
             fetchPaymentChannels(); // ดึง URL QR Code
@@ -368,8 +346,6 @@ const fetchCategories = () => {
     const calculateTotalPaid = () => {
         return temporaryPayments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดชำระจากทุกการแยกจ่าย
     };
-    
-    
     
     const calculateDiscountedPrice = (price, discount, discountType) => {
         if (discountType === 'THB') {
@@ -436,11 +412,6 @@ const fetchCategories = () => {
         }
     };
     
-    
-    
-    
-    
-    
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
         try {
@@ -462,17 +433,12 @@ const fetchCategories = () => {
         }
     };
     
-    
-    
-    
     const calculateTotalAfterItemDiscounts = () => {
         return cart.reduce((acc, item) => 
             acc + calculateDiscountedPrice(Number(item.price), Number(item.discount), item.discountType) * Number(item.quantity)
         , 0) || 0;
     };
     
-    
-
     // ฟังก์ชันคำนวณยอดรวมที่ต้องชำระ
     const calculateTotalWithBillDiscountAndVAT = () => {
         const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
@@ -489,9 +455,6 @@ const fetchCategories = () => {
         return Number((discountedTotal + vatAmount).toFixed(2)); // รวม VAT (กรณีไม่รวม VAT)
     };
     
-    
-    
-
     const calculateVAT = () => {
         const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ตรวจสอบว่า baseTotal เป็นตัวเลข
         let vatAmount = 0;
@@ -580,9 +543,6 @@ const fetchCategories = () => {
         </div>
     );
     
-    
-    
-    
     const handleAmountInput = (amount) => {
         setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
     };
@@ -591,7 +551,6 @@ const fetchCategories = () => {
         return Math.max(receivedAmount - remainingDue, 0).toFixed(2); // เงินทอน = รับเงิน - ยอดคงเหลือ
     };
     
-
     const handlePayment = () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
         const totalPaid = calculateTotalPaid() + receivedAmount; // รวมยอดที่ชำระทั้งหมด
@@ -629,11 +588,6 @@ const fetchCategories = () => {
             setReceivedAmount(0); // รีเซ็ตยอดเงินที่รับหลังชำระ
         });
     };
-    
-    
-    
-    
-    
     
     const calculateTotalWithBillDiscount = () => {
         const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
@@ -679,10 +633,6 @@ const fetchCategories = () => {
             throw new Error(`Unable to create order: ${error.response?.data?.message || error.message}`);
         }
     };
-    
-    
-    
-    
     
     useEffect(() => {
         calculateTotalWithVAT();
@@ -794,10 +744,6 @@ const fetchCategories = () => {
         }
     };
     
-    
-    
-    
-    
     const saveOrderData = async (orderId, paymentMethod, receivedAmount, cart, billDiscount, billDiscountType, vatType, calculateTotalWithBillDiscountAndVAT, calculateVAT) => {
         try {
             // คำนวณส่วนลดรวมต่อสินค้า
@@ -873,9 +819,6 @@ const fetchCategories = () => {
         resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
     };
     
-    
-    
-    
     const addOrderItems = async () => {
         if (!orderId) {
             // ถ้ายังไม่มี orderId หมายความว่าไม่มีการสร้างออเดอร์
@@ -943,9 +886,6 @@ const fetchCategories = () => {
         }
     };
     
-    
-
-    
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
         try {
@@ -987,8 +927,7 @@ const fetchCategories = () => {
         setReceivedAmount(remainingDue); // ตั้งยอดรับเงินให้เท่ากับยอดคงเหลือ
     };
     
-    
-    
+
     const closeReceipt = async () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
     
@@ -1081,17 +1020,12 @@ const fetchCategories = () => {
         }
     };
     
-    
     const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
-
-    
-    
     // ฟังก์ชันคำนวณยอดสุทธิ
     const calculateNetAmount = (totalDue, billDiscount) => {
         return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
     };
 
-    
     // ฟังก์ชันรีเซ็ตสถานะหลังชำระเงินสำเร็จ
     const resetStateAfterSuccess = () => {
         setTemporaryPayments([]); // ล้างข้อมูลการแยกชำระเงิน
@@ -1107,7 +1041,6 @@ const fetchCategories = () => {
         setIsBillPaused(false); // ปิดสถานะพักบิล
     };
     
-    
     const handlePauseBill = () => {
         setShowReceipt(false);
         setIsBillPaused(true);
@@ -1117,9 +1050,6 @@ const fetchCategories = () => {
         const totalPaid = calculateTotalPaid(); // ยอดรวมที่ชำระไปแล้ว
         return Math.max(totalDue - totalPaid, 0); // ยอดคงเหลือ = ยอดรวม - ยอดที่ชำระไปแล้ว
     };
-    
-    
-    
     
     const handleItemDiscountChange = (id, discount, discountType) => {
         setCart((prevCart) => 
@@ -1166,8 +1096,6 @@ const fetchCategories = () => {
             throw new Error('ไม่สามารถบันทึกข้อมูลการชำระเงินได้');
         }
     };
-    
-    
     
     const fetchPaymentChannels = async () => {
         try {
@@ -1356,7 +1284,7 @@ const fetchCategories = () => {
                                             position: 'absolute',
                                             top: 0,
                                             left: 0,
-                                            width: '100%',
+                                            width: '100xp',
                                             height: '100%',
                                             backgroundColor: 'rgba(0, 0, 0, 0.5)',
                                             display: 'flex',
@@ -1393,8 +1321,6 @@ const fetchCategories = () => {
                     </div>
                 </div>
             </div>
-
-
                 <div style={styles.cart}>
                         <div style={{ ...styles.cartHeader, position: 'sticky', top: 0, zIndex: 100 }}>
                             <div style={{ display: 'flex', alignItems: 'center', fontSize: '11px', color: '#d33' }}>
@@ -1433,8 +1359,8 @@ const fetchCategories = () => {
                             <Image
                                 src={`${api_url}/storage/app/public/product/${slug}/${item.image}`}
                                 alt={item.p_name}
-                                width={40}
-                                height={40}
+                                width={100}
+                                height={100}
                                 quality={100}
                                 style={styles.cartItemImage}
                             />
@@ -1636,7 +1562,7 @@ const fetchCategories = () => {
         </div>
             {/* ปุ่มเพิ่มจำนวนเงิน */}
             <div style={styles.amountButtons}>
-                {[1, 5, 10, 20, 50, 100].map((amount) => (
+                {[1, 20, 50, 100, 500, 1000].map((amount) => (
                     <button key={amount} onClick={() => handleAmountButton(amount)} style={styles.amountButton}>
                         +{amount}.00
                     </button>
@@ -1710,67 +1636,67 @@ const fetchCategories = () => {
                 ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท
             </div>
             {/* การแสดงเงินทอน และปุ่มดูประวัติการแยกชำระ */}
-<div
-    style={{
-        display: 'flex', // ใช้ Flexbox จัดให้อยู่ในแถวเดียวกัน
-        justifyContent: 'space-between', // กระจายพื้นที่ระหว่างองค์ประกอบ
-        alignItems: 'center', // จัดตำแหน่งให้อยู่ตรงกลางในแนวตั้ง
-        padding: '10px 0', // เพิ่ม Padding ด้านบนและล่าง
-    }}
->
-    {/* แสดงเงินทอน */}
-    <div
-        style={{
-            fontSize: '1rem',
-            fontWeight: 'bold',
-            color: '#0d1b13',
-            marginRight: '10px', // เพิ่มระยะห่างจากปุ่ม
-        }}
-    >
-        เงินทอน: {calculateChange()} บาท
-    </div>
-
-    {/* ปุ่มดูประวัติการแยกชำระ */}
-    <div style={{ position: 'relative', textAlign: 'right' }}>
-        {splitPaymentCount > 0 && (
-            <span
-                style={{
-                    position: 'absolute',
-                    top: '-5px',
-                    right: '-5px',
-                    backgroundColor: 'red',
-                    color: 'white',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    fontSize: '12px',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}
+            <div
+            style={{
+                display: 'flex', // ใช้ Flexbox จัดให้อยู่ในแถวเดียวกัน
+                justifyContent: 'space-between', // กระจายพื้นที่ระหว่างองค์ประกอบ
+                alignItems: 'center', // จัดตำแหน่งให้อยู่ตรงกลางในแนวตั้ง
+                padding: '10px 0', // เพิ่ม Padding ด้านบนและล่าง
+            }}
             >
-                {splitPaymentCount}
-            </span>
-        )}
-            <button
+            {/* แสดงเงินทอน */}
+            <div
                 style={{
-                    padding: '10px',
-                    borderRadius: '5px',
-                    backgroundColor: '#c7a641',
-                    color: 'white',
+                    fontSize: '1rem',
                     fontWeight: 'bold',
-                    cursor: 'pointer',
-                    border: 'none', // เอากรอบออก
-                    boxShadow: 'none', // เอาเงาออก
+                    color: '#0d1b13',
+                    marginRight: '10px', // เพิ่มระยะห่างจากปุ่ม
                 }}
-                onClick={toggleSplitPaymentPopup}
             >
-                ดูประวัติการแยกชำระ
-            </button>
-        </div>
-    </div>
-            </>
-        ) : null}
+                เงินทอน: {calculateChange()} บาท
+            </div>
+
+            {/* ปุ่มดูประวัติการแยกชำระ */}
+            <div style={{ position: 'relative', textAlign: 'right' }}>
+                {splitPaymentCount > 0 && (
+                    <span
+                        style={{
+                            position: 'absolute',
+                            top: '-5px',
+                            right: '-5px',
+                            backgroundColor: 'red',
+                            color: 'white',
+                            borderRadius: '50%',
+                            width: '20px',
+                            height: '20px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}
+                    >
+                        {splitPaymentCount}
+                    </span>
+                )}
+                    <button
+                        style={{
+                            padding: '10px',
+                            borderRadius: '5px',
+                            backgroundColor: '#c7a641',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            border: 'none', // เอากรอบออก
+                            boxShadow: 'none', // เอาเงาออก
+                        }}
+                        onClick={toggleSplitPaymentPopup}
+                    >
+                        ดูประวัติการแยกชำระ
+                    </button>
+                </div>
+            </div>
+                    </>
+                ) : null}
 
         {/* ปุ่มการทำงาน */}
         <div style={styles.paymentRow}>
@@ -1829,7 +1755,6 @@ const fetchCategories = () => {
             >
                 ชำระเงิน
             </button>
-
             </div>
             </div>
             </div>
@@ -1887,8 +1812,6 @@ const fetchCategories = () => {
                     </button>
                 </div>
             )}
-
-
         {showReceipt && (
             <div style={styles.receiptOverlay}>
                 <div style={styles.receiptContainer}>
@@ -2019,16 +1942,8 @@ const styles = {
     circleItem: { width: '140px', height: '140px', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', cursor: 'pointer' },
     popupTitle: { fontSize: '28px', fontWeight: 'bold', marginBottom: '20px', color: '#333', margin: '0px' },
     icon: { margin: '20px 0', cursor: 'pointer', borderRadius: '12px', padding: '5px', width: '10px', height: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' },
-    categoryRow: {
-        display: 'flex',               // ใช้ Flexbox
-        justifyContent: 'center',      // จัดให้อยู่ตรงกลางในแนวนอน
-        gap: '10px',                   // ระยะห่างระหว่าง item
-        margin: '0 auto',              // จัดตำแหน่ง container กลางหน้าแนวนอน
-        flexWrap: 'wrap',              // รองรับการล้นและขึ้นบรรทัดใหม่
-        alignItems: 'center',          // จัดให้อยู่ตรงกลางในแนวตั้ง
-        width: '100%',                 // ใช้เต็มพื้นที่ในแนวนอน
-    },
-        searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%' },
+    categoryRow: { display: 'flex', justifyContent: 'center', gap: '10px', margin: '0 auto', flexWrap: 'wrap', alignItems: 'center', width: '100%',},
+    searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%' },
     pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden'  },
     sidebarContainer: { flex: '0 0 100px' },
     cart: {width: '400px',overflowY: 'auto',overflowX: 'hidden',backgroundColor: '#f8f9fa',padding: '15px',borderRadius: '12px',marginTop: '-8px',display: 'flex',flexDirection: 'column',justifyContent: 'flex-start',boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',},    
@@ -2108,7 +2023,7 @@ const styles = {
     changeDisplay: {fontSize: '1rem',fontWeight: 'bold',textAlign: 'center',margin: '10px 0',color: '#0d1b13',},
     actionButton: { flex: 1, padding: '8px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
     pauseButton: { flex: 1, padding: '8px', backgroundColor: '#cccccc', color: '#0f0e0e', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' },
-    productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' },
+    productCount: { fontSize: '14px', color: '#333', display: 'inline', paddingRight: '10px', marginLeft: '10px' ,fontWeight:'bold' },
     paymentRow: {display: 'flex',gap: '10px',justifyContent: 'space-around',},
     qrCodeContainer: {textAlign: 'center',marginTop: '20px',},
     qrCodeImage: {width: '150px',height: '150px',marginBottom: '10px',}
