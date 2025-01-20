@@ -33,9 +33,9 @@
 
         // ฟังก์ชันสำหรับแปลงวันที่และเวลาให้อยู่ในรูปแบบของประเทศไทย
         const formatDateTimeToThai = (utcDateTime) => {
-            if (!utcDateTime) return 'N/A'; // หากไม่มีข้อมูล ให้แสดง "N/A"
-            const date = new Date(`${utcDateTime}Z`); // เพิ่ม "Z" เพื่อบอกว่าเป็น UTC
-            return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }); // แปลงเป็นเวลาประเทศไทย
+            if (!utcDateTime) return 'N/A';
+            const date = new Date(`${utcDateTime}T00:00:00Z`); // เพิ่มเวลาเริ่มต้น
+            return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
         };
 
         // ฟังก์ชันสำหรับดึงข้อมูลการชำระเงินตาม Order ID
@@ -101,7 +101,6 @@
                 vatLabel,
             };
         };
-        
         
         const fetchReportData = async () => {
             try {
@@ -178,7 +177,6 @@
             );
         };
 
-
         // ฟังก์ชันแสดงรายละเอียด Order พร้อม Popup
         const fetchOrderDetails = async (orderId) => {
             try {
@@ -189,16 +187,15 @@
                     },
                 });
         
-                // ตรวจสอบว่า response มีฟิลด์ที่ต้องการ
+                console.log('Order Details:', response.data); // เพิ่ม log เพื่อตรวจสอบโครงสร้างข้อมูล
+        
                 if (response.data && response.data.items) {
-                    return response.data; // ส่งข้อมูลทั้งหมด (รวมส่วนลดสินค้า) กลับ
+                    return response.data; // ส่งข้อมูลทั้งหมดกลับ
                 } else {
                     throw new Error('ไม่พบข้อมูลรายการสินค้าของออเดอร์นี้');
                 }
             } catch (error) {
                 console.error('Error fetching order details:', error);
-
-                // แสดง Popup พร้อมตารางรายละเอียด Order
                 Swal.fire({
                     title: 'เกิดข้อผิดพลาด',
                     text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
@@ -207,7 +204,7 @@
                 });
                 return null;
             }
-        };
+        };        
         
         const showOrderDetails = async (orderId) => {
             if (!orderId) {
@@ -281,9 +278,9 @@
                     <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                         <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
                             <tr>
-                                <th style="padding: 5px; border: 1px solid #ddd;">วันที่ชำระ</th>
+                                <th style="padding: 5px; border: 1px solid #ddd;">แยกชำระ</th>
                                 <th style="padding: 5px; border: 1px solid #ddd;">วิธีการชำระ</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">ยอดชำระ</th>
+                                <th style="padding: 5px; border: 1px solid #ddd;">วันที่ชำระ</th>
                                 <th style="padding: 5px; border: 1px solid #ddd;">หมายเหตุ</th>
                             </tr>
                         </thead>
@@ -291,15 +288,16 @@
                             ${payments.length > 0
                                 ? payments.map((payment) => `
                                     <tr>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'null'}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.method ? (payment.method === 'split' ? 'แยกชำระ' : 'ชำระเงินปกติ') : 'null'}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? parseFloat(payment.amount).toFixed(2) : 'null'} ฿</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.notes || 'null'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'N/A'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.split_payment ? 'แยกชำระ' : 'N/A'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.method === 'qr_code' ? 'QR Code พร้อมเพย์' : payment.method === 'cash' ? 'เงินสด' : 'N/A'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? parseFloat(payment.amount).toFixed(2) : 'N/A'} ฿</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.notes || 'N/A'}</td>
                                     </tr>
                                 `).join('')
                                 : `
                                     <tr>
-                                        <td colspan="4" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
+                                        <td colspan="5" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
                                             ไม่มีข้อมูลการชำระเงิน
                                         </td>
                                     </tr>
@@ -307,7 +305,6 @@
                         </tbody>
                     </table>
                 `;
-        
                 // แสดงผลใน SweetAlert
                 Swal.fire({
                     html: `
@@ -338,8 +335,8 @@
                     icon: 'error',
                     confirmButtonText: 'ปิด',
                 });
-            }
-        };
+                }
+            };
         
         const calculateTotals = (orders) => {
             const totalAmount = orders.reduce((total, order) => total + parseFloat(order.total_amount || 0), 0).toFixed(2);
@@ -507,7 +504,7 @@
 
     const styles = {
         pageContainer: { display: 'flex' },
-        content: { flex: 1, padding: '15px', backgroundColor: '#f9f9f9', marginLeft: '100px', overflowY: 'hidden' },
+        content: { flex: 1, padding: '25px', backgroundColor: '#f9f9f9', marginLeft: '110px', overflowY: 'hidden' },
         headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
         title: { fontSize: '24px', fontWeight: 'bold', color: '#000' },
         datePickerContainer: { display: 'flex', alignItems: 'center' },
