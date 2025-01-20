@@ -73,28 +73,18 @@ export default function Sidebar() {
         <div
           style={styles.icon}
         >
-          <Image src="/images/food.png" alt="Food" width={40} height={40} />
-          {isExpanded && <span style={styles.iconLabel}>Food</span>}
+          <Image src="/images/restaurant.png" alt="Food" width={40} height={40} />
+          {isExpanded && <span style={styles.iconLabel}>อาหาร</span>}
         </div>
 
-        {/* เมนู Categories */}
+        {/* เมนู Return */}
         <div
           style={styles.icon}
-          className={activeMenu === '/categories' ? 'active' : ''}
-          onClick={() => handleMenuClick('/categories')}
+          className={activeMenu === '/TablePage' ? 'active' : ''}
+          onClick={() => handleMenuClick('/TablePage')}
         >
-          <Image src="/images/list.png" alt="List" width={40} height={40} />
-          {isExpanded && <span style={styles.iconLabel}>Categories</span>}
-        </div>
-
-        {/* เมนู Settings */}
-        <div
-          style={styles.icon}
-          className={activeMenu === '/settings' ? 'active' : ''}
-          onClick={() => handleMenuClick('/settings')}
-        >
-          <Image src="/images/settings.png" alt="Settings" width={40} height={40} />
-          {isExpanded && <span style={styles.iconLabel}>Settings</span>}
+          <Image src="/images/return.png" alt="Return" width={35} height={35} />
+          {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
         </div>
       </div>
 
@@ -215,7 +205,7 @@ const styles = {
     color: '#fff',
   },
   iconLabel: {
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: '500',
     color: '#ffffff',
   },
