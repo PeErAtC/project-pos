@@ -9,6 +9,8 @@ export default function LoginPage({ onLogin }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
   const togglePasswordVisibility = () => {
@@ -16,51 +18,52 @@ export default function LoginPage({ onLogin }) {
   };
 
   const handleLoginClick = async (e) => {
-    e.preventDefault();
-    const apiUrl = `${config.api_url}/${config.slug}`;
+  e.preventDefault();
+  const apiUrl = `${config.api_url}/${config.slug}`;
 
-    if (!apiUrl || !config.slug) {
-      alert('API URL or slug is missing. Please check your configuration.');
+  if (!apiUrl || !config.slug) {
+    alert('API URL or slug is missing. Please check your configuration.');
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    const response = await fetch(`${apiUrl}/login`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      const message = `Login failed: HTTP ${response.status} ${response.statusText}`;
+      alert(message);
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${apiUrl}/login`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+    const result = await response.json();
 
-      if (!response.ok) {
-        const message = `Login failed: HTTP ${response.status} ${response.statusText}`;
-        alert(message);
-        setIsLoading(false);
-        return;
-      }
+    if (result.success) {
+      Cookies.set('token', result.data.token, { expires: 2 });
+      Cookies.set('userName', result.data.name, { expires: 2 });
+      Cookies.set('userId', result.data.userId, { expires: 2 });
+      Cookies.set('slug', result.data.slug, { expires: 2 });
 
-      const result = await response.json();
-
-      if (result.success) {
-        Cookies.set('token', result.data.token, { expires: 2 });
-        Cookies.set('userName', result.data.name, { expires: 2 });
-        Cookies.set('userId', result.data.userId, { expires: 2 });
-        Cookies.set('slug', result.data.slug, { expires: 2 });
-
-        onLogin();
-        router.push('/products');
-      } else {
-        alert(`Login failed: ${result.message}`);
-      }
-    } catch (error) {
-      alert('An error occurred while logging in.');
-    } finally {
-      setIsLoading(false);
+      onLogin();
+      router.push('/TablePage'); // เปลี่ยนเส้นทางไปหน้า TablePage.js
+    } else {
+      alert(`Login failed: ${result.message}`);
     }
-  };
+  } catch (error) {
+    alert('An error occurred while logging in.');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div style={styles.container}>
@@ -68,8 +71,8 @@ export default function LoginPage({ onLogin }) {
         <h1 style={styles.title}>
           Easy POS <FaUtensils style={styles.iconShop} />
         </h1>
+        {error && <p style={styles.error}>{error}</p>}
         <div style={styles.inputContainer}>
-          
           <FaUser style={styles.icon} />
           <input
             type="text"
@@ -91,6 +94,17 @@ export default function LoginPage({ onLogin }) {
           <span onClick={togglePasswordVisibility} style={styles.eyeIcon}>
             {showPassword ? <FaEyeSlash /> : <FaEye />}
           </span>
+        </div>
+        <div style={styles.rememberMeContainer}>
+          <input
+            type="checkbox"
+            id="rememberMe"
+            checked={rememberMe}
+            onChange={() => setRememberMe(!rememberMe)}
+          />
+          <label htmlFor="rememberMe" style={styles.rememberMeLabel}>
+            จำฉัน
+          </label>
         </div>
         {isLoading ? (
           <div style={styles.loading}>กำลังโหลด...</div>
@@ -150,8 +164,8 @@ const styles = {
     outline: 'none',
     color: '#333',
     boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.1)',
-    margin: '0 auto', // จัดให้อยู่ตรงกลาง
-    display: 'block', // เพื่อให้การจัดวางเป็น Block
+    margin: '0 auto',
+    display: 'block',
   },
   icon: {
     position: 'absolute',
@@ -170,6 +184,16 @@ const styles = {
     color: '#90a4ae',
     fontSize: '18px',
   },
+  rememberMeContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '20px',
+  },
+  rememberMeLabel: {
+    fontSize: '14px',
+    color: '#333',
+  },
   button: {
     width: '100%',
     padding: '12px',
@@ -184,6 +208,11 @@ const styles = {
   loading: {
     color: '#00796b',
     fontSize: '16px',
+  },
+  error: {
+    color: 'red',
+    fontSize: '14px',
+    marginBottom: '10px',
   },
 };
 
