@@ -1,14 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import axios from 'axios';
 import { useRouter } from 'next/router';
 
-export default function BackendSidebar() {
-  const [isReportPopupOpen, setIsReportPopupOpen] = useState(false);
+export default function Sidebar() {
+  const [categories, setCategories] = useState([]);
+  const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
   const [isSettingsPopupOpen, setIsSettingsPopupOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false); // สถานะสำหรับพับ/กาง Sidebar
+  const [activeMenu, setActiveMenu] = useState(null); // เพิ่มสถานะ activeMenu เพื่อติดตามเมนูที่เลือก
   const router = useRouter();
 
-  const toggleReportPopup = () => {
-    setIsReportPopupOpen(!isReportPopupOpen);
+  useEffect(() => {
+    axios.get('https://easyapp.clinic/pos-api/api/category', {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
+      },
+    })
+      .then(response => setCategories(response.data))
+      .catch(error => {
+        console.error('Error fetching categories:', error.response ? error.response.data : error.message);
+      });
+  }, []);
+
+  const toggleCategoryPopup = () => {
+    setIsCategoryPopupOpen(!isCategoryPopupOpen);
   };
 
   const toggleSettingsPopup = () => {
@@ -16,48 +33,95 @@ export default function BackendSidebar() {
   };
 
   const handleBackToTablePage = () => {
-    router.push('/');
+    router.push('/TablePage');
+  };
+
+  const toggleSidebar = () => {
+    setIsExpanded(!isExpanded); // เปลี่ยนสถานะพับ/กาง
+  };
+
+  // ฟังก์ชันสำหรับการคลิกเมนู
+  const handleMenuClick = (menu) => {
+    setActiveMenu(menu); // ตั้งค่าหมายเลขเมนูที่ถูกเลือกเป็น active
+    if (isExpanded) {
+      setIsExpanded(false); // ถ้า Sidebar กางอยู่ให้พับกลับ
+    }
+    router.push(menu); // เปลี่ยนหน้าเมื่อเลือกเมนู
   };
 
   return (
-    <>
-      <div style={styles.sidebar}>
-        <div style={{ ...styles.icon, ...styles.iconWithBackground }} className="icon">
-          <Image src="/images/folder.png" alt="Store" width={40} height={40} style={styles.iconImage} />
+    <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
+      {/* Toggle Button */}
+      <div style={styles.toggleButton} onClick={toggleSidebar}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ ...styles.arrow, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </div>
+
+      {/* Icons Section */}
+      <div style={styles.iconContainer(isExpanded)}>
+        {/* Store Icon with White Border and Store Name */}
+        <div style={styles.iconWrapper} className="icon">
+          <Image src="/images/store.png" alt="Store" width={40} height={40} />
+          {isExpanded && (
+            <>
+              <span style={styles.storeName}>Easy POS</span> {/* เพิ่มข้อความ "Easy POS" ข้างไอคอน */}
+            </>
+          )}
         </div>
-        <div style={styles.icon} onClick={() => router.push('/backendpage')} className="icon">
-          <Image src="/images/food.png" alt="Food" width={40} height={40} style={styles.iconImage} />
+        {/* เมนู Food */}
+        <div
+          style={styles.icon}
+        >
+          <Image src="/images/food.png" alt="Food" width={40} height={40} />
+          {isExpanded && <span style={styles.iconLabel}>Food</span>}
         </div>
-        <div style={styles.icon} onClick={toggleReportPopup} className="icon">
-          <Image src="/images/report-icon.png" alt="report-icon" width={40} height={40} priority loading="eager" />
+
+        {/* เมนู Categories */}
+        <div
+          style={styles.icon}
+          className={activeMenu === '/categories' ? 'active' : ''}
+          onClick={() => handleMenuClick('/categories')}
+        >
+          <Image src="/images/list.png" alt="List" width={40} height={40} />
+          {isExpanded && <span style={styles.iconLabel}>Categories</span>}
         </div>
-        <div style={styles.icon} onClick={toggleSettingsPopup} className="icon">
-          <Image src="/images/settings.png" alt="Settings" width={40} height={40} style={styles.iconImage} />
+
+        {/* เมนู Settings */}
+        <div
+          style={styles.icon}
+          className={activeMenu === '/settings' ? 'active' : ''}
+          onClick={() => handleMenuClick('/settings')}
+        >
+          <Image src="/images/settings.png" alt="Settings" width={40} height={40} />
+          {isExpanded && <span style={styles.iconLabel}>Settings</span>}
         </div>
       </div>
 
-      {isReportPopupOpen && (
-        <div style={styles.menuPopup} onClick={toggleReportPopup}>
-          <div style={styles.menuContainer} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.popupTitle}>รายงาน</h2>
-            <ul className="menu">
-              <li className="menu-item" onClick={() => router.push('/SalesReport')} style={{ backgroundColor: '#1abc9c' }}>
-                <span style={styles.iconText}>💰</span>
-                <span style={styles.labelText}>การชำระ</span>
-              </li>
-              <li className="menu-item" onClick={() => router.push('/PaymentSummary')} style={{ backgroundColor: '#3498db' }}>
-                <span style={styles.iconText}>💳</span>
-                <span style={styles.labelText}>ยอดขาย</span>
-              </li>
-              <li className="menu-item" onClick={() => router.push('/EmployeeSales')} style={{ backgroundColor: '#e67e22' }}>
-                <span style={styles.iconText}>👤</span>
-                <span style={styles.labelText}>ยอดขายพนักงาน</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
+      {/* Styles for active menu */}
+      <style jsx>{`
+        .active {
+          background-color: rgb(12, 62, 95); /* เปลี่ยนสีพื้นหลังเมื่อคลิกเมนู */
+          border-radius: 8px; /* ปรับขนาด border-radius */
+          color: #fff;
+          padding: 8px 12px; /* ลดขนาด padding */
+          font-size: 14px; /* ปรับขนาดฟอนต์ */
+        }
+        .icon:hover {
+          background: none;
+          transition: background 0.3s ease;
+          box-shadow: none;
+          padding: 0;
+        }
+        .icon:active {
+          background: none;
+          transition: background 0.1s ease;
+          box-shadow: none;
+          padding: 0;
+        }
+      `}</style>
 
+      {/* Settings Popup */}
       {isSettingsPopupOpen && (
         <div style={styles.menuPopup} onClick={toggleSettingsPopup}>
           <div style={styles.menuContainer} onClick={(e) => e.stopPropagation()}>
@@ -68,65 +132,139 @@ export default function BackendSidebar() {
               style={{ ...styles.circleItem, backgroundColor: '#3498db' }}
             >
               <span style={styles.iconText}>🔙</span>
-              <span style={styles.labelText}>ไปที่หน้าหลัก</span>
+              <span style={styles.labelText}>ไปที่หน้าโต๊ะ</span>
             </div>
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .icon:hover {
-          background: linear-gradient(45deg, #6dd5ed, #2193b0);
-          transition: background 0.3s ease;
-        }
-        .icon:active {
-          background: linear-gradient(45deg, #ff7e5f, #feb47b);
-          transition: background 0.1s ease;
-        }
-        
-        .menu {
-          display: flex;
-          justify-content: center;
-          gap: 40px;
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        .menu-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          width: 140px;
-          height: 140px;
-          border-radius: 50%;
-          color: #fff;
-          font-size: 22px;
-          text-align: center;
-          cursor: pointer;
-          transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
-        }
-        .menu-item:hover {
-          transform: scale(1.15);
-          box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.3);
-        }
-        .menu-item:active {
-          transform: scale(1.05);
-          box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
-        }
-      `}</style>
-    </>
+    </div>
   );
 }
 
-const styles = { 
-  sidebar: { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#499cae', padding: '20px 0', width: '90px', height: '630px', borderRadius: '20px', position: 'fixed', top: '20px', left: '20px', zIndex: 1000, boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)' }, 
-  icon: { margin: '20px 0', cursor: 'pointer', borderRadius: '12px', padding: '5px', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' }, 
-  iconWithBackground: { backgroundColor: '#ffffff', borderRadius: '12px', padding: '5px', width: '50px', height: '50px', boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }, 
-  menuPopup: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }, 
-  menuContainer: { backgroundColor: '#ffffff', padding: '30px', borderRadius: '30px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center' }, 
-  popupTitle: { fontSize: '28px', fontWeight: 'bold', marginBottom: '20px', color: '#333', textAlign: 'center', margin: '0px', padding: '10px' }, 
-  circleItem: { width: '140px', height: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', cursor: 'pointer' }, 
-  iconText: { fontSize: '40px', marginBottom: '10px' }, 
-  labelText: { fontSize: '18px', fontWeight: 'bold', color: '#fff' } 
+const styles = {
+  sidebar: {
+    height: '87vh',
+    backgroundColor: '#499cae',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '10px 0',
+    borderRadius: '20px',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
+    transition: 'width 0.3s ease',
+    position: 'fixed',
+    top: '20px',
+    left: '20px',
+    zIndex: 1000,
+  },
+  toggleButton: {
+    cursor: 'pointer',
+    fontSize: '20px',
+    fontWeight: 'bold',
+    marginBottom: '20px',
+    backgroundColor: '#494cba',
+    color: '#499cae',
+    borderRadius: '50%',
+    width: '30px',
+    height: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    position: 'absolute',
+    top: '20px',
+    right: '-15px',
+    zIndex: 1100,
+  },
+  arrow: {
+    fontSize: '20px',
+    color: '#fff',
+  },
+  iconContainer: (isExpanded) => ({
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: isExpanded ? 'flex-start' : 'center',
+    gap: '20px',
+    width: '100%',
+    paddingLeft: isExpanded ? '20px' : '0',
+  }),
+  iconWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: '10px',
+    padding: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    flexDirection: 'row',
+    marginTop: '30px',
+  },
+  storeName: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#499cae',
+    marginLeft: '10px',
+  },
+  icon: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '13px',
+    cursor: 'pointer',
+    transition: 'background 0.3s ease',
+    color: '#fff',
+  },
+  iconLabel: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#ffffff',
+  },
+  menuPopup: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100vw',
+    height: '100vh',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  menuContainer: {
+    backgroundColor: '#ffffff',
+    padding: '30px',
+    borderRadius: '30px',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    alignItems: 'center',
+  },
+  popupTitle: {
+    fontSize: '28px',
+    fontWeight: 'bold',
+    marginBottom: '20px',
+    color: '#333',
+    margin: '0px',
+  },
+  circleItem: {
+    width: '140px',
+    height: '140px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '50%',
+    cursor: 'pointer',
+  },
+  iconText: {
+    fontSize: '40px',
+    marginBottom: '10px',
+  },
+  labelText: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#fff',
+  },
 };
