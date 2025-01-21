@@ -118,11 +118,11 @@ const DraggableKeyboard = ({ onKeyPress, onClose }) => {
               {key === 'SPACE'
                 ? '' // ไม่มีข้อความในปุ่ม SPACE
                 : key === 'SHIFT'
-                ? 'Shift'
+                ? '⇧'
                 : key === 'DELETE'
-                ? '⬅'
+                ? '⌫'
                 : key === 'CLOSE'
-                ? 'ปิด'
+                ? '⏎'
                 : key}
             </button>
           ))}
