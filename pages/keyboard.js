@@ -6,6 +6,7 @@ const DraggableKeyboard = ({ onKeyPress, onClose }) => {
   const [position, setPosition] = useState({ x: 100, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const [mode, setMode] = useState('ALPHA'); // ALPHA or NUMERIC
+  const [activeKey, setActiveKey] = useState(null); // Track active key for effect
 
   const layouts = {
     ALPHA: {
@@ -58,6 +59,9 @@ const DraggableKeyboard = ({ onKeyPress, onClose }) => {
   };
 
   const handleKeyPress = (key) => {
+    setActiveKey(key); // Activate key effect
+    setTimeout(() => setActiveKey(null), 150); // Remove effect after 150ms
+
     if (key === 'CLOSE') {
       onClose();
     } else if (key === 'SPACE') {
@@ -107,6 +111,7 @@ const DraggableKeyboard = ({ onKeyPress, onClose }) => {
                 ...(key === 'DELETE' ? styles.deleteButton : {}),
                 ...(key === 'CLOSE' ? styles.closeButton : {}),
                 ...(key === 'SPACE' ? styles.spaceButton : {}),
+                ...(activeKey === key ? styles.activeKey : {}), // Apply active effect
               }}
               onClick={() => handleKeyPress(key)}
             >
@@ -169,7 +174,7 @@ const styles = {
     margin: '3px',
     fontSize: '16px',
     cursor: 'pointer',
-    transition: 'background-color 0.2s',
+    transition: 'background-color 0.2s, transform 0.1s',
     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
   },
   deleteButton: {
@@ -183,6 +188,10 @@ const styles = {
   spaceButton: {
     flexGrow: 1,
     padding: '10px 80px', // ความกว้างพิเศษสำหรับ SPACE
+  },
+  activeKey: {
+    transform: 'scale(0.95)', // Shrink effect
+    backgroundColor: '#e0e0e0',
   },
   languageSwitchRow: {
     display: 'flex',
