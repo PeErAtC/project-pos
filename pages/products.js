@@ -1198,7 +1198,7 @@ const fetchCategories = () => {
                         className="categoryCircle"
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
                         <span style={styles.iconText}>🍽️</span>
                         <span style={styles.labelText}>ทั้งหมด</span>
@@ -1207,7 +1207,7 @@ const fetchCategories = () => {
                         onClick={() => handleCategorySelect(1)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
                         <span style={styles.iconText}>🍛</span>
                         <span style={styles.labelText}>เมนูผัด</span>
@@ -1216,7 +1216,7 @@ const fetchCategories = () => {
                         onClick={() => handleCategorySelect(2)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
                         <span style={styles.iconText}>🍚</span>
                         <span style={styles.labelText}>ข้าวผัด</span>
@@ -1225,7 +1225,7 @@ const fetchCategories = () => {
                         onClick={() => handleCategorySelect(3)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
                         <span style={styles.iconText}>🥗</span>
                         <span style={styles.labelText}>เมนูยำ</span>
@@ -1234,7 +1234,7 @@ const fetchCategories = () => {
                         onClick={() => handleCategorySelect(4)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
                         <span style={styles.iconText}>🍲</span>
                         <span style={styles.labelText}>ข้าวต้ม</span>
@@ -1244,7 +1244,7 @@ const fetchCategories = () => {
                         onClick={() => handleCategorySelect(5)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#499cae' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
                         <span style={styles.iconText}>🍹</span>
                         <span style={styles.labelText}>เครื่องดื่ม</span>
@@ -1938,7 +1938,7 @@ const fetchCategories = () => {
 
 const styles = {
     iconText: { fontSize: '30px', marginBottom: '2px' },
-    labelText: { fontSize: '14px', fontWeight: 'bold', color: '#fff' },
+    labelText: { fontSize: '14px', fontWeight: 'bold', color: '#333' },
     circleItem: { width: '140px', height: '140px', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', cursor: 'pointer' },
     popupTitle: { fontSize: '28px', fontWeight: 'bold', marginBottom: '20px', color: '#333', margin: '0px' },
     icon: { margin: '20px 0', cursor: 'pointer', borderRadius: '12px', padding: '5px', width: '10px', height: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' },
@@ -1956,7 +1956,7 @@ const styles = {
     amountInputHalf: { width: '8.4rem',padding: '8px',borderRadius: '4px',border: '1px solid #ddd',flex: '1',},    
     amountInputSmall: { width: '40%', padding: '6px', borderRadius: '4px', border: '1px solid #ddd' },
     cartItemPriceDiscountRow: { display: 'flex', alignItems: 'center', gap: '3px', flexDirection: 'row', marginTop: '-27px' },
-    categoryCircle: { width: '95px',height: '60px',display: 'flex',flexDirection: 'column',alignItems: 'center',justifyContent: 'center',borderRadius: '10px',fontWeight: 'bold',cursor: 'pointer',fontSize: '12px', textAlign: 'center',lineHeight: '1',margin: '10px',background: '#499cae',backdropFilter: 'blur(5px)', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',color: '#ffffff', transition: 'all 0.3s ease',':hover': {transform: 'scale(1.1)',background: 'rgba(255, 127, 36, 0.9)', boxShadow: '0 6px 8px rgba(0, 0, 0, 0.2)',},},
+    categoryCircle: { width: '145px',height: '60px',display: 'flex',alignItems: 'center',justifyContent: 'center',borderRadius: '10px',fontWeight: 'bold',cursor: 'pointer',fontSize: '12px', textAlign: 'center',lineHeight: '1',margin: '5px',background: '#fff',backdropFilter: 'blur(5px)', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',color: '#ffffff', transition: 'all 0.3s ease',':hover': {transform: 'scale(1.1)',background: 'rgba(255, 127, 36, 0.9)', boxShadow: '0 6px 8px rgba(0, 0, 0, 0.2)',},},
     headerContainer: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', position: 'sticky', top: '0', backgroundColor: '#f5f5f5', zIndex: 10, padding: '10px 0', width: '100%' },
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
