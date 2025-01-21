@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { MdRestaurant } from 'react-icons/md';
 import axios from 'axios';
+import Keyboard from './keyboard';  // คีย์บอร์ดเสมือนที่คุณสร้างขึ้นมา
 
 const api_url = "https://easyapp.clinic/pos-api/api";
 const slug = "abc";
 const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
+// Component สำหรับแสดงข้อมูลโต๊ะ
 function TableCard({ table, onClick }) {
     const [isPressed, setIsPressed] = useState(false);
-    const isAvailable = table.tableFree === 1 && table.status === 'Y';
-    const isSpecialTable = table.table_code === 'CT001';
+    const isAvailable = table.tableFree === 1 && table.status === 'Y'; // ตรวจสอบสถานะโต๊ะ
+    const isSpecialTable = table.table_code === 'CT001'; // ตรวจสอบว่าโต๊ะเป็นโต๊ะพิเศษหรือไม่
 
     return (
         <div
@@ -37,7 +39,7 @@ function TableCard({ table, onClick }) {
             }}
             onClick={() => {
                 setIsPressed(false);
-                onClick(table.id);  // Handle table click
+                onClick(table.id);  // เมื่อกดที่โต๊ะให้ไปที่หน้ารายละเอียด
             }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
@@ -64,15 +66,18 @@ export default function MainTablePage() {
     const [error, setError] = useState(null);
     const { tableCode } = router.query;
     const [displayTable, setDisplayTable] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');  // State for search query
+    const [searchQuery, setSearchQuery] = useState('');  // ใช้สำหรับการค้นหาตาราง
+    const [keyboardVisible, setKeyboardVisible] = useState(false);  // ใช้เพื่อควบคุมการแสดงคีย์บอร์ด
+    const searchInputRef = useRef(null);  // ใช้เพื่ออ้างอิงช่องค้นหา
+    const keyboardRef = useRef(null);  // ใช้เพื่ออ้างอิงคีย์บอร์ด
 
-    // Play sound on table click
+    // ฟังก์ชันสำหรับเล่นเสียงเมื่อกดโต๊ะ
     const playClickSound = () => {
-        const audio = new Audio('/sounds/click-151673.mp3'); // Path to your audio file
+        const audio = new Audio('/sounds/click-151673.mp3'); // เสียงเมื่อกด
         audio.play();
     };
 
-    // Fetch tables data from API
+    // ฟังก์ชันสำหรับดึงข้อมูลโต๊ะจาก API
     const fetchTables = async () => {
         try {
             const url = `${api_url}/${slug}/table_codes`;
@@ -82,70 +87,89 @@ export default function MainTablePage() {
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-
             const tablesData = response.data;
-            // Filter out special table and place it at the start of the list
+
+            // คัดแยกโต๊ะพิเศษ "หน้าขาย" ไว้ที่ตำแหน่งแรก
             const specialTable = tablesData.find(table => table.table_code === 'CT001');
             const otherTables = tablesData.filter(table => table.table_code !== 'CT001');
-
-            // Compare current tables with new data to check for changes
-            if (JSON.stringify(tables) !== JSON.stringify([specialTable ? [specialTable, ...otherTables] : otherTables])) {
-                setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
-                setError(null);
-            }
+            setTables(specialTable ? [specialTable, ...otherTables] : otherTables);  // อัพเดตโต๊ะที่แสดง
+            setError(null);
         } catch (error) {
             console.error('Error fetching tables:', error);
-            if (error.response) {
-                if (error.response.status === 404) {
-                    setError('ไม่พบเส้นทางของ API (404 Not Found)');
-                } else {
-                    setError(`เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.response.status}`);
-                }
-            } else if (error.request) {
-                setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณ');
-            } else {
-                setError('เกิดข้อผิดพลาด: ' + error.message);
-            }
+            setError('เกิดข้อผิดพลาดในการดึงข้อมูล');
         }
     };
 
-    // Check if the tableCode is special ("CT001") to display "หน้าขาย" instead of "โต๊ะ <number>"
-    useEffect(() => {
-        if (tableCode === 'CT001') {
-            setDisplayTable('หน้าขาย');
-        } else if (tableCode) {
-            setDisplayTable(`โต๊ะ ${tableCode}`);
-        }
-    }, [tableCode]);
-
     useEffect(() => {
         fetchTables();
-        const interval = setInterval(fetchTables, 5000); // Fetch every 5 seconds
+        const interval = setInterval(fetchTables, 5000); // ดึงข้อมูลทุก 5 วินาที
         return () => clearInterval(interval);
     }, []);
 
+    // ฟังก์ชันเปลี่ยนแปลงค่าค้นหา
+    const handleSearchChange = (event) => {
+        setSearchQuery(event.target.value);
+    };
+
+    // ฟังก์ชันรับค่าจากคีย์บอร์ดเสมือน
+    const handleKeyboardInput = (key) => {
+        if (key === 'DELETE') {
+            setSearchQuery(searchQuery.slice(0, -1));  // ลบตัวอักษร
+        } else if (key === 'SPACE') {
+            setSearchQuery(searchQuery + ' ');  // เพิ่มช่องว่าง
+        } else if (key === 'ENTER') {
+            // กด Enter
+        } else {
+            setSearchQuery(searchQuery + key);  // เพิ่มอักขระที่กด
+        }
+    };
+
+    // ฟังก์ชันกรองข้อมูลโต๊ะตามคำค้นหา
+    const filteredTables = tables.filter((table) => {
+        const tableCode = table.table_code.toLowerCase();
+        return tableCode.includes(searchQuery.toLowerCase());
+    });
+
+    // ฟังก์ชันเมื่อคลิกที่โต๊ะ
     const handleTableClick = (tableCode) => {
-        playClickSound();  // Play sound when a table is clicked
+        playClickSound();  // เล่นเสียงเมื่อคลิกโต๊ะ
         router.push({
             pathname: '/products',
             query: { tableCode }
         });
     };
 
-    // Handle search input change
-    const handleSearchChange = (event) => {
-        setSearchQuery(event.target.value);
+    // ฟังก์ชันเปิดคีย์บอร์ด
+    const handleFocusSearch = () => {
+        setKeyboardVisible(true);
     };
 
-    // Filter tables based on the search query
-    const filteredTables = tables.filter((table) => {
-        const tableCode = table.table_code.toLowerCase();
-        return tableCode.includes(searchQuery.toLowerCase());
-    });
+    // ฟังก์ชันปิดคีย์บอร์ด
+    const handleCloseKeyboard = () => {
+        setKeyboardVisible(false);
+    };
+
+    // ฟังก์ชันเพื่อปิดคีย์บอร์ดเมื่อคลิกที่พื้นที่นอกช่องค้นหา
+    const handleClickOutside = (event) => {
+        if (
+            searchInputRef.current &&
+            !searchInputRef.current.contains(event.target) &&
+            keyboardRef.current &&
+            !keyboardRef.current.contains(event.target)  // ป้องกันไม่ให้คีย์บอร์ดปิดเมื่อคลิกในคีย์บอร์ด
+        ) {
+            setKeyboardVisible(false);  // ปิดคีย์บอร์ด
+        }
+    };
+
+    useEffect(() => {
+        document.addEventListener('mousedown', handleClickOutside);  // ฟังการคลิกที่เอกสาร
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);  // ลบ event listener เมื่อไม่ใช้งาน
+        };
+    }, []);
 
     return (
         <div style={styles.pageContainer}>
-            {/* Section to display the header and current table information */}
             {tableCode ? (
                 <div style={styles.header}>
                     <h1>รวมเมนูอาหาร</h1>
@@ -154,12 +178,13 @@ export default function MainTablePage() {
             ) : (
                 <div style={styles.tableSelectionContainer}>
                     <h1 style={styles.title}>เลือกโต๊ะ</h1>
-                    {/* Search Bar */}
                     <input
+                        ref={searchInputRef}
                         type="text"
                         placeholder="ค้นหาโต๊ะ"
                         value={searchQuery}
                         onChange={handleSearchChange}
+                        onFocus={handleFocusSearch}  // เปิดคีย์บอร์ดเมื่อคลิกช่องค้นหา
                         style={styles.searchInput}
                     />
                     <div style={styles.tableGrid}>
@@ -177,6 +202,7 @@ export default function MainTablePage() {
                             <p style={styles.noTableText}>ไม่พบข้อมูลโต๊ะ</p>
                         )}
                     </div>
+                    {keyboardVisible && <Keyboard onKeyPress={handleKeyboardInput} onClose={handleCloseKeyboard} ref={keyboardRef} />}
                 </div>
             )}
         </div>
@@ -187,31 +213,7 @@ const styles = {
     pageContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#f0f2f5', minHeight: '100vh' }, 
     header: { padding: '20px', textAlign: 'center', backgroundColor: '#f0f2f5', width: '100%' }, 
     tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }, 
-    stickyHeader: {
-        position: 'sticky',
-        top: '0',
-        backgroundColor: '#f0f2f5',
-        zIndex: '10',
-        padding: '20px',
-        width: '100%',
-        boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-    },
     title: { fontSize: '28px', fontWeight: '600', textAlign: 'center', marginBottom: '30px' }, 
-    searchInput: { padding: '10px', fontSize: '16px', marginBottom: '20px', width: '80%', maxWidth: '400px' },
-    loadingText: { fontSize: '18px', color: '#666' },
-    tableGrid: { 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
-        gap: '20px', 
-        justifyContent: 'center', 
-        padding: '20px', 
-        width: '100%', 
-        maxWidth: '1000px',
-        maxHeight: '64vh',  
-        overflowY: 'auto',  
-    }, 
-    errorText: { color: 'red' }, 
-    noTableText: { color: '#333' },
     searchInput: { 
         width: '50%', 
         padding: '10px', 
@@ -220,4 +222,7 @@ const styles = {
         borderRadius: '5px', 
         border: '1px solid #ccc',
     }, 
+    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' }, 
+    errorText: { color: 'red' }, 
+    noTableText: { color: '#333' },
 };
