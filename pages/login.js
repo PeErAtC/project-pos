@@ -1,8 +1,9 @@
 import Cookies from 'js-cookie';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { FaEye, FaEyeSlash, FaUser, FaLock, FaUtensils } from 'react-icons/fa';
 import config from './config'; // ดึง config.js จาก pages
+import Keyboard from './keyboard'; // นำเข้า Keyboard
 
 export default function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -11,6 +12,8 @@ export default function LoginPage({ onLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [showKeyboard, setShowKeyboard] = useState(false); // จัดการแสดง Keyboard
+  const [activeField, setActiveField] = useState(''); // ช่องกรอกที่กำลังใช้งาน
   const router = useRouter();
 
   const togglePasswordVisibility = () => {
@@ -18,52 +21,143 @@ export default function LoginPage({ onLogin }) {
   };
 
   const handleLoginClick = async (e) => {
-  e.preventDefault();
-  const apiUrl = `${config.api_url}/${config.slug}`;
+    e.preventDefault();
+    const apiUrl = `${config.api_url}/${config.slug}`;
 
-  if (!apiUrl || !config.slug) {
-    alert('API URL or slug is missing. Please check your configuration.');
-    return;
-  }
-
-  setIsLoading(true);
-  try {
-    const response = await fetch(`${apiUrl}/login`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      const message = `Login failed: HTTP ${response.status} ${response.statusText}`;
-      alert(message);
-      setIsLoading(false);
+    if (!apiUrl || !config.slug) {
+      alert('API URL or slug is missing. Please check your configuration.');
       return;
     }
 
-    const result = await response.json();
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${apiUrl}/login`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (result.success) {
-      Cookies.set('token', result.data.token, { expires: 2 });
-      Cookies.set('userName', result.data.name, { expires: 2 });
-      Cookies.set('userId', result.data.userId, { expires: 2 });
-      Cookies.set('slug', result.data.slug, { expires: 2 });
+      if (!response.ok) {
+        const message = `Login failed: HTTP ${response.status} ${response.statusText}`;
+        alert(message);
+        setIsLoading(false);
+        return;
+      }
 
-      onLogin();
-      router.push('/TablePage'); // เปลี่ยนเส้นทางไปหน้า TablePage.js
-    } else {
-      alert(`Login failed: ${result.message}`);
+      const result = await response.json();
+
+      if (result.success) {
+        Cookies.set('token', result.data.token, { expires: 2 });
+        Cookies.set('userName', result.data.name, { expires: 2 });
+        Cookies.set('userId', result.data.userId, { expires: 2 });
+        Cookies.set('slug', result.data.slug, { expires: 2 });
+
+        onLogin();
+        router.push('/TablePage'); // เปลี่ยนเส้นทางไปหน้า TablePage.js
+      } else {
+        alert(`Login failed: ${result.message}`);
+      }
+    } catch (error) {
+      alert('An error occurred while logging in.');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    alert('An error occurred while logging in.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
+  const handleInputFocus = (field) => {
+    setActiveField(field);
+    setShowKeyboard(true); // แสดง Keyboard
+  };
+
+  const handleKeyPress = (key) => {
+    if (activeField) {
+      const inputElement = document.querySelector(`[name="${activeField}"]`);
+      if (inputElement) {
+        const { selectionStart, selectionEnd, value } = inputElement;
+        if (key === 'DELETE') {
+          if (selectionStart !== selectionEnd) {
+            // ลบส่วนที่ครอบอยู่
+            const newValue =
+              value.slice(0, selectionStart) + value.slice(selectionEnd);
+            if (activeField === 'username') {
+              setUsername(newValue);
+            } else if (activeField === 'password') {
+              setPassword(newValue);
+            }
+            inputElement.setSelectionRange(selectionStart, selectionStart);
+          } else {
+            // ลบทีละตัวก่อนตำแหน่งเคอร์เซอร์
+            const newValue =
+              value.slice(0, selectionStart - 1) + value.slice(selectionEnd);
+            if (activeField === 'username') {
+              setUsername(newValue);
+            } else if (activeField === 'password') {
+              setPassword(newValue);
+            }
+            inputElement.setSelectionRange(selectionStart - 1, selectionStart - 1);
+          }
+        } else {
+          if (selectionStart !== selectionEnd) {
+            // แทนที่ส่วนที่ครอบอยู่ด้วยตัวอักษรที่พิมพ์
+            const newValue =
+              value.slice(0, selectionStart) + key + value.slice(selectionEnd);
+            if (activeField === 'username') {
+              setUsername(newValue);
+            } else if (activeField === 'password') {
+              setPassword(newValue);
+            }
+            inputElement.setSelectionRange(selectionStart + 1, selectionStart + 1);
+          } else {
+            // เพิ่มตัวอักษรหลังตำแหน่งเคอร์เซอร์
+            const newValue =
+              value.slice(0, selectionStart) + key + value.slice(selectionStart);
+            if (activeField === 'username') {
+              setUsername(newValue);
+            } else if (activeField === 'password') {
+              setPassword(newValue);
+            }
+            inputElement.setSelectionRange(selectionStart + 1, selectionStart + 1);
+          }
+        }
+        inputElement.focus(); // Keep focus to ensure caret stays visible
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handlePhysicalKeyPress = (event) => {
+      if (event.ctrlKey || event.metaKey) return; // Ignore Ctrl/Cmd key combinations
+
+      if (activeField === 'username' || activeField === 'password') {
+        const key = event.key;
+        if (key === 'Backspace') {
+          handleKeyPress('DELETE');
+          event.preventDefault();
+        } else if (key.length === 1 && !event.ctrlKey && !event.metaKey) {
+          handleKeyPress(key);
+          event.preventDefault();
+        }
+      }
+    };
+
+    const handleClickOutside = (event) => {
+      const keyboardElement = document.querySelector('.keyboard-container');
+      if (keyboardElement && !keyboardElement.contains(event.target)) {
+        setShowKeyboard(false);
+      }
+    };
+
+    window.addEventListener('keydown', handlePhysicalKeyPress);
+    window.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('keydown', handlePhysicalKeyPress);
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeField]);
 
   return (
     <div style={styles.container}>
@@ -76,8 +170,10 @@ export default function LoginPage({ onLogin }) {
           <FaUser style={styles.icon} />
           <input
             type="text"
+            name="username"
             placeholder="ชื่อผู้ใช้"
             value={username}
+            onFocus={() => handleInputFocus('username')}
             onChange={(e) => setUsername(e.target.value)}
             style={styles.input}
           />
@@ -86,8 +182,10 @@ export default function LoginPage({ onLogin }) {
           <FaLock style={styles.icon} />
           <input
             type={showPassword ? 'text' : 'password'}
+            name="password"
             placeholder="รหัสผ่าน"
             value={password}
+            onFocus={() => handleInputFocus('password')}
             onChange={(e) => setPassword(e.target.value)}
             style={styles.input}
           />
@@ -114,6 +212,13 @@ export default function LoginPage({ onLogin }) {
           </button>
         )}
       </div>
+
+      {showKeyboard && (
+        <Keyboard
+          onKeyPress={handleKeyPress}
+          onClose={() => setShowKeyboard(false)}
+        />
+      )}
     </div>
   );
 }
