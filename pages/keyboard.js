@@ -111,6 +111,7 @@ const DraggableKeyboard = ({ onKeyPress, onClose }) => {
                 ...(key === 'DELETE' ? styles.deleteButton : {}),
                 ...(key === 'CLOSE' ? styles.closeButton : {}),
                 ...(key === 'SPACE' ? styles.spaceButton : {}),
+                ...(key === 'SHIFT' ? styles.shiftButton : {}),
                 ...(activeKey === key ? styles.activeKey : {}), // Apply active effect
               }}
               onClick={() => handleKeyPress(key)}
@@ -178,12 +179,15 @@ const styles = {
     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
   },
   deleteButton: {
-    backgroundColor: '#f44336', // สีแดง
+    backgroundColor: '#999', // สีแดง
     color: '#fff',
   },
   closeButton: {
-    backgroundColor: '#4caf50', // สีเขียว
+    backgroundColor: '#999', // สีเขียว
     color: '#fff',
+  },
+  shiftButton: {
+    backgroundColor: '#999',
   },
   spaceButton: {
     flexGrow: 1,
