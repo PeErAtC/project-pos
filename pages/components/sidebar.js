@@ -1,83 +1,78 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import axios from 'axios';
 import { useRouter } from 'next/router';
+import Swal from 'sweetalert2';
 
 export default function Sidebar() {
-  const [categories, setCategories] = useState([]);
-  const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
-  const [isSettingsPopupOpen, setIsSettingsPopupOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); // สถานะสำหรับพับ/กาง Sidebar
-  const [activeMenu, setActiveMenu] = useState(null); // เพิ่มสถานะ activeMenu เพื่อติดตามเมนูที่เลือก
+  const [activeMenu, setActiveMenu] = useState(null); // ติดตามเมนูที่เลือก
   const router = useRouter();
-
-  useEffect(() => {
-    axios.get('https://easyapp.clinic/pos-api/api/category', {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH',
-      },
-    })
-      .then(response => setCategories(response.data))
-      .catch(error => {
-        console.error('Error fetching categories:', error.response ? error.response.data : error.message);
-      });
-  }, []);
-
-  const toggleCategoryPopup = () => {
-    setIsCategoryPopupOpen(!isCategoryPopupOpen);
-  };
-
-  const toggleSettingsPopup = () => {
-    setIsSettingsPopupOpen(!isSettingsPopupOpen);
-  };
-
-  const handleBackToTablePage = () => {
-    router.push('/TablePage');
-  };
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded); // เปลี่ยนสถานะพับ/กาง
   };
 
-  // ฟังก์ชันสำหรับการคลิกเมนู
   const handleMenuClick = (menu) => {
-    setActiveMenu(menu); // ตั้งค่าหมายเลขเมนูที่ถูกเลือกเป็น active
-    if (isExpanded) {
-      setIsExpanded(false); // ถ้า Sidebar กางอยู่ให้พับกลับ
+    if (menu === '/TablePage') {
+      // ใช้ SweetAlert2 สำหรับการยืนยันก่อนย้อนกลับ
+      Swal.fire({
+        title: 'ยืนยันการย้อนกลับ',
+        text: 'คุณต้องการย้อนกลับใช่หรือไม่?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'ใช่, ย้อนกลับ',
+        cancelButtonText: 'ยกเลิก',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setActiveMenu(menu);
+          router.push(menu);
+        }
+      });
+      return; // หยุดการทำงานต่อไป
     }
-    router.push(menu); // เปลี่ยนหน้าเมื่อเลือกเมนู
+
+    setActiveMenu(menu); // ตั้งเมนูที่เลือกเป็น active
+    router.push(menu); // เปลี่ยนหน้า
   };
 
   return (
     <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
       {/* Toggle Button */}
       <div style={styles.toggleButton} onClick={toggleSidebar}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" style={{ ...styles.arrow, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          style={{ ...styles.arrow, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        >
           <path d="M9 18l6-6-6-6" />
         </svg>
       </div>
 
-      {/* Icons Section */}
+      {/* Sidebar Items */}
       <div style={styles.iconContainer(isExpanded)}>
-        {/* Store Icon with White Border and Store Name */}
-        <div style={styles.iconWrapper} className="icon">
+        {/* Store Icon */}
+        <div style={styles.iconWrapper}>
           <Image src="/images/store.png" alt="Store" width={40} height={40} />
-          {isExpanded && (
-            <>
-              <span style={styles.storeName}>Easy POS</span> {/* เพิ่มข้อความ "Easy POS" ข้างไอคอน */}
-            </>
-          )}
+          {isExpanded && <span style={styles.storeName}>Easy POS</span>}
         </div>
-        {/* เมนู Food */}
+
+        {/* Food Menu */}
         <div
           style={styles.icon}
+          onClick={() => handleMenuClick('')}
         >
           <Image src="/images/restaurant.png" alt="Food" width={40} height={40} />
           {isExpanded && <span style={styles.iconLabel}>อาหาร</span>}
         </div>
 
-        {/* เมนู Return */}
+        {/* Return Menu */}
         <div
           style={styles.icon}
           className={activeMenu === '/TablePage' ? 'active' : ''}
@@ -88,45 +83,16 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Styles for active menu */}
+      {/* Active Menu Styles */}
       <style jsx>{`
         .active {
-          background-color: rgb(12, 62, 95); /* เปลี่ยนสีพื้นหลังเมื่อคลิกเมนู */
-          border-radius: 8px; /* ปรับขนาด border-radius */
+          background-color: rgb(12, 62, 95);
+          border-radius: 8px;
           color: #fff;
-          padding: 8px 12px; /* ลดขนาด padding */
-          font-size: 14px; /* ปรับขนาดฟอนต์ */
-        }
-        .icon:hover {
-          background: none;
-          transition: background 0.3s ease;
-          box-shadow: none;
-          padding: 0;
-        }
-        .icon:active {
-          background: none;
-          transition: background 0.1s ease;
-          box-shadow: none;
-          padding: 0;
+          padding: 8px 12px;
+          font-size: 14px;
         }
       `}</style>
-
-      {/* Settings Popup */}
-      {isSettingsPopupOpen && (
-        <div style={styles.menuPopup} onClick={toggleSettingsPopup}>
-          <div style={styles.menuContainer} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.popupTitle}>ตั้งค่า</h2>
-            <div
-              className="menu-item"
-              onClick={handleBackToTablePage}
-              style={{ ...styles.circleItem, backgroundColor: '#3498db' }}
-            >
-              <span style={styles.iconText}>🔙</span>
-              <span style={styles.labelText}>ไปที่หน้าโต๊ะ</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -208,53 +174,5 @@ const styles = {
     fontSize: '16px',
     fontWeight: '500',
     color: '#ffffff',
-  },
-  menuPopup: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2000,
-  },
-  menuContainer: {
-    backgroundColor: '#ffffff',
-    padding: '30px',
-    borderRadius: '30px',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    alignItems: 'center',
-  },
-  popupTitle: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    marginBottom: '20px',
-    color: '#333',
-    margin: '0px',
-  },
-  circleItem: {
-    width: '140px',
-    height: '140px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: '50%',
-    cursor: 'pointer',
-  },
-  iconText: {
-    fontSize: '40px',
-    marginBottom: '10px',
-  },
-  labelText: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#fff',
   },
 };
