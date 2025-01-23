@@ -3,7 +3,7 @@
     // นำเข้า axios สำหรับการดึงข้อมูล API
     import axios from 'axios';
     // นำเข้า BackendSidebar ซึ่งเป็น Component สำหรับ Sidebar
-    import BackendSidebar from './components/backendsidebar';
+    import BackendSidebar from './components/backendsideber';
     // นำเข้า SweetAlert2 สำหรับการแจ้งเตือนแบบ Popup
     import Swal from 'sweetalert2';
     // นำเข้าไอคอนต่าง ๆ จาก react-icons สำหรับตกแต่ง UI
@@ -19,11 +19,7 @@
         FaTimesCircle,
     } from 'react-icons/fa';
 
-    // กำหนดค่าคงที่ของ API URL, slug และ Token สำหรับการเชื่อมต่อ API
-    const api_url = "https://easyapp.clinic/pos-api/api";
-    const slug = "abc";
-    const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
-
+    
     export default function SalesReport({ initialReportData, initialError }) {
         // การใช้ useState สำหรับสถานะของข้อมูล รายงาน, ข้อผิดพลาด และตัวกรองวันที่
         const [reportData, setReportData] = useState(initialReportData || []);
@@ -41,6 +37,12 @@
         // ฟังก์ชันสำหรับดึงข้อมูลการชำระเงินตาม Order ID
             const fetchPaymentHistory = async (orderId) => {
                 try {
+
+                    //////////////////// ประกาศตัวแปร URL CALL   
+                    const api_url =  localStorage.getItem('url_api'); 
+                    const slug = localStorage.getItem('slug');
+                    const authToken = localStorage.getItem('token');
+                    //////////////////// ประกาศตัวแปร  END URL CALL 
                     const response = await axios.get(`${api_url}/${slug}/payments`, {
                         headers: {
                             Accept: 'application/json',
@@ -104,6 +106,12 @@
         
         const fetchReportData = async () => {
             try {
+                //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
+            
                 // ดึงข้อมูล orders
                 const ordersResponse = await axios.get(`${api_url}/${slug}/orders`, {
                     headers: {
@@ -180,6 +188,11 @@
         // ฟังก์ชันแสดงรายละเอียด Order พร้อม Popup
         const fetchOrderDetails = async (orderId) => {
             try {
+                //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
                 const response = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
                     headers: {
                         Accept: 'application/json',
