@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Sidebar from './components/backendsidebar';
+import Sidebar from './components/backendsideber';
 import Swal from 'sweetalert2';
 import { Snackbar, Alert } from '@mui/material';
 
-const api_url = "https://easyapp.clinic/pos-api/api";
-const slug = "abc";
-const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 export default function TableManagement() {
     const [tables, setTables] = useState([]);
@@ -27,6 +24,12 @@ export default function TableManagement() {
 
     const fetchTables = async () => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
+
             const url = `${api_url}/${slug}/table_codes`;
             const response = await axios.get(url, {
                 headers: {
@@ -71,6 +74,11 @@ export default function TableManagement() {
         const tableData = { table_code: tableCode, seats, status };
     
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             if (editMode && editTableId) {
                 // ตรวจสอบการแก้ไขโต๊ะ ถ้ารหัสโต๊ะที่แก้ไขมีอยู่แล้ว จะไม่สามารถแก้ไขได้
                 const isTableCodeExistForEdit = tables.some(
