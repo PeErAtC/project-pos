@@ -8,6 +8,9 @@ import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/router';
 
+const api_url = "https://easyapp.clinic/pos-api";
+const slug = "abc";
+const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 
 export default function SalesPage() {
@@ -41,12 +44,6 @@ export default function SalesPage() {
     // ฟังก์ชัน fetchProducts
     const fetchProducts = async () => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-
             const response = await axios.get(`${api_url}/api/${slug}/products`, {
                 headers: {
                     'Accept': 'application/json',
@@ -63,18 +60,62 @@ export default function SalesPage() {
             setProducts([]); // ตั้งค่า products เป็นค่าว่างหาก API ล้มเหลว
         }
     };
-                                                                                //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
+
+
+    const fetchTableLastOrder = async (tableId) => {
+        try {
+            const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            if (response.data && response.data.order) {
+                console.log('ข้อมูลออเดอร์ล่าสุด:', response.data.order);
+                return response.data.order; // ส่งกลับข้อมูลออเดอร์
+            } else {
+                console.warn('ไม่มีข้อมูลออเดอร์ล่าสุด');
+                return null;
+            }
+        } catch (error) {
+            console.error('เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:', error.response?.data || error.message);
+            return null;
+        }
+    };
+    useEffect(() => {
+        const loadTableLastOrder = async () => {
+            if (!tableCode) {
+                console.warn('ไม่มี tableCode');
+                return;
+            }
+    
+            try {
+                // เรียก API table_lastorder
+                const lastOrder = await fetchTableLastOrder(tableCode);
+    
+                if (lastOrder) {
+                    setOrderId(lastOrder.id); // เก็บ ID ของออเดอร์ล่าสุด
+                    setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
+                    setCart(lastOrder.items || []); // อัปเดตรายการสินค้าในตะกร้า
+                } else {
+                    console.warn('ไม่มีออเดอร์ล่าสุดสำหรับโต๊ะนี้');
+                    setCart([]); // ล้างตะกร้าหากไม่มีออเดอร์
+                }
+            } catch (error) {
+                console.error('เกิดข้อผิดพลาดในการโหลดออเดอร์ล่าสุด:', error.message);
+            }
+        };
+    
+        loadTableLastOrder();
+    }, [tableCode]); // ทำงานเมื่อ tableCode เปลี่ยน
+    
+    //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     const fetchOrdersByTable = async (tableCode) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-
             const today = new Date();
             const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
-            
+
             const response = await axios.get(`${api_url}/api/${slug}/orders`, {
                 params: {
                     table_code: tableCode, // กรองตามโต๊ะ
@@ -100,14 +141,8 @@ export default function SalesPage() {
         }
     };                                                                         
 
-    //  แสดงรายการ items ของออเดอร์
     const fetchOrderItems = async (orderId) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/order-items`, {
                 params: { order_id: orderId },
                 headers: {
@@ -115,48 +150,55 @@ export default function SalesPage() {
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-    
             if (response.data && response.data.items) {
-                return response.data.items; // ส่งกลับรายการสินค้าในออเดอร์
+                setCart(
+                    response.data.items.map((item) => ({
+                        id: item.product_id,
+                        p_name: item.name,
+                        price: item.price,
+                        quantity: item.quantity,
+                        discount: 0,
+                        discountType: "THB",
+                    }))
+                );
             } else {
-                throw new Error('ไม่มีข้อมูลรายการสินค้า');
+                console.warn('ไม่มีข้อมูลรายการสินค้า');
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการดึงรายการสินค้า:', error.message);
-            return [];
+            console.error('เกิดข้อผิดพลาดในการดึงรายการสินค้า:', error);
+            setCart([]);
         }
     };
     
+    
     useEffect(() => {
         const loadOrdersForTable = async () => {
-            if (!tableCode) {
-                console.warn('ไม่มี tableCode');
-                return;
-            }
-    
+            if (!tableCode) return;
+        
             try {
-                
-                
-                // ดึงข้อมูลออเดอร์ของโต๊ะในวันนี้
-                const orders = await fetchOrdersByTable(tableCode);
-    
-                if (orders.length > 0) {
-                    // เลือกออเดอร์ล่าสุดที่ยังไม่ได้ชำระ
-                    const latestOrder = orders[0];
-                    setOrderId(latestOrder.id); // เก็บ ID ออเดอร์ล่าสุด
-                    setOrderNumber(latestOrder.order_number); // เก็บหมายเลขออเดอร์
-    
-                    // ดึงรายการสินค้าในออเดอร์
-                    const items = await fetchOrderItems(latestOrder.id);
-                    setCart(items.length > 0 ? items : []); // อัปเดตตะกร้าสินค้า
+                const lastOrder = await fetchTableLastOrder(tableCode);
+        
+                if (lastOrder && lastOrder.items) {
+                    setOrderId(lastOrder.id); // เก็บ ID ออเดอร์ล่าสุด
+                    setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
+                    setCart(
+                        lastOrder.items.map((item) => ({
+                            id: item.product_id,
+                            p_name: item.p_name,
+                            price: item.price,
+                            quantity: item.quantity,
+                            discount: 0, // ค่าเริ่มต้น
+                            discountType: "THB", // ค่าเริ่มต้น
+                        }))
+                    );
                 } else {
-                    console.warn('ไม่มีออเดอร์ที่ยังไม่ได้ชำระสำหรับวันนี้');
-                    setCart([]); // เคลียร์ตะกร้าหากไม่มีออเดอร์
+                    setCart([]); // หากไม่มี items ให้เคลียร์ตะกร้า
                 }
             } catch (error) {
-                console.error('เกิดข้อผิดพลาดในการโหลดออเดอร์:', error.message);
+                console.error("เกิดข้อผิดพลาดในการโหลดออเดอร์:", error);
             }
         };
+        
     
         loadOrdersForTable();
     }, [tableCode]);
@@ -172,11 +214,6 @@ export default function SalesPage() {
                                                                                    //******************** */
     const closeOrder = async (orderId) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.put(
                 `${api_url}/api/${slug}/orders/${orderId}`,
                 { status: 'Y' }, // อัปเดตสถานะเป็นชำระเงินแล้ว
@@ -201,11 +238,6 @@ export default function SalesPage() {
     
 // ฟังก์ชัน fetchCategories
 const fetchCategories = () => {
-    //////////////////// ประกาศตัวแปร URL CALL   
-    const api_url =  localStorage.getItem('url_api'); 
-    const slug = localStorage.getItem('slug');
-    const authToken = localStorage.getItem('token');
-    //////////////////// ประกาศตัวแปร  END URL CALL 
     const url = `${api_url}/api/${slug}/category`;
     console.log('Fetching categories from:', url);
 
@@ -277,7 +309,6 @@ const fetchCategories = () => {
     
         // ส่งข้อมูลสินค้าไปที่ฐานข้อมูล
         try {
-            
             await addItemToDatabase(product);
         } catch (error) {
             console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
@@ -287,12 +318,6 @@ const fetchCategories = () => {
     // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
     const addItemToDatabase = async (product) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-
             // ตรวจสอบค่า product ก่อนใช้
             if (!product || !product.id || !product.price) {
                 console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
@@ -391,12 +416,6 @@ const fetchCategories = () => {
     
     const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-
             // ตรวจสอบ slug
             if (!slug || typeof slug !== "string") {
                 console.error('Slug is not defined or invalid:', slug);
@@ -454,11 +473,6 @@ const fetchCategories = () => {
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/partial-payments`, {
                 params: { order_id: orderId },
                 headers: {
@@ -659,11 +673,6 @@ const fetchCategories = () => {
     
     const sendOrder = async (orderData) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
                 headers: {
                     'Accept': 'application/json',
@@ -691,11 +700,6 @@ const fetchCategories = () => {
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
     
             // คำนวณยอดรวม (Total Amount)
@@ -764,11 +768,6 @@ const fetchCategories = () => {
                 console.log("Updating table status with URL:", url);
     
                 try {
-                    //////////////////// ประกาศตัวแปร URL CALL   
-                    const api_url =  localStorage.getItem('url_api'); 
-                    const slug = localStorage.getItem('slug');
-                    const authToken = localStorage.getItem('token');
-                    //////////////////// ประกาศตัวแปร  END URL CALL 
                     const response = await axios.put(url, tableUpdateData, {
                         headers: {
                             'Accept': 'application/json',
@@ -805,11 +804,6 @@ const fetchCategories = () => {
     
     const saveOrderData = async (orderId, paymentMethod, receivedAmount, cart, billDiscount, billDiscountType, vatType, calculateTotalWithBillDiscountAndVAT, calculateVAT) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             // คำนวณส่วนลดรวมต่อสินค้า
             const totalItemDiscount = cart.reduce((acc, item) => {
                 const itemDiscountAmount = (item.discountType === 'THB') 
@@ -905,11 +899,6 @@ const fetchCategories = () => {
     
     const addToOrder = async (orderId, newItems) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             // ตรวจสอบให้แน่ใจว่า newItems ไม่ว่าง และมีค่า product_id
             if (!newItems || newItems.length === 0) {
                 throw new Error('ไม่มีรายการสินค้าที่จะเพิ่ม');
@@ -958,11 +947,6 @@ const fetchCategories = () => {
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -1006,11 +990,6 @@ const fetchCategories = () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
     
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             // คำนวณส่วนลดรวมต่อสินค้า
             const totalItemDiscount = cart.reduce((acc, item) => {
                 const itemDiscountAmount = (item.discountType === 'THB') 
@@ -1060,7 +1039,6 @@ const fetchCategories = () => {
                 const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
 
                 try {
-                    
                     console.log('กำลังอัปเดตสถานะโต๊ะ:', tableCode, 'เป็น "ว่าง" ด้วยข้อมูล:', tableUpdateData);
 
                     const response = await axios.patch(url, tableUpdateData, { // ใช้ PATCH เพื่ออัปเดตเฉพาะสถานะ
@@ -1150,11 +1128,6 @@ const fetchCategories = () => {
     };
     const savePaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const url = `${api_url}/api/${slug}/payments`;
             const paymentData = {
                 order_id: orderId,
@@ -1184,11 +1157,6 @@ const fetchCategories = () => {
     
     const fetchPaymentChannels = async () => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/payChannels`, {
                 headers: {
                     'Accept': 'application/json',
@@ -1272,9 +1240,6 @@ const fetchCategories = () => {
         }
     };   
     
-    
-    
-    
     return (
         <div style={styles.pageContainer}>
             <div style={styles.sidebarContainer}>
@@ -1292,7 +1257,7 @@ const fetchCategories = () => {
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
-                        <span style={styles.iconText}>🍽️</span>
+                        <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ทั้งหมด</span>
                     </div>
                     <div
@@ -1301,7 +1266,7 @@ const fetchCategories = () => {
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
-                        <span style={styles.iconText}>🍛</span>
+                        <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เมนูผัด</span>
                     </div>
                     <div
@@ -1310,7 +1275,7 @@ const fetchCategories = () => {
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
-                        <span style={styles.iconText}>🍚</span>
+                        <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ข้าวผัด</span>
                     </div>
                     <div
@@ -1319,7 +1284,7 @@ const fetchCategories = () => {
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
-                        <span style={styles.iconText}>🥗</span>
+                        <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เมนูยำ</span>
                     </div>
                     <div
@@ -1328,7 +1293,7 @@ const fetchCategories = () => {
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
-                        <span style={styles.iconText}>🍲</span>
+                        <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ข้าวต้ม</span>
                     </div>
                     <div
@@ -1338,7 +1303,7 @@ const fetchCategories = () => {
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
                     >
-                        <span style={styles.iconText}>🍹</span>
+                        <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เครื่องดื่ม</span>
                     </div>
                 </div>
@@ -1415,8 +1380,8 @@ const fetchCategories = () => {
             </div>
                 <div style={styles.cart}>
                         <div style={{ ...styles.cartHeader, position: 'sticky', top: 0, zIndex: 100 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', fontSize: '11px', color: '#d33' }}>
-                                <Image src="/images/shopping.png" alt="รายการสั่งซื้อ" width={24} height={24} />
+                            <div style={{ display: 'flex', alignItems: 'center', fontSize: '11px', color: '#499cae' }}>
+                                <Image src="/images/trolley-cart.png" alt="รายการสั่งซื้อ" width={24} height={24} />
                                     <h2 style={{ marginLeft: '10px' }}>
                                         ({cart.reduce((acc, item) => acc + item.quantity, 0)})
                                     </h2>
@@ -1588,7 +1553,7 @@ const fetchCategories = () => {
                     alignItems: 'center', // จัดให้อยู่แนวตั้งตรงกลาง
                     gap: '4px', // เพิ่มช่องว่างระหว่างองค์ประกอบ
                 }}
-            >
+            >  
                 {/* เลือก VAT */}
                 <select
                     value={vatType}
