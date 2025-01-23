@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import Image from 'next/image';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
 
@@ -37,6 +37,25 @@ export default function Sidebar() {
     router.push(menu); // เปลี่ยนหน้า
   };
 
+  const handleLogout = () => {
+    Swal.fire({
+      title: 'ยืนยันการออกจากระบบ',
+      text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'ใช่, ออกจากระบบ',
+      cancelButtonText: 'ยกเลิก',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('token');
+        router.push('/login');
+      }
+    });
+  };
+
   return (
     <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
       {/* Toggle Button */}
@@ -63,13 +82,13 @@ export default function Sidebar() {
           {isExpanded && <span style={styles.storeName}>Easy POS</span>}
         </div>
 
-        {/* Food Menu */}
+        {/*Home Page*/}
         <div
           style={styles.icon}
-          onClick={() => handleMenuClick('')}
+          onClick={() => handleMenuClick('/')}
         >
-          <Image src="/images/restaurant.png" alt="Food" width={40} height={40} />
-          {isExpanded && <span style={styles.iconLabel}>อาหาร</span>}
+          <Image src="/images/web.png" alt="Homepage" width={40} height={40} />
+          {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
         </div>
 
         {/* Return Menu */}
@@ -78,8 +97,17 @@ export default function Sidebar() {
           className={activeMenu === '/TablePage' ? 'active' : ''}
           onClick={() => handleMenuClick('/TablePage')}
         >
-          <Image src="/images/return.png" alt="Return" width={35} height={35} />
+          <Image src="/images/left-arrow (1).png" alt="Return" width={35} height={35} />
           {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
+        </div>
+
+        {/* Logout Menu */}
+        <div
+          style={styles.icon}
+          onClick={handleLogout}
+        >
+          <Image src="/images/logout.png" alt="Logout" width={35} height={35} />
+          {isExpanded && <span style={styles.iconLabel}>ออกจากระบบ</span>}
         </div>
       </div>
 
