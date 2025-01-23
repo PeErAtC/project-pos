@@ -4,10 +4,6 @@ import { MdRestaurant } from 'react-icons/md';
 import axios from 'axios';
 import Keyboard from './keyboard';  // คีย์บอร์ดเสมือนที่คุณสร้างขึ้นมา
 
-const api_url = "https://easyapp.clinic/pos-api/api";
-const slug = "abc";
-const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
-
 // Component สำหรับแสดงข้อมูลโต๊ะ
 function TableCard({ table, onClick }) {
     const [isPressed, setIsPressed] = useState(false);
@@ -79,7 +75,13 @@ export default function MainTablePage() {
 
     // ฟังก์ชันสำหรับดึงข้อมูลโต๊ะจาก API
     const fetchTables = async () => {
-        try {
+        try { 
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
+
             const url = `${api_url}/${slug}/table_codes`;
             const response = await axios.get(url, {
                 headers: {
