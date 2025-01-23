@@ -12,11 +12,18 @@ export default function HomePage() {
     setIsLoggedIn(loggedIn);
   }, []);
 
+  // Function to play the click sound
+  const playClickSound = () => {
+    const audio = new Audio('/sounds/click-151673.mp3');
+    audio.play();
+  };
+
   const handleIconClick = (page) => {
     if (!isLoggedIn) {
       alert("กรุณาเข้าสู่ระบบก่อนเข้าถึงหน้านี้");
       router.push('/login');
     } else {
+      playClickSound(); // Play sound on click
       router.push(page);
     }
   };
