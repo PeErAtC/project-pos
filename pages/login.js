@@ -1,9 +1,10 @@
+import Swal from 'sweetalert2';
 import Cookies from 'js-cookie';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { FaEye, FaEyeSlash, FaUser, FaLock, FaUtensils } from 'react-icons/fa';
-import config from './config'; // ดึง config.js จาก pages
-import Keyboard from './keyboard'; // นำเข้า Keyboard
+import config from './config';
+import Keyboard from './keyboard';
 
 export default function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -25,21 +26,23 @@ export default function LoginPage({ onLogin }) {
     const apiUrl = `https://easyapp.clinic/pos-api/api/login`;
 
     if (!username || !password) {
-      alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+      Swal.fire({
+        icon: 'error',
+        title: 'ข้อมูลไม่ครบถ้วน',
+        text: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน',
+      });
       return;
     }
 
     if (!apiUrl || !config.slug) {
       console.error('❌ URL หรือ slug ไม่ถูกต้อง:', { apiUrl, slug: config.slug });
-      alert('URL หรือ slug ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่า');
+      Swal.fire({
+        icon: 'error',
+        title: 'ข้อผิดพลาด',
+        text: 'URL หรือ slug ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่า',
+      });
       return;
     }
-
-    console.group('🔍 รายละเอียดคำขอ (Request)');
-    console.log('📍 API URL:', apiUrl);
-    console.log('📡 วิธีการส่งคำขอ (Request Method): POST');
-    console.log('🛠 Headers:', { Accept: 'application/json' });
-    console.groupEnd();
 
     setIsLoading(true);
     try {
@@ -49,103 +52,49 @@ export default function LoginPage({ onLogin }) {
         body: JSON.stringify({ username, password }),
       });
 
-      const responseText = await response.text();
-      // console.group('🔍 รายละเอียดคำตอบ (Response)');
-      // console.log('✔️ รหัสสถานะ HTTP:', response.status);
-      // console.log('✔️ สถานะข้อความ HTTP:', response.statusText);
-      // console.log('✔️ คำตอบดิบ (Raw Response):', responseText);
-      // console.groupEnd();
+      const result = await response.json();
 
-      // if (!response.ok) {
-      //   let errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
-      //   try {
-      //     const errorData = JSON.parse(responseText);
-      //     errorMessage = errorData.message || errorMessage;
-      //   } catch {
-      //     console.warn('⚠️ คำตอบไม่ใช่ JSON:', responseText);
-      //   }
-      //   alert(`การเข้าสู่ระบบล้มเหลว: HTTP ${response.status} - ${errorMessage}`);
-      //   return;
-      // }
+      if (result.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'เข้าสู่ระบบสำเร็จ',
+          text: 'กำลังเปลี่ยนเส้นทาง...',
+          timer: 2000,
+          showConfirmButton: false,
+        });
 
-      const result = JSON.parse(responseText);
-      if (result.success == true) {
-        const authToken = result.data.token.substring((result.data.token.length-40),result.data.token.length);
-        localStorage.setItem("token",authToken);
-        localStorage.setItem("username",result.data.username);
-        localStorage.setItem("name",result.data.name);
-        localStorage.setItem("email",result.data.email);
-        localStorage.setItem("userId",result.data.userId);
-        localStorage.setItem("slug",result.data.slug);
-        localStorage.setItem("owner",result.data.owner);
-        localStorage.setItem("url_api",result.data.url_api);
-        localStorage.setItem("store",result.data.store);
-        localStorage.setItem("package",result.data.package);
-        localStorage.setItem("live_date",result.data.live_date);
-        localStorage.setItem("expiry_date",result.data.expiry_date);
+        localStorage.setItem('token', result.data.token);
+        localStorage.setItem('username', result.data.username);
+        localStorage.setItem('name', result.data.name);
+        localStorage.setItem('email', result.data.email);
+        localStorage.setItem('userId', result.data.userId);
+        localStorage.setItem('slug', result.data.slug);
+        localStorage.setItem('owner', result.data.owner);
+        localStorage.setItem('url_api', result.data.url_api);
+        localStorage.setItem('store', result.data.store);
+        localStorage.setItem('package', result.data.package);
+        localStorage.setItem('live_date', result.data.live_date);
+        localStorage.setItem('expiry_date', result.data.expiry_date);
 
-        alert('เข้าสู่ระบบสำเร็จ');
-        // onLogin();
-        router.push('/TablePage');
+        router.push('/');
       } else {
-        alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบล้มเหลว',
+          text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+        });
       }
     } catch (error) {
       console.error('❌ เกิดข้อผิดพลาดระหว่างเข้าสู่ระบบ:', error);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาลองอีกครั้ง');
+      Swal.fire({
+        icon: 'error',
+        title: 'ข้อผิดพลาด',
+        text: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาลองอีกครั้ง',
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const fetchWithAuth = async (url, options = {}) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert('Token หมดอายุหรือไม่พบ Token กรุณาเข้าสู่ระบบอีกครั้ง');
-      router.push('/login');
-      return;
-    }
-
-    const headers = {
-      ...options.headers,
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    };
-
-    return fetch(url, { ...options, headers });
-  };
-
-  const fetchUserData = async () => {
-    try {
-      const response = await fetchWithAuth(`${config.api_url}/${config.slug}/userdata`);
-      if (!response.success) {
-        handleApiError(response);
-        return;
-      }
-      const data = await response.json();
-      console.log('ข้อมูลผู้ใช้:', data);
-    } catch (error) {
-      console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', error);
-    }
-  };
-
-  const handleApiError = (response) => {
-    if (response.status === 401) {
-      alert('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-      Cookies.remove('authToken');
-      router.push('/login');
-    }
-  };
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert('กรุณาเข้าสู่ระบบก่อนใช้งาน');
-      router.push('/login');
-    } else {
-      fetchUserData();
-    }
-  }, []);
 
   const handleInputFocus = (field) => {
     setActiveField(field);
@@ -173,9 +122,11 @@ export default function LoginPage({ onLogin }) {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>
-          Easy POS <FaUtensils style={styles.iconShop} />
-        </h1>
+      <h1 style={styles.title}>
+        <span style={styles.titleEasy}>Easy</span>{' '}
+        <span style={styles.titlePos}>POS</span>
+      </h1>
+        <p style={styles.subtitle}>จัดการธุรกิจของคุณอย่างง่ายดาย</p>
         {error && <p style={styles.error}>{error}</p>}
         <div style={styles.inputContainer}>
           <FaUser style={styles.icon} />
@@ -222,6 +173,11 @@ export default function LoginPage({ onLogin }) {
             เข้าสู่ระบบ
           </button>
         )}
+        <div style={styles.footer}>
+          หากมีปัญหา ติดต่อเราได้ที่{' '}
+          <span style={styles.contactLink}>support@example.com</span>
+        </div>
+
       </div>
       {showKeyboard && (
         <Keyboard
@@ -233,7 +189,6 @@ export default function LoginPage({ onLogin }) {
   );
 }
 
-
 const styles = {
   container: {
     display: 'flex',
@@ -241,7 +196,6 @@ const styles = {
     alignItems: 'center',
     height: '100vh',
     background: 'linear-gradient(to right, #e0f7fa, #80deea)',
-    animation: 'fadeIn 1s ease, pulseBackground 3s infinite',
   },
   card: {
     width: '100%',
@@ -251,21 +205,32 @@ const styles = {
     borderRadius: '20px',
     boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
     textAlign: 'center',
-    animation: 'fadeIn 1s ease',
   },
   title: {
-    fontFamily: '"Pacifico", cursive',
+    fontFamily: '"Montserrat", sans-serif', // ใช้ฟอนต์ Montserrat
     fontSize: '36px',
-    color: '#00796b',
+    fontWeight: '700', // เพิ่มน้ำหนักให้ตัวหนาขึ้น
+    color: '#34495e', // สีเริ่มต้น
     marginBottom: '20px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleEasy: {
+    color: '#34495e', // สีคำว่า "Easy"
+  },
+  titlePos: {
+    color: '#499cae', // สีคำว่า "POS"
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#7f8c8d',
+    marginBottom: '20px',
+  },
   iconShop: {
     marginLeft: '8px',
     fontSize: '28px',
-    color: '#00796b',
+    color: '#499cae',
   },
   inputContainer: {
     position: 'relative',
@@ -280,8 +245,6 @@ const styles = {
     outline: 'none',
     color: '#333',
     boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.1)',
-    margin: '0 auto',
-    display: 'block',
   },
   icon: {
     position: 'absolute',
@@ -315,14 +278,14 @@ const styles = {
     padding: '12px',
     fontSize: '16px',
     color: '#ffffff',
-    backgroundColor: '#00796b',
+    backgroundColor: '#499cae',
     border: 'none',
     borderRadius: '5px',
     cursor: 'pointer',
     transition: 'background-color 0.3s ease',
   },
   loading: {
-    color: '#00796b',
+    color: '#499cae',
     fontSize: '16px',
   },
   error: {
@@ -330,32 +293,46 @@ const styles = {
     fontSize: '14px',
     marginBottom: '10px',
   },
+  footer: {
+    marginTop: '20px', // เพิ่มระยะห่างด้านบน
+    fontSize: '12px',
+    color: '#7f8c8d',
+    textAlign: 'center', // จัดข้อความให้อยู่กลาง
+  },
+  contactLink: {
+    color: '#3498db',
+    padding:'5px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+  },
 };
 
-// Add global CSS for animations
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.type = 'text/css';
-  styleSheet.innerText = `
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
 
-    @keyframes pulseBackground {
-      0%, 100% {
-        background: linear-gradient(to right, #e0f7fa, #d4f7fc);
+  // Add global CSS for animations
+  if (typeof document !== 'undefined') {
+    const styleSheet = document.createElement('style');
+    styleSheet.type = 'text/css';
+    styleSheet.innerText = `
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
-      50% {
-        background: linear-gradient(to right, #d7faff, #d3f5f9);
+
+      @keyframes pulseBackground {
+        0%, 100% {
+          background: linear-gradient(to right, #e0f7fa, #d4f7fc);
+        }
+        50% {
+          background: linear-gradient(to right, #d7faff, #d3f5f9);
+        }
       }
-    }
-  `;
-  document.head.appendChild(styleSheet);
-}
+    `;
+    document.head.appendChild(styleSheet);
+  }
+
