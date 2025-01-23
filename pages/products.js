@@ -8,9 +8,6 @@ import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/router';
 
-const api_url = "https://easyapp.clinic/pos-api";
-const slug = "abc";
-const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 
 export default function SalesPage() {
@@ -44,6 +41,12 @@ export default function SalesPage() {
     // ฟังก์ชัน fetchProducts
     const fetchProducts = async () => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
+
             const response = await axios.get(`${api_url}/api/${slug}/products`, {
                 headers: {
                     'Accept': 'application/json',
@@ -65,7 +68,11 @@ export default function SalesPage() {
         try {
             const today = new Date();
             const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
-
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/orders`, {
                 params: {
                     table_code: tableCode, // กรองตามโต๊ะ
@@ -94,6 +101,11 @@ export default function SalesPage() {
     //  แสดงรายการ items ของออเดอร์
     const fetchOrderItems = async (orderId) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/order-items`, {
                 params: { order_id: orderId },
                 headers: {
@@ -156,6 +168,11 @@ export default function SalesPage() {
                                                                                    //******************** */
     const closeOrder = async (orderId) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.put(
                 `${api_url}/api/${slug}/orders/${orderId}`,
                 { status: 'Y' }, // อัปเดตสถานะเป็นชำระเงินแล้ว
@@ -180,6 +197,11 @@ export default function SalesPage() {
     
 // ฟังก์ชัน fetchCategories
 const fetchCategories = () => {
+    //////////////////// ประกาศตัวแปร URL CALL   
+    const api_url =  localStorage.getItem('url_api'); 
+    const slug = localStorage.getItem('slug');
+    const authToken = localStorage.getItem('token');
+    //////////////////// ประกาศตัวแปร  END URL CALL 
     const url = `${api_url}/api/${slug}/category`;
     console.log('Fetching categories from:', url);
 
@@ -260,6 +282,12 @@ const fetchCategories = () => {
     // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
     const addItemToDatabase = async (product) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
+
             // ตรวจสอบค่า product ก่อนใช้
             if (!product || !product.id || !product.price) {
                 console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
@@ -358,6 +386,12 @@ const fetchCategories = () => {
     
     const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
+
             // ตรวจสอบ slug
             if (!slug || typeof slug !== "string") {
                 console.error('Slug is not defined or invalid:', slug);
@@ -415,6 +449,11 @@ const fetchCategories = () => {
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/partial-payments`, {
                 params: { order_id: orderId },
                 headers: {
