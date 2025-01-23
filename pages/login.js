@@ -12,8 +12,8 @@ export default function LoginPage({ onLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [showKeyboard, setShowKeyboard] = useState(false); // จัดการแสดง Keyboard
-  const [activeField, setActiveField] = useState(''); // ช่องกรอกที่กำลังใช้งาน
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [activeField, setActiveField] = useState('');
   const router = useRouter();
 
   const togglePasswordVisibility = () => {
@@ -22,54 +22,134 @@ export default function LoginPage({ onLogin }) {
 
   const handleLoginClick = async (e) => {
     e.preventDefault();
-    const apiUrl = `${config.api_url}/${config.slug}`;
+    const apiUrl = `https://easyapp.clinic/pos-api/api/login`;
 
-    if (!apiUrl || !config.slug) {
-      alert('API URL or slug is missing. Please check your configuration.');
+    if (!username || !password) {
+      alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
       return;
     }
 
+    if (!apiUrl || !config.slug) {
+      console.error('❌ URL หรือ slug ไม่ถูกต้อง:', { apiUrl, slug: config.slug });
+      alert('URL หรือ slug ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่า');
+      return;
+    }
+
+    console.group('🔍 รายละเอียดคำขอ (Request)');
+    console.log('📍 API URL:', apiUrl);
+    console.log('📡 วิธีการส่งคำขอ (Request Method): POST');
+    console.log('🛠 Headers:', { Accept: 'application/json' });
+    console.groupEnd();
+
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/login`, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
-      if (!response.ok) {
-        const message = `Login failed: HTTP ${response.status} ${response.statusText}`;
-        alert(message);
-        setIsLoading(false);
-        return;
-      }
+      const responseText = await response.text();
+      // console.group('🔍 รายละเอียดคำตอบ (Response)');
+      // console.log('✔️ รหัสสถานะ HTTP:', response.status);
+      // console.log('✔️ สถานะข้อความ HTTP:', response.statusText);
+      // console.log('✔️ คำตอบดิบ (Raw Response):', responseText);
+      // console.groupEnd();
 
-      const result = await response.json();
+      // if (!response.ok) {
+      //   let errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+      //   try {
+      //     const errorData = JSON.parse(responseText);
+      //     errorMessage = errorData.message || errorMessage;
+      //   } catch {
+      //     console.warn('⚠️ คำตอบไม่ใช่ JSON:', responseText);
+      //   }
+      //   alert(`การเข้าสู่ระบบล้มเหลว: HTTP ${response.status} - ${errorMessage}`);
+      //   return;
+      // }
 
-      if (result.success) {
-        Cookies.set('token', result.data.token, { expires: 2 });
-        Cookies.set('userName', result.data.name, { expires: 2 });
-        Cookies.set('userId', result.data.userId, { expires: 2 });
-        Cookies.set('slug', result.data.slug, { expires: 2 });
+      const result = JSON.parse(responseText);
+      if (result.success == true) {
+        const authToken = result.data.token.substring((result.data.token.length-40),result.data.token.length);
+        localStorage.setItem("token",authToken);
+        localStorage.setItem("username",result.data.username);
+        localStorage.setItem("name",result.data.name);
+        localStorage.setItem("email",result.data.email);
+        localStorage.setItem("userId",result.data.userId);
+        localStorage.setItem("slug",result.data.slug);
+        localStorage.setItem("owner",result.data.owner);
+        localStorage.setItem("url_api",result.data.url_api);
+        localStorage.setItem("store",result.data.store);
+        localStorage.setItem("package",result.data.package);
+        localStorage.setItem("live_date",result.data.live_date);
+        localStorage.setItem("expiry_date",result.data.expiry_date);
 
-        onLogin();
-        router.push('/TablePage'); // เปลี่ยนเส้นทางไปหน้า TablePage.js
+        alert('เข้าสู่ระบบสำเร็จ');
+        // onLogin();
+        router.push('/TablePage');
       } else {
-        alert(`Login failed: ${result.message}`);
+        alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
     } catch (error) {
-      alert('An error occurred while logging in.');
+      console.error('❌ เกิดข้อผิดพลาดระหว่างเข้าสู่ระบบ:', error);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาลองอีกครั้ง');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const fetchWithAuth = async (url, options = {}) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert('Token หมดอายุหรือไม่พบ Token กรุณาเข้าสู่ระบบอีกครั้ง');
+      router.push('/login');
+      return;
+    }
+
+    const headers = {
+      ...options.headers,
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
+
+    return fetch(url, { ...options, headers });
+  };
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetchWithAuth(`${config.api_url}/${config.slug}/userdata`);
+      if (!response.success) {
+        handleApiError(response);
+        return;
+      }
+      const data = await response.json();
+      console.log('ข้อมูลผู้ใช้:', data);
+    } catch (error) {
+      console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', error);
+    }
+  };
+
+  const handleApiError = (response) => {
+    if (response.status === 401) {
+      alert('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+      Cookies.remove('authToken');
+      router.push('/login');
+    }
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert('กรุณาเข้าสู่ระบบก่อนใช้งาน');
+      router.push('/login');
+    } else {
+      fetchUserData();
+    }
+  }, []);
+
   const handleInputFocus = (field) => {
     setActiveField(field);
-    setShowKeyboard(true); // แสดง Keyboard
+    setShowKeyboard(true);
   };
 
   const handleKeyPress = (key) => {
@@ -78,86 +158,17 @@ export default function LoginPage({ onLogin }) {
       if (inputElement) {
         const { selectionStart, selectionEnd, value } = inputElement;
         if (key === 'DELETE') {
-          if (selectionStart !== selectionEnd) {
-            // ลบส่วนที่ครอบอยู่
-            const newValue =
-              value.slice(0, selectionStart) + value.slice(selectionEnd);
-            if (activeField === 'username') {
-              setUsername(newValue);
-            } else if (activeField === 'password') {
-              setPassword(newValue);
-            }
-            inputElement.setSelectionRange(selectionStart, selectionStart);
-          } else {
-            // ลบทีละตัวก่อนตำแหน่งเคอร์เซอร์
-            const newValue =
-              value.slice(0, selectionStart - 1) + value.slice(selectionEnd);
-            if (activeField === 'username') {
-              setUsername(newValue);
-            } else if (activeField === 'password') {
-              setPassword(newValue);
-            }
-            inputElement.setSelectionRange(selectionStart - 1, selectionStart - 1);
-          }
+          const newValue =
+            value.slice(0, selectionStart) + value.slice(selectionEnd);
+          activeField === 'username' ? setUsername(newValue) : setPassword(newValue);
         } else {
-          if (selectionStart !== selectionEnd) {
-            // แทนที่ส่วนที่ครอบอยู่ด้วยตัวอักษรที่พิมพ์
-            const newValue =
-              value.slice(0, selectionStart) + key + value.slice(selectionEnd);
-            if (activeField === 'username') {
-              setUsername(newValue);
-            } else if (activeField === 'password') {
-              setPassword(newValue);
-            }
-            inputElement.setSelectionRange(selectionStart + 1, selectionStart + 1);
-          } else {
-            // เพิ่มตัวอักษรหลังตำแหน่งเคอร์เซอร์
-            const newValue =
-              value.slice(0, selectionStart) + key + value.slice(selectionStart);
-            if (activeField === 'username') {
-              setUsername(newValue);
-            } else if (activeField === 'password') {
-              setPassword(newValue);
-            }
-            inputElement.setSelectionRange(selectionStart + 1, selectionStart + 1);
-          }
+          const newValue =
+            value.slice(0, selectionStart) + key + value.slice(selectionEnd);
+          activeField === 'username' ? setUsername(newValue) : setPassword(newValue);
         }
-        inputElement.focus(); // Keep focus to ensure caret stays visible
       }
     }
   };
-
-  useEffect(() => {
-    const handlePhysicalKeyPress = (event) => {
-      if (event.ctrlKey || event.metaKey) return; // Ignore Ctrl/Cmd key combinations
-
-      if (activeField === 'username' || activeField === 'password') {
-        const key = event.key;
-        if (key === 'Backspace') {
-          handleKeyPress('DELETE');
-          event.preventDefault();
-        } else if (key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          handleKeyPress(key);
-          event.preventDefault();
-        }
-      }
-    };
-
-    const handleClickOutside = (event) => {
-      const keyboardElement = document.querySelector('.keyboard-container');
-      if (keyboardElement && !keyboardElement.contains(event.target)) {
-        setShowKeyboard(false);
-      }
-    };
-
-    window.addEventListener('keydown', handlePhysicalKeyPress);
-    window.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      window.removeEventListener('keydown', handlePhysicalKeyPress);
-      window.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [activeField]);
 
   return (
     <div style={styles.container}>
@@ -212,7 +223,6 @@ export default function LoginPage({ onLogin }) {
           </button>
         )}
       </div>
-
       {showKeyboard && (
         <Keyboard
           onKeyPress={handleKeyPress}
@@ -222,6 +232,7 @@ export default function LoginPage({ onLogin }) {
     </div>
   );
 }
+
 
 const styles = {
   container: {
