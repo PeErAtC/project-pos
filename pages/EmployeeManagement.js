@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import BackendSidebar from './components/backendsidebar';
+import BackendSidebar from './components/backendsideber';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
@@ -20,13 +20,18 @@ export default function EmployeeManagement() {
   const [searchQuery, setSearchQuery] = useState(''); // State for search query
   const router = useRouter();
 
-  const api_url = "https://easyapp.clinic/pos-api/api";
-  const slug = "abc";
-  const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
+  // const api_url = "https://easyapp.clinic/pos-api/api";
+  // const slug = "abc";
+  // const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
+        //////////////////// ประกาศตัวแปร URL CALL   
+        const api_url =  localStorage.getItem('url_api'); 
+        const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+        //////////////////// ประกาศตัวแปร  END URL CALL 
         const response = await fetch(`${api_url}/${slug}/users`, {
           headers: {
             Accept: 'application/json',
