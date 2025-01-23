@@ -66,13 +66,15 @@ export default function SalesPage() {
                                                                                 //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     const fetchOrdersByTable = async (tableCode) => {
         try {
-            const today = new Date();
-            const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
             //////////////////// ประกาศตัวแปร URL CALL   
             const api_url =  localStorage.getItem('url_api'); 
             const slug = localStorage.getItem('slug');
             const authToken = localStorage.getItem('token');
             //////////////////// ประกาศตัวแปร  END URL CALL 
+
+            const today = new Date();
+            const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
+            
             const response = await axios.get(`${api_url}/api/${slug}/orders`, {
                 params: {
                     table_code: tableCode, // กรองตามโต๊ะ
@@ -133,6 +135,8 @@ export default function SalesPage() {
             }
     
             try {
+                
+                
                 // ดึงข้อมูลออเดอร์ของโต๊ะในวันนี้
                 const orders = await fetchOrdersByTable(tableCode);
     
@@ -273,6 +277,7 @@ const fetchCategories = () => {
     
         // ส่งข้อมูลสินค้าไปที่ฐานข้อมูล
         try {
+            
             await addItemToDatabase(product);
         } catch (error) {
             console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
@@ -654,6 +659,11 @@ const fetchCategories = () => {
     
     const sendOrder = async (orderData) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
                 headers: {
                     'Accept': 'application/json',
@@ -681,6 +691,11 @@ const fetchCategories = () => {
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
     
             // คำนวณยอดรวม (Total Amount)
@@ -749,6 +764,11 @@ const fetchCategories = () => {
                 console.log("Updating table status with URL:", url);
     
                 try {
+                    //////////////////// ประกาศตัวแปร URL CALL   
+                    const api_url =  localStorage.getItem('url_api'); 
+                    const slug = localStorage.getItem('slug');
+                    const authToken = localStorage.getItem('token');
+                    //////////////////// ประกาศตัวแปร  END URL CALL 
                     const response = await axios.put(url, tableUpdateData, {
                         headers: {
                             'Accept': 'application/json',
@@ -785,6 +805,11 @@ const fetchCategories = () => {
     
     const saveOrderData = async (orderId, paymentMethod, receivedAmount, cart, billDiscount, billDiscountType, vatType, calculateTotalWithBillDiscountAndVAT, calculateVAT) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             // คำนวณส่วนลดรวมต่อสินค้า
             const totalItemDiscount = cart.reduce((acc, item) => {
                 const itemDiscountAmount = (item.discountType === 'THB') 
@@ -880,6 +905,11 @@ const fetchCategories = () => {
     
     const addToOrder = async (orderId, newItems) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             // ตรวจสอบให้แน่ใจว่า newItems ไม่ว่าง และมีค่า product_id
             if (!newItems || newItems.length === 0) {
                 throw new Error('ไม่มีรายการสินค้าที่จะเพิ่ม');
@@ -928,6 +958,11 @@ const fetchCategories = () => {
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -971,6 +1006,11 @@ const fetchCategories = () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
     
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             // คำนวณส่วนลดรวมต่อสินค้า
             const totalItemDiscount = cart.reduce((acc, item) => {
                 const itemDiscountAmount = (item.discountType === 'THB') 
@@ -1020,6 +1060,7 @@ const fetchCategories = () => {
                 const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
 
                 try {
+                    
                     console.log('กำลังอัปเดตสถานะโต๊ะ:', tableCode, 'เป็น "ว่าง" ด้วยข้อมูล:', tableUpdateData);
 
                     const response = await axios.patch(url, tableUpdateData, { // ใช้ PATCH เพื่ออัปเดตเฉพาะสถานะ
@@ -1109,6 +1150,11 @@ const fetchCategories = () => {
     };
     const savePaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const url = `${api_url}/api/${slug}/payments`;
             const paymentData = {
                 order_id: orderId,
@@ -1138,6 +1184,11 @@ const fetchCategories = () => {
     
     const fetchPaymentChannels = async () => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/payChannels`, {
                 headers: {
                     'Accept': 'application/json',
