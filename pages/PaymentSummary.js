@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsidebar';
+import BackendSidebar from './components/backendsideber';
 import { Bar } from 'react-chartjs-2';
 import Chart from 'chart.js/auto';
 import { FiTrendingUp, FiBarChart, FiShoppingCart, FiPackage } from 'react-icons/fi';  // เพิ่มการนำเข้าไอคอน
 
-const api_url = "https://easyapp.clinic/pos-api/api";
-const slug = "abc";
-const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
 export default function PaymentSummary() {
     const [salesData, setSalesData] = useState([]);
@@ -24,6 +21,11 @@ export default function PaymentSummary() {
         const fetchSalesData = async () => {
             setLoading(true);
             try {
+                //////////////////// ประกาศตัวแปร URL CALL   
+                const api_url =  localStorage.getItem('url_api'); 
+                const slug = localStorage.getItem('slug');
+                const authToken = localStorage.getItem('token');
+                //////////////////// ประกาศตัวแปร  END URL CALL 
                 const response = await axios.get(`${api_url}/${slug}/orders`, {
                     headers: {
                         'Accept': 'application/json',
@@ -56,6 +58,11 @@ export default function PaymentSummary() {
 
     const fetchTopSellingItems = async () => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            const api_url =  localStorage.getItem('url_api'); 
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/${slug}/order_items`, {
                 headers: {
                     'Accept': 'application/json',
@@ -312,8 +319,8 @@ export default function PaymentSummary() {
 }
 
 const styles = {
-    pageContainer: {display: 'flex',minHeight: '100vh',overflowY: 'auto',overflowX: 'hidden', marginRight: '60px'},
-    content: { flex: 1, padding: '25px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft:'20px' },
+    pageContainer: {display: 'flex',minHeight: '100vh',overflowY: 'auto',overflowX: 'hidden', marginRight: '70px'},
+    content: { flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft:'65px' },
     titleWithHighlight: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textShadow: '2px 2px #ffe6e6' ,marginRight:'1150px' },
     filterContainer: { display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '20px', justifyContent: 'flex-start',  width: '100%', marginLeft: '89%' },
     label: { fontSize: '20px', color: '#4a4a4a',marginTop:'-11px' },
