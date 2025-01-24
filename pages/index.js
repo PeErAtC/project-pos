@@ -4,57 +4,75 @@ import { useRouter } from 'next/router';
 
 export default function HomePage() {
   const router = useRouter();
-  const [selected, setSelected] = useState(null);
-  const [username, setUsername] = useState(''); // สำหรับเก็บชื่อผู้ใช้ที่ล็อกอิน
+  const [username, setUsername] = useState('');
+  const [clicked, setClicked] = useState(null); // เก็บสถานะการคลิกของการ์ด
 
   useEffect(() => {
-    const loggedInUsername = localStorage.getItem('username'); // ดึงชื่อผู้ใช้จาก localStorage
+    const loggedInUsername = localStorage.getItem('username');
     if (loggedInUsername) {
-      setUsername(loggedInUsername); // ตั้งค่าชื่อผู้ใช้ที่ล็อกอิน
+      setUsername(loggedInUsername);
     } else {
-      // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage ให้ส่งกลับไปหน้า login
       router.push('/login');
     }
   }, [router]);
 
-  // Function to play the click sound
   const playClickSound = () => {
     const audio = new Audio('/sounds/click-151673.mp3');
     audio.play();
   };
 
-  const handleIconClick = (page) => {
-    playClickSound(); // เล่นเสียงเมื่อคลิก
-    router.push(page); // เปลี่ยนเส้นทางไปยังหน้าที่กำหนด
+  const handleIconClick = (page, cardName) => {
+    playClickSound();
+    setClicked(cardName); // ตั้งค่าการคลิก
+    setTimeout(() => {
+      setClicked(null); // รีเซ็ตการคลิก
+      router.push(page);
+    }, 200); // ดีเลย์เล็กน้อยเพื่อให้เห็นเอฟเฟกต์
   };
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.welcomeMessage}>ยินดีต้อนรับ, {username}</h2> {/* แสดงชื่อผู้ใช้ */}
-      <div style={styles.iconContainer}>
+      <h2 style={styles.welcomeMessage}>ยินดีต้อนรับ: {username}</h2>
+      <div style={styles.cardContainer}>
         <div
           style={{
-            ...styles.iconBox,
-            ...(selected === 'sell' ? styles.selected : {}),
+            ...styles.card,
+            ...(clicked === 'sell' ? styles.clicked : {}),
           }}
-          onMouseDown={() => setSelected('sell')}
-          onMouseUp={() => setSelected(null)}
-          onClick={() => handleIconClick('/TablePage')} // เปลี่ยนเส้นทางไปที่ TablePage แทน
+          onMouseDown={() => setClicked('sell')}
+          onMouseUp={() => setClicked(null)}
+          onClick={() => handleIconClick('/TablePage', 'sell')}
         >
-          <Image src="/images/store.png" alt="หน้าขาย" width={80} height={80} style={styles.icon} />
-          <p style={styles.text}>หน้าขาย</p>
+          <div style={styles.emojiContainer}>
+            <Image
+              src="/images/store.png"
+              alt="หน้าขาย"
+              width={70}
+              height={70}
+            />
+          </div>
+          <p style={styles.cardTitle}>หน้าขาย</p>
+          <p style={styles.cardSubtitle}>เริ่มต้นการขายสินค้าของคุณที่นี่</p>
         </div>
         <div
           style={{
-            ...styles.iconBox,
-            ...(selected === 'backend' ? styles.selected : {}),
+            ...styles.card,
+            ...(clicked === 'backend' ? styles.clicked : {}),
           }}
-          onMouseDown={() => setSelected('backend')}
-          onMouseUp={() => setSelected(null)}
-          onClick={() => handleIconClick('/backendpage')}
+          onMouseDown={() => setClicked('backend')}
+          onMouseUp={() => setClicked(null)}
+          onClick={() => handleIconClick('/backendpage', 'backend')}
         >
-          <Image src="/images/folder.png" alt="หลังบ้าน" width={80} height={80} style={styles.icon} />
-          <p style={styles.text}>หลังบ้าน</p>
+          <div style={styles.emojiContainer}>
+            <Image
+              src="/images/folder.png"
+              alt="หลังบ้าน"
+              width={70}
+              height={70}
+            />
+          </div>
+          <p style={styles.cardTitle}>หลังบ้าน</p>
+          <p style={styles.cardSubtitle}>จัดการข้อมูลและการตั้งค่าต่างๆ</p>
         </div>
       </div>
     </div>
@@ -68,44 +86,55 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     height: '100vh',
-    backgroundColor: '#e0f7f9',
+    background: 'linear-gradient(to right,rgb(196, 240, 246), #499cae)',
   },
   welcomeMessage: {
+    fontFamily: '"Montserrat", sans-serif',
     fontSize: '24px',
     fontWeight: 'bold',
-    color: '#333',
+    color: '#000',
     marginBottom: '20px',
   },
-  iconContainer: {
+  cardContainer: {
     display: 'flex',
-    gap: '30px',
-    marginBottom: '20px',
-    padding: '100px',
-    backgroundColor: '#ffffff',
-    borderRadius: '20px',
-    boxShadow: '0px 8px 20px rgba(0, 0, 0, 0.15)',
+    gap: '20px',
   },
-  iconBox: {
+  card: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    backgroundColor: '#499cae',
-    padding: '20px',
-    borderRadius: '10px',
+    justifyContent: 'center',
+    width: '280px',
+    height: '350px',
+    backgroundColor: '#ffffff',
+    borderRadius: '15px',
     boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
-    width: '220px',
     cursor: 'pointer',
-    transition: 'transform 0.1s ease-in-out',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
   },
-  icon: {
-    marginBottom: '10px',
+  clicked: {
+    transform: 'scale(0.95)', // เอฟเฟกต์การกด ยุบลงเล็กน้อย
+    boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)', // เงาลดลง
   },
-  text: {
+  emojiContainer: {
+    backgroundColor: '#e0f7fa',
+    borderRadius: '50%',
+    width: '150px',
+    height: '150px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '15px',
+  },
+  cardTitle: {
     fontSize: '18px',
-    color: 'white',
     fontWeight: 'bold',
+    color: '#333',
+    marginBottom: '5px',
   },
-  selected: {
-    transform: 'scale(0.95)',
+  cardSubtitle: {
+    fontSize: '14px',
+    color: '#777',
+    textAlign: 'center',
   },
 };
