@@ -44,6 +44,8 @@ export default function SalesPage() {
     // ฟังก์ชัน fetchProducts
     const fetchProducts = async () => {
         try {
+
+            
             const response = await axios.get(`${api_url}/api/${slug}/products`, {
                 headers: {
                     'Accept': 'application/json',
@@ -61,54 +63,65 @@ export default function SalesPage() {
         }
     };
 
+//  const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
 
-    const fetchTableLastOrder = async (tableId) => {
-        try {
-            const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-    
-            if (response.data && response.data.order) {
-                console.log('ข้อมูลออเดอร์ล่าสุด:', response.data.order);
-                return response.data.order; // ส่งกลับข้อมูลออเดอร์
+const fetchTableLastOrder = async (tableId) => {
+    try {
+        const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+        });
+
+        if (response.data && response.data.order) {
+            const lastOrder = response.data.order;
+
+            // ตรวจสอบสถานะของออเดอร์ว่าเป็น 'N' หรือไม่
+            if (lastOrder.status === 'N') {
+                console.log('ข้อมูลออเดอร์ล่าสุดที่ยังไม่ได้ชำระเงิน:', lastOrder);
+                return lastOrder; // ส่งกลับข้อมูลออเดอร์
             } else {
-                console.warn('ไม่มีข้อมูลออเดอร์ล่าสุด');
+                console.warn('ออเดอร์ล่าสุดไม่ใช่สถานะ "N" (ยังไม่ได้ชำระเงิน)');
                 return null;
             }
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:', error.response?.data || error.message);
+        } else {
+            console.warn('ไม่มีข้อมูลออเดอร์ล่าสุด');
             return null;
         }
+    } catch (error) {
+        console.error('เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:', error.response?.data || error.message);
+        return null;
+    }
+};
+
+useEffect(() => {
+    const loadTableLastOrder = async () => {
+        if (!tableCode) {
+            console.warn('ไม่มี tableCode');
+            return;
+        }
+
+        try {
+            // เรียก API table_lastorder
+            const lastOrder = await fetchTableLastOrder(tableCode);
+
+            if (lastOrder) {
+                setOrderId(lastOrder.id); // เก็บ ID ของออเดอร์ล่าสุด
+                setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
+                setCart(lastOrder.items || []); // อัปเดตรายการสินค้าในตะกร้า
+            } else {
+                console.warn('ไม่มีออเดอร์ล่าสุดสำหรับโต๊ะนี้ หรือสถานะไม่ใช่ "N"');
+                setCart([]); // ล้างตะกร้าหากไม่มีออเดอร์
+            }
+        } catch (error) {
+            console.error('เกิดข้อผิดพลาดในการโหลดออเดอร์ล่าสุด:', error.message);
+        }
     };
-    useEffect(() => {
-        const loadTableLastOrder = async () => {
-            if (!tableCode) {
-                console.warn('ไม่มี tableCode');
-                return;
-            }
-    
-            try {
-                // เรียก API table_lastorder
-                const lastOrder = await fetchTableLastOrder(tableCode);
-    
-                if (lastOrder) {
-                    setOrderId(lastOrder.id); // เก็บ ID ของออเดอร์ล่าสุด
-                    setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
-                    setCart(lastOrder.items || []); // อัปเดตรายการสินค้าในตะกร้า
-                } else {
-                    console.warn('ไม่มีออเดอร์ล่าสุดสำหรับโต๊ะนี้');
-                    setCart([]); // ล้างตะกร้าหากไม่มีออเดอร์
-                }
-            } catch (error) {
-                console.error('เกิดข้อผิดพลาดในการโหลดออเดอร์ล่าสุด:', error.message);
-            }
-        };
-    
-        loadTableLastOrder();
-    }, [tableCode]); // ทำงานเมื่อ tableCode เปลี่ยน
+
+    loadTableLastOrder();
+}, [tableCode]); // ทำงานเมื่อ tableCode เปลี่ยน
+
     
     //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     const fetchOrdersByTable = async (tableCode) => {
