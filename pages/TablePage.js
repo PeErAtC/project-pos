@@ -171,14 +171,24 @@ export default function MainTablePage() {
     return (
         <div style={{ display: 'flex', minHeight: '100vh' }}>
             <Sidebar /> {/* เพิ่ม Sidebar */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#f0f2f5' }}>
+            <div
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    background: 'rgb(221, 236, 237)', // สีพื้นหลังใหม่
+                }}
+            >
                 {tableCode ? (
                     <div style={styles.header}>
                         <h1>รวมเมนูอาหาร</h1>
                     </div>
                 ) : (
                     <div style={styles.tableSelectionContainer}>
-                        <h1 style={styles.title}>{userName ? `ยินดีต้อนรับ: ${userName}` : 'กำลังโหลด...'}</h1>
+                        <h1 style={styles.title}>
+                            {userName ? `ยินดีต้อนรับ: ${userName}` : 'กำลังโหลด...'}
+                        </h1>
                         <input
                             ref={searchInputRef}
                             type="text"
@@ -193,11 +203,7 @@ export default function MainTablePage() {
                                 <p style={styles.errorText}>{error}</p>
                             ) : filteredTables.length > 0 ? (
                                 filteredTables.map((table) => (
-                                    <TableCard
-                                        key={table.id}
-                                        table={table}
-                                        onClick={handleTableClick}
-                                    />
+                                    <TableCard key={table.id} table={table} onClick={handleTableClick} />
                                 ))
                             ) : (
                                 <p style={styles.noTableText}>ไม่พบข้อมูลโต๊ะ</p>
@@ -218,11 +224,43 @@ export default function MainTablePage() {
 }
 
 const styles = {
-    header: { padding: '20px', textAlign: 'center', backgroundColor: '#f0f2f5', width: '100%' },
-    tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' },
-    title: { fontSize: '28px', fontWeight: '600', textAlign: 'center', marginBottom: '30px' },
-    searchInput: { width: '50%', padding: '10px', fontSize: '16px', marginBottom: '20px', borderRadius: '5px', border: '1px solid #ccc' },
-    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' },
+    header: {
+        padding: '20px',
+        textAlign: 'center',
+        backgroundColor: '#f0f2f5',
+        width: '100%',
+    },
+    tableSelectionContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+    },
+    title: {
+        fontSize: '28px',
+        fontWeight: '600',
+        textAlign: 'center',
+        marginBottom: '30px',
+        fontFamily: '"Montserrat", sans-serif',
+        color: '#000',
+    },
+    searchInput: {
+        width: '50%',
+        padding: '10px',
+        fontSize: '16px',
+        marginBottom: '20px',
+        borderRadius: '5px',
+        border: '1px solid #ccc',
+    },
+    tableGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: '20px',
+        justifyContent: 'center',
+        padding: '20px',
+        width: '100%',
+        maxWidth: '1000px',
+    },
     errorText: { color: 'red' },
     noTableText: { color: '#333' },
 };
