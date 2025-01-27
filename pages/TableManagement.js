@@ -3,7 +3,7 @@ import axios from 'axios';
 import Sidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 import { Snackbar, Alert } from '@mui/material';
-
+import { useRouter } from 'next/router'; // เพิ่มส่วนนี้
 
 export default function TableManagement() {
     const [tables, setTables] = useState([]);
@@ -18,17 +18,26 @@ export default function TableManagement() {
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
+    const router = useRouter(); // ใช้ useRouter
+
     useEffect(() => {
         fetchTables();
-    }, []);
+    },);
 
     const fetchTables = async () => {
         const api_url = localStorage.getItem('url_api');
         const slug = localStorage.getItem('slug');
         const authToken = localStorage.getItem('token');
-    
+
         if (!authToken) {
-            Swal.fire('กรุณาเข้าสู่ระบบก่อนใช้งาน');
+            Swal.fire({
+                title: 'กรุณาเข้าสู่ระบบ',
+                text: 'คุณยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนใช้งาน',
+                icon: 'warning',
+                confirmButtonText: 'เข้าสู่ระบบ',
+            }).then(() => {
+                router.push('/login'); // ใช้ router.push เพื่อเปลี่ยนเส้นทางไปหน้า /login
+            });
             return;
         }
     
