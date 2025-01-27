@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Sidebar from './components/backendsideber';
+import Sidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 import { Snackbar, Alert } from '@mui/material';
 
@@ -23,13 +23,16 @@ export default function TableManagement() {
     }, []);
 
     const fetchTables = async () => {
+        const api_url = localStorage.getItem('url_api');
+        const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+    
+        if (!authToken) {
+            Swal.fire('กรุณาเข้าสู่ระบบก่อนใช้งาน');
+            return;
+        }
+    
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-
             const url = `${api_url}/${slug}/table_codes`;
             const response = await axios.get(url, {
                 headers: {
@@ -41,9 +44,15 @@ export default function TableManagement() {
             setError(null);
         } catch (error) {
             console.error('Error fetching tables:', error);
-            setError('Failed to load tables. Please try again.');
+            if (error.response && error.response.status === 401) {
+                Swal.fire('Session หมดอายุ', 'กรุณาเข้าสู่ระบบใหม่', 'warning');
+                // Redirect ไปหน้า Login
+                window.location.href = '/login';
+            } else {
+                setError('Failed to load tables. Please try again.');
+            }
         }
-    };
+    };    
 
     const handleAddOrUpdateTable = async () => {
         if (!tableCode || seats < 1) {
