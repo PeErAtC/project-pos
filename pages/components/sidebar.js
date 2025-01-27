@@ -18,7 +18,6 @@ export default function Sidebar() {
   };
 
   const handleBack = () => {
-    setActiveMenu('back');
     if (router.asPath.includes('/products')) {
       router.push('/TablePage');
     } else if (router.pathname === '/TablePage') {
@@ -35,16 +34,11 @@ export default function Sidebar() {
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
       confirmButtonText: 'ใช่, ออกจากระบบ',
-      cancelButtonText: 'cancel',
-      customClass: {
-        confirmButton: 'hover-effect-button',
-        cancelButton: 'hover-effect-cancel',
-      },
+      cancelButtonText: 'ยกเลิก',
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('token');
-        setActiveMenu('logout');
         router.push('/login');
       }
     });
@@ -78,7 +72,6 @@ export default function Sidebar() {
             ...styles.icon,
             ...(activeMenu === '/' ? styles.activeIcon : {}),
           }}
-          onClick={() => handleMenuClick('/')}
         >
           <Image src="/images/menu.png" alt="Homepage" width={35} height={35} />
           {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
@@ -100,27 +93,15 @@ export default function Sidebar() {
             ...styles.icon,
             ...(activeMenu === 'logout' ? styles.activeIcon : {}),
           }}
-          onClick={handleLogout}
+          onClick={() => {
+            setActiveMenu('logout');
+            handleLogout();
+          }}
         >
           <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ออกจากระบบ</span>}
         </div>
       </div>
-
-      <style jsx global>{`
-        .hover-effect-button:hover {
-          background-color: rgb(12, 62, 95) !important;
-          color: #ffffff !important;
-          border-radius: 5px;
-          transition: all 0.3s ease;
-        }
-        .hover-effect-cancel:hover {
-          background-color: rgba(211, 51, 51, 0.8) !important;
-          color: #ffffff !important;
-          border-radius: 5px;
-          transition: all 0.3s ease;
-        }
-      `}</style>
     </div>
   );
 }
@@ -199,7 +180,7 @@ const styles = {
     color: '#fff',
   },
   activeIcon: {
-    backgroundColor: 'rgb(12, 62, 95)',
+    backgroundColor: 'rgb(12, 62, 95)', // ใช้สีที่คุณต้องการ
     color: '#ffffff',
     borderRadius: '10px',
     padding: '15px',
