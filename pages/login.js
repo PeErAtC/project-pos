@@ -195,7 +195,7 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     height: '100vh',
-    background: 'linear-gradient(to right, #e0f7fa, #80deea)',
+    background: 'linear-gradient(to right,rgb(196, 240, 246), #499cae)',
   },
   card: {
     width: '100%',
@@ -217,10 +217,10 @@ const styles = {
     justifyContent: 'center',
   },
   titleEasy: {
-    color: '#34495e', // สีคำว่า "Easy"
+    color: '#499cae', // สีคำว่า "Easy"
   },
   titlePos: {
-    color: '#499cae', // สีคำว่า "POS"
+    color: '#34495e', // สีคำว่า "POS"
   },
   subtitle: {
     fontSize: '14px',
