@@ -4,37 +4,26 @@ import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
 
 export default function Sidebar() {
-  const [isExpanded, setIsExpanded] = useState(false); // สถานะสำหรับพับ/กาง Sidebar
-  const [activeMenu, setActiveMenu] = useState(null); // ติดตามเมนูที่เลือก
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeMenu, setActiveMenu] = useState(null);
   const router = useRouter();
 
   const toggleSidebar = () => {
-    setIsExpanded(!isExpanded); // เปลี่ยนสถานะพับ/กาง
+    setIsExpanded(!isExpanded);
   };
 
   const handleMenuClick = (menu) => {
-    if (menu === '/TablePage') {
-      // ใช้ SweetAlert2 สำหรับการยืนยันก่อนย้อนกลับ
-      Swal.fire({
-        title: 'ยืนยันการย้อนกลับ',
-        text: 'คุณต้องการย้อนกลับใช่หรือไม่?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'ใช่, ย้อนกลับ',
-        cancelButtonText: 'ยกเลิก',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          setActiveMenu(menu);
-          router.push(menu);
-        }
-      });
-      return; // หยุดการทำงานต่อไป
-    }
+    setActiveMenu(menu);
+    router.push(menu);
+  };
 
-    setActiveMenu(menu); // ตั้งเมนูที่เลือกเป็น active
-    router.push(menu); // เปลี่ยนหน้า
+  const handleBack = () => {
+    setActiveMenu('back');
+    if (router.asPath.includes('/products')) {
+      router.push('/TablePage');
+    } else if (router.pathname === '/TablePage') {
+      router.push('/');
+    }
   };
 
   const handleLogout = () => {
@@ -46,11 +35,16 @@ export default function Sidebar() {
       confirmButtonColor: '#3085d6',
       cancelButtonColor: '#d33',
       confirmButtonText: 'ใช่, ออกจากระบบ',
-      cancelButtonText: 'ยกเลิก',
+      cancelButtonText: 'cancel',
+      customClass: {
+        confirmButton: 'hover-effect-button',
+        cancelButton: 'hover-effect-cancel',
+      },
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('token');
+        setActiveMenu('logout');
         router.push('/login');
       }
     });
@@ -58,7 +52,6 @@ export default function Sidebar() {
 
   return (
     <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
-      {/* Toggle Button */}
       <div style={styles.toggleButton} onClick={toggleSidebar}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -74,36 +67,39 @@ export default function Sidebar() {
         </svg>
       </div>
 
-      {/* Sidebar Items */}
       <div style={styles.iconContainer(isExpanded)}>
-        {/* Store Icon */}
         <div style={styles.iconWrapper}>
           <Image src="/images/store.png" alt="Store" width={40} height={40} />
           {isExpanded && <span style={styles.storeName}>Easy POS</span>}
         </div>
 
-        {/*Home Page*/}
         <div
-          style={styles.icon}
+          style={{
+            ...styles.icon,
+            ...(activeMenu === '/' ? styles.activeIcon : {}),
+          }}
           onClick={() => handleMenuClick('/')}
         >
           <Image src="/images/menu.png" alt="Homepage" width={35} height={35} />
           {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
         </div>
 
-        {/* Return Menu */}
         <div
-          style={styles.icon}
-          className={activeMenu === '/TablePage' ? 'active' : ''}
-          onClick={() => handleMenuClick('/TablePage')}
+          style={{
+            ...styles.icon,
+            ...(activeMenu === 'back' ? styles.activeIcon : {}),
+          }}
+          onClick={handleBack}
         >
           <Image src="/images/left-arrow.png" alt="Return" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
         </div>
 
-        {/* Logout Menu */}
         <div
-          style={styles.icon}
+          style={{
+            ...styles.icon,
+            ...(activeMenu === 'logout' ? styles.activeIcon : {}),
+          }}
           onClick={handleLogout}
         >
           <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
@@ -111,14 +107,18 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Active Menu Styles */}
-      <style jsx>{`
-        .active {
-          background-color: rgb(12, 62, 95);
-          border-radius: 8px;
-          color: #fff;
-          padding: 8px 12px;
-          font-size: 14px;
+      <style jsx global>{`
+        .hover-effect-button:hover {
+          background-color: rgb(12, 62, 95) !important;
+          color: #ffffff !important;
+          border-radius: 5px;
+          transition: all 0.3s ease;
+        }
+        .hover-effect-cancel:hover {
+          background-color: rgba(211, 51, 51, 0.8) !important;
+          color: #ffffff !important;
+          border-radius: 5px;
+          transition: all 0.3s ease;
         }
       `}</style>
     </div>
@@ -197,6 +197,13 @@ const styles = {
     cursor: 'pointer',
     transition: 'background 0.3s ease',
     color: '#fff',
+  },
+  activeIcon: {
+    backgroundColor: 'rgb(12, 62, 95)',
+    color: '#ffffff',
+    borderRadius: '10px',
+    padding: '15px',
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
   },
   iconLabel: {
     fontSize: '16px',
