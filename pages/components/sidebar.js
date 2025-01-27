@@ -87,7 +87,7 @@ export default function Sidebar() {
           style={styles.icon}
           onClick={() => handleMenuClick('/')}
         >
-          <Image src="/images/web.png" alt="Homepage" width={40} height={40} />
+          <Image src="/images/menu.png" alt="Homepage" width={35} height={35} />
           {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
         </div>
 
@@ -97,7 +97,7 @@ export default function Sidebar() {
           className={activeMenu === '/TablePage' ? 'active' : ''}
           onClick={() => handleMenuClick('/TablePage')}
         >
-          <Image src="/images/left-arrow (1).png" alt="Return" width={35} height={35} />
+          <Image src="/images/left-arrow.png" alt="Return" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
         </div>
 
@@ -106,7 +106,7 @@ export default function Sidebar() {
           style={styles.icon}
           onClick={handleLogout}
         >
-          <Image src="/images/logout.png" alt="Logout" width={35} height={35} />
+          <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ออกจากระบบ</span>}
         </div>
       </div>
