@@ -1,26 +1,48 @@
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import Swal from 'sweetalert2';
 
 export default function HomePage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [clicked, setClicked] = useState(null); // เก็บสถานะการคลิกของการ์ด
+  const soundRef = useRef(null); // ใช้ useRef สำหรับจัดการเสียง
 
+  // โหลดเสียงเมื่อ Component ถูก Mount
   useEffect(() => {
+    soundRef.current = new Audio('/sounds/click-151673.mp3');
+  }, []);
+
+  // ตรวจสอบสถานะการเข้าสู่ระบบ
+  useEffect(() => {
+    const authToken = localStorage.getItem('token');
     const loggedInUsername = localStorage.getItem('username');
-    if (loggedInUsername) {
-      setUsername(loggedInUsername);
-    } else {
-      router.push('/login');
+
+    if (!authToken || !loggedInUsername) {
+      Swal.fire({
+        title: 'กรุณาเข้าสู่ระบบ',
+        text: 'คุณยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนใช้งาน',
+        icon: 'warning',
+        confirmButtonText: 'เข้าสู่ระบบ',
+      }).then(() => {
+        router.push('/login');
+      });
+      return;
     }
+
+    // ตั้งค่าชื่อผู้ใช้
+    setUsername(loggedInUsername);
   }, [router]);
 
+  // ฟังก์ชันเล่นเสียงคลิก
   const playClickSound = () => {
-    const audio = new Audio('/sounds/click-151673.mp3');
-    audio.play();
+    if (soundRef.current) {
+      soundRef.current.play();
+    }
   };
 
+  // ฟังก์ชันจัดการการคลิกไอคอน
   const handleIconClick = (page, cardName) => {
     playClickSound();
     setClicked(cardName); // ตั้งค่าการคลิก
