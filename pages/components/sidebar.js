@@ -41,12 +41,23 @@ export default function Sidebar() {
       },
     }).then((result) => {
       if (result.isConfirmed) {
+        // ลบข้อมูลใน localStorage
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('token');
-        router.push('/login');
+  
+        // แสดง Alert แจ้งว่าออกจากระบบสำเร็จ
+        Swal.fire({
+          title: 'ออกจากระบบสำเร็จ',
+          text: 'คุณได้ออกจากระบบเรียบร้อยแล้ว',
+          icon: 'success',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#3085d6',
+        }).then(() => {
+          router.push('/login'); // เปลี่ยนเส้นทางไปที่หน้า Login หลังแสดงข้อความสำเร็จ
+        });
       }
     });
-  };
+  };  
 
   return (
     <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
