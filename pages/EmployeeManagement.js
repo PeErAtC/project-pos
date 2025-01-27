@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
@@ -17,21 +17,27 @@ export default function EmployeeManagement() {
   });
   const [editIndex, setEditIndex] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(''); // State for search query
+  const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
-
-  // const api_url = "https://easyapp.clinic/pos-api/api";
-  // const slug = "abc";
-  // const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
 
   useEffect(() => {
     const fetchEmployees = async () => {
+      const authToken = localStorage.getItem('token');
+      if (!authToken) {
+        Swal.fire({
+          title: 'กรุณาเข้าสู่ระบบ',
+          text: 'คุณยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนใช้งาน',
+          icon: 'warning',
+          confirmButtonText: 'เข้าสู่ระบบ',
+        }).then(() => {
+          router.push('/login');
+        });
+        return;
+      }
+
       try {
-        //////////////////// ประกาศตัวแปร URL CALL   
-        const api_url =  localStorage.getItem('url_api'); 
+        const api_url = localStorage.getItem('url_api');
         const slug = localStorage.getItem('slug');
-        const authToken = localStorage.getItem('token');
-        //////////////////// ประกาศตัวแปร  END URL CALL 
         const response = await fetch(`${api_url}/${slug}/users`, {
           headers: {
             Accept: 'application/json',
@@ -50,7 +56,7 @@ export default function EmployeeManagement() {
     };
 
     fetchEmployees();
-  }, []);
+  }, [router]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -60,9 +66,14 @@ export default function EmployeeManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = editIndex !== null
-        ? `${api_url}/${slug}/users/${employees[editIndex].id}`
-        : `${api_url}/${slug}/users`;
+      const authToken = localStorage.getItem('token');
+      const api_url = localStorage.getItem('url_api');
+      const slug = localStorage.getItem('slug');
+
+      const url =
+        editIndex !== null
+          ? `${api_url}/${slug}/users/${employees[editIndex].id}`
+          : `${api_url}/${slug}/users`;
 
       const method = editIndex !== null ? 'PUT' : 'POST';
       const response = await fetch(url, {
@@ -76,7 +87,6 @@ export default function EmployeeManagement() {
 
       if (!response.ok) {
         const errorDetails = await response.json();
-        console.log('Error Details:', errorDetails);
         throw new Error(`Error: ${response.status} - ${errorDetails.message}`);
       }
 
@@ -91,7 +101,15 @@ export default function EmployeeManagement() {
 
       Swal.fire('สำเร็จ!', 'การดำเนินการเสร็จสมบูรณ์', 'success');
       setEditIndex(null);
-      setFormData({ username: '', name: '', email: '', password: '', slug: '', owner: 'N', status: 'active' });
+      setFormData({
+        username: '',
+        name: '',
+        email: '',
+        password: '',
+        slug: '',
+        owner: 'N',
+        status: 'active',
+      });
     } catch (error) {
       Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
     }
@@ -110,6 +128,10 @@ export default function EmployeeManagement() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          const authToken = localStorage.getItem('token');
+          const api_url = localStorage.getItem('url_api');
+          const slug = localStorage.getItem('slug');
+
           const response = await fetch(`${api_url}/${slug}/users/${employees[index].id}`, {
             method: 'DELETE',
             headers: {
@@ -138,7 +160,6 @@ export default function EmployeeManagement() {
     setFormData({ ...formData, status });
   };
 
-  // Filter employees based on search query
   const filteredEmployees = employees.filter((employee) =>
     employee.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     employee.name.toLowerCase().includes(searchQuery.toLowerCase())
