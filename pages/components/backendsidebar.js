@@ -20,16 +20,20 @@ export default function BackendSidebar() {
 
   const handleMenuClick = (menu) => {
     if (menu === '/logout') {
-      // แสดงข้อความยืนยันก่อน Logout
+      // แสดงข้อความยืนยันก่อน Logout พร้อมเพิ่มเอฟเฟกต์
       Swal.fire({
         title: 'ยืนยันการออกจากระบบ',
         text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
         confirmButtonText: 'ใช่, ออกจากระบบ',
-        cancelButtonText: 'ยกเลิก',
+        cancelButtonText: 'cancel',
+        customClass: {
+          confirmButton: 'hover-effect-button',
+          cancelButton: 'hover-effect-cancel',
+        },
       }).then((result) => {
         if (result.isConfirmed) {
           // ลบข้อมูลใน localStorage และเปลี่ยนเส้นทางไปยังหน้า Login
@@ -138,11 +142,29 @@ export default function BackendSidebar() {
         </div>
       </div>
 
-      <style jsx>{`
-        .active {
-          background-color: rgb(12, 62, 95);
-          border-radius: 10px;
-          color: #fff;
+      {/* SweetAlert2 Custom Style */}
+      <style global jsx>{`
+        .swal2-confirm.custom-confirm-btn {
+          background-color: #3085d6 !important;
+          color: white !important;
+          font-size: 16px;
+          font-weight: bold;
+          transition: transform 0.2s ease-in-out;
+        }
+        .swal2-confirm.custom-confirm-btn:hover {
+          background-color: #2b75c4 !important;
+          transform: scale(1.05);
+        }
+        .swal2-cancel.custom-cancel-btn {
+          background-color: #d33 !important;
+          color: white !important;
+          font-size: 16px;
+          font-weight: bold;
+          transition: transform 0.2s ease-in-out;
+        }
+        .swal2-cancel.custom-cancel-btn:hover {
+          background-color: #b02a37 !important;
+          transform: scale(1.05);
         }
       `}</style>
     </div>
