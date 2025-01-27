@@ -39,7 +39,15 @@ export default function BackendSidebar() {
           localStorage.removeItem('username');
           localStorage.removeItem('url_api');
           localStorage.removeItem('slug');
-          router.push('/login');
+
+          Swal.fire({
+            title: 'ออกจากระบบสำเร็จ',
+            text: 'คุณได้ออกจากระบบเรียบร้อยแล้ว',
+            icon: 'success',
+            confirmButtonText: 'ตกลง',
+          }).then(() => {
+            router.push('/login');
+          });
         }
       });
       return;
@@ -227,8 +235,8 @@ const styles = {
     fontSize: '18px',
     fontWeight: 'bold',
     color: '#499cae',
-    marginBottom:'0px',
-    padding:'0px',
+    marginBottom: '0px',
+    padding: '0px',
     marginLeft: '5px',
     flexDirection: 'column',
   },
