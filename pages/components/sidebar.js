@@ -1,51 +1,62 @@
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
 
-export default function Sidebar() {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [activeMenu, setActiveMenu] = useState(null);
+export default function BackendSidebar() {
+  const [isExpanded, setIsExpanded] = useState(false); // สถานะสำหรับพับ/กาง Sidebar
+  const [activeMenu, setActiveMenu] = useState(null); // สำหรับตรวจสอบเมนูที่ถูกเลือก
   const router = useRouter();
 
   const toggleSidebar = () => {
-    setIsExpanded(!isExpanded);
+    setIsExpanded(!isExpanded); // เปลี่ยนสถานะพับ/กาง
   };
+
+  // ตรวจสอบเส้นทางที่เลือกจาก router.pathname และตั้งค่าหมวดหมู่ที่ถูกเลือก
+  useEffect(() => {
+    const currentPath = router.pathname;
+    setActiveMenu(currentPath);
+  }, [router.pathname]);
 
   const handleMenuClick = (menu) => {
-    setActiveMenu(menu);
-    router.push(menu);
-  };
-
-  const handleBack = () => {
-    if (router.asPath.includes('/products')) {
-      router.push('/TablePage');
-    } else if (router.pathname === '/TablePage') {
-      router.push('/');
+    if (menu === '/logout') {
+      // แสดงข้อความยืนยันก่อน Logout
+      Swal.fire({
+        title: 'ยืนยันการออกจากระบบ',
+        text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'ใช่, ออกจากระบบ',
+        cancelButtonText: 'ยกเลิก',
+        customClass: {
+          confirmButton: 'hover-effect-button',
+          cancelButton: 'hover-effect-cancel',
+        },
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // ลบข้อมูลใน localStorage และเปลี่ยนเส้นทางไปยังหน้า Login
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          localStorage.removeItem('url_api');
+          localStorage.removeItem('slug');
+          router.push('/login');
+        }
+      });
+      return;
     }
-  };
 
-  const handleLogout = () => {
-    Swal.fire({
-      title: 'ยืนยันการออกจากระบบ',
-      text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'ใช่, ออกจากระบบ',
-      cancelButtonText: 'ยกเลิก',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('token');
-        router.push('/login');
-      }
-    });
+    setActiveMenu(menu); // ตั้งค่าเมนูที่คลิกให้เป็น active
+    if (isExpanded) {
+      setIsExpanded(false); // ถ้า Sidebar กางอยู่ให้พับกลับ
+    }
+    router.push(menu); // เปลี่ยนหน้าเมื่อเลือกเมนู
   };
 
   return (
     <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
+      {/* Toggle Button */}
       <div style={styles.toggleButton} onClick={toggleSidebar}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -61,47 +72,83 @@ export default function Sidebar() {
         </svg>
       </div>
 
+      {/* Icons Section */}
       <div style={styles.iconContainer(isExpanded)}>
-        <div style={styles.iconWrapper}>
-          <Image src="/images/store.png" alt="Store" width={40} height={40} />
+        <div style={styles.iconWrapper} className="icon">
+          <Image src="/images/folder.png" alt="Store" width={40} height={40} />
           {isExpanded && <span style={styles.storeName}>Easy POS</span>}
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/' ? styles.activeIcon : {}),
-          }}
+          style={styles.icon}
+          className={activeMenu === '/backendpage' ? 'active' : ''}
+          onClick={() => handleMenuClick('/backendpage')}
         >
-          <Image src="/images/menu.png" alt="Homepage" width={35} height={35} />
-          {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
+          <Image src="/images/menu.png" alt="Food" width={35} height={35} />
+          {isExpanded && <span style={styles.iconLabel}>รายการอาหาร</span>}
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === 'back' ? styles.activeIcon : {}),
-          }}
-          onClick={handleBack}
+          style={styles.icon}
+          className={activeMenu === '/SalesReport' ? 'active' : ''}
+          onClick={() => handleMenuClick('/SalesReport')}
         >
-          <Image src="/images/left-arrow.png" alt="Return" width={30} height={30} />
+          <Image src="/images/file.png" alt="Report" width={36} height={36} />
+          {isExpanded && <span style={styles.iconLabel}>รายงานการขาย</span>}
+        </div>
+
+        <div
+          style={styles.icon}
+          className={activeMenu === '/PaymentSummary' ? 'active' : ''}
+          onClick={() => handleMenuClick('/PaymentSummary')}
+        >
+          <Image src="/images/growth.png" alt="Report" width={40} height={40} />
+          {isExpanded && <span style={styles.iconLabel}>ยอดขาย</span>}
+        </div>
+
+        <div
+          style={styles.icon}
+          className={activeMenu === '/TableManagement' ? 'active' : ''}
+          onClick={() => handleMenuClick('/TableManagement')}
+        >
+          <Image src="/images/dinner-table.png" alt="Report" width={35} height={35} />
+          {isExpanded && <span style={styles.iconLabel}>จัดการโต๊ะ</span>}
+        </div>
+
+        <div
+          style={styles.icon}
+          className={activeMenu === '/EmployeeManagement' ? 'active' : ''}
+          onClick={() => handleMenuClick('/EmployeeManagement')}
+        >
+          <Image src="/images/add-user.png" alt="Report" width={35} height={35} />
+          {isExpanded && <span style={styles.iconLabel}>จัดการผู้ใช้</span>}
+        </div>
+
+        <div
+          style={styles.icon}
+          className={activeMenu === '/' ? 'active' : ''}
+          onClick={() => handleMenuClick('/')}
+        >
+          <Image src="/images/left-arrow.png" alt="Settings" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
         </div>
-
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === 'logout' ? styles.activeIcon : {}),
-          }}
-          onClick={() => {
-            setActiveMenu('logout');
-            handleLogout();
-          }}
+          style={styles.icon}
+          className={activeMenu === '/logout' ? 'active' : ''}
+          onClick={() => handleMenuClick('/logout')}
         >
           <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ออกจากระบบ</span>}
         </div>
       </div>
+
+      <style jsx>{`
+        .active {
+          background-color: rgb(12, 62, 95);
+          border-radius: 10px;
+          color: #fff;
+        }
+      `}</style>
     </div>
   );
 }
@@ -121,6 +168,7 @@ const styles = {
     top: '20px',
     left: '20px',
     zIndex: 1000,
+    fontFamily: 'Arial, sans-serif',
   },
   toggleButton: {
     cursor: 'pointer',
@@ -135,7 +183,6 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
     position: 'absolute',
     top: '20px',
     right: '-15px',
@@ -174,17 +221,12 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    padding: '13px',
+    padding: '15px',
     cursor: 'pointer',
     transition: 'background 0.3s ease',
     color: '#fff',
-  },
-  activeIcon: {
-    backgroundColor: 'rgb(12, 62, 95)', // ใช้สีที่คุณต้องการ
-    color: '#ffffff',
-    borderRadius: '10px',
-    padding: '15px',
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
+    fontSize: '16px',
+    fontWeight: '500',
   },
   iconLabel: {
     fontSize: '16px',
