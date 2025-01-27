@@ -102,23 +102,21 @@ export default function LoginPage({ onLogin }) {
   };
 
   const handleKeyPress = (key) => {
-    if (activeField) {
-      const inputElement = document.querySelector(`[name="${activeField}"]`);
-      if (inputElement) {
-        const { selectionStart, selectionEnd, value } = inputElement;
-        if (key === 'DELETE') {
-          const newValue =
-            value.slice(0, selectionStart) + value.slice(selectionEnd);
-          activeField === 'username' ? setUsername(newValue) : setPassword(newValue);
-        } else {
-          const newValue =
-            value.slice(0, selectionStart) + key + value.slice(selectionEnd);
-          activeField === 'username' ? setUsername(newValue) : setPassword(newValue);
-        }
+    if (key === 'DELETE') {
+      if (activeField === 'username') {
+        setUsername((prev) => prev.slice(0, -1));
+      } else if (activeField === 'password') {
+        setPassword((prev) => prev.slice(0, -1));
+      }
+    } else {
+      if (activeField === 'username') {
+        setUsername((prev) => prev + key);
+      } else if (activeField === 'password') {
+        setPassword((prev) => prev + key);
       }
     }
   };
-
+  
   return (
     <div style={styles.container}>
       <div style={styles.card}>
@@ -177,14 +175,15 @@ export default function LoginPage({ onLogin }) {
           หากมีปัญหา ติดต่อเราได้ที่{' '}
           <span style={styles.contactLink}>support@example.com</span>
         </div>
-
       </div>
-      {showKeyboard && (
+          {showKeyboard && (
+      <div style={styles.keyboardContainer}>
         <Keyboard
           onKeyPress={handleKeyPress}
           onClose={() => setShowKeyboard(false)}
         />
-      )}
+      </div>
+    )}
     </div>
   );
 }
@@ -195,7 +194,7 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     height: '100vh',
-    background: 'linear-gradient(to right,rgb(196, 240, 246), #499cae)',
+    background: 'linear-gradient(to right, #e0f7fa, #80deea)',
   },
   card: {
     width: '100%',
@@ -217,10 +216,10 @@ const styles = {
     justifyContent: 'center',
   },
   titleEasy: {
-    color: '#499cae', // สีคำว่า "Easy"
+    color: '#34495e', // สีคำว่า "Easy"
   },
   titlePos: {
-    color: '#34495e', // สีคำว่า "POS"
+    color: '#499cae', // สีคำว่า "POS"
   },
   subtitle: {
     fontSize: '14px',
@@ -305,6 +304,10 @@ const styles = {
     fontWeight: 'bold',
     cursor: 'pointer',
   },
+  keyboardContainer: {
+    position: 'absolute',
+    top:'380px'
+  },
 };
 
 
@@ -335,4 +338,3 @@ const styles = {
     `;
     document.head.appendChild(styleSheet);
   }
-
