@@ -3,7 +3,7 @@
     // นำเข้า axios สำหรับการดึงข้อมูล API
     import axios from 'axios';
     // นำเข้า BackendSidebar ซึ่งเป็น Component สำหรับ Sidebar
-    import BackendSidebar from './components/backendsideber';
+    import BackendSidebar from './components/backendsidebar';
     // นำเข้า SweetAlert2 สำหรับการแจ้งเตือนแบบ Popup
     import Swal from 'sweetalert2';
     // นำเข้าไอคอนต่าง ๆ จาก react-icons สำหรับตกแต่ง UI
@@ -105,14 +105,23 @@
         };
         
         const fetchReportData = async () => {
-            try {
-                //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
+            const api_url = localStorage.getItem('url_api');
             const slug = localStorage.getItem('slug');
             const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            
-                // ดึงข้อมูล orders
+        
+            if (!authToken) {
+                Swal.fire({
+                    title: 'ไม่ได้เข้าสู่ระบบ',
+                    text: 'กรุณาเข้าสู่ระบบก่อนใช้งาน',
+                    icon: 'warning',
+                    confirmButtonText: 'ตกลง',
+                }).then(() => {
+                    window.location.href = '/login'; // Redirect ไปยังหน้า Login
+                });
+                return;
+            }
+        
+            try {
                 const ordersResponse = await axios.get(`${api_url}/${slug}/orders`, {
                     headers: {
                         Accept: 'application/json',
@@ -120,7 +129,6 @@
                     },
                 });
         
-                // ดึงข้อมูลโต๊ะ (tables)
                 const tablesResponse = await axios.get(`${api_url}/${slug}/table_codes`, {
                     headers: {
                         Accept: 'application/json',
@@ -128,7 +136,6 @@
                     },
                 });
         
-                // ดึงข้อมูลการชำระเงิน (payments)
                 const paymentsResponse = await axios.get(`${api_url}/${slug}/payments`, {
                     headers: {
                         Accept: 'application/json',
