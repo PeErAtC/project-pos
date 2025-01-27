@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import { Bar } from 'react-chartjs-2';
 import Chart from 'chart.js/auto';
-import { FiTrendingUp, FiBarChart, FiShoppingCart, FiPackage } from 'react-icons/fi';  // เพิ่มการนำเข้าไอคอน
-
+import { FiTrendingUp, FiBarChart, FiShoppingCart, FiPackage } from 'react-icons/fi';
+import Swal from 'sweetalert2';
 
 export default function PaymentSummary() {
     const [salesData, setSalesData] = useState([]);
@@ -19,59 +19,63 @@ export default function PaymentSummary() {
 
     useEffect(() => {
         const fetchSalesData = async () => {
+            const authToken = localStorage.getItem('token');
+            if (!authToken) {
+                Swal.fire({
+                    title: 'กรุณาเข้าสู่ระบบ',
+                    text: 'คุณยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนใช้งาน',
+                    icon: 'warning',
+                    confirmButtonText: 'เข้าสู่ระบบ',
+                }).then(() => {
+                    window.location.href = '/login';
+                });
+                return;
+            }
+
             setLoading(true);
             try {
-                //////////////////// ประกาศตัวแปร URL CALL   
-                const api_url =  localStorage.getItem('url_api'); 
+                const api_url = localStorage.getItem('url_api');
                 const slug = localStorage.getItem('slug');
-                const authToken = localStorage.getItem('token');
-                //////////////////// ประกาศตัวแปร  END URL CALL 
                 const response = await axios.get(`${api_url}/${slug}/orders`, {
                     headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${authToken}`,
                     },
-                    params: {
-                        viewType,
-                        startDate: startDate || undefined
-                    },
+                    params: { viewType, startDate: startDate || undefined },
                 });
-    
+
                 const data = response.data;
                 setSalesData(data);
                 calculateTotalSales(data);
                 calculateMonthlySales(data);
                 calculateTotalTransactions(data);
-    
-                await fetchTopSellingItems();  // Wait for fetching top-selling items after sales data
+
+                await fetchTopSellingItems(); // รอการดึงข้อมูลสินค้าขายดี
                 setError(null);
             } catch (err) {
-                setError("ไม่สามารถเชื่อมต่อกับ API ได้");
+                setError('ไม่สามารถเชื่อมต่อกับ API ได้');
                 console.error('Error fetching sales data:', err);
             } finally {
                 setLoading(false);
             }
         };
-    
+
         fetchSalesData();
     }, [viewType, startDate]);
 
     const fetchTopSellingItems = async () => {
+        const authToken = localStorage.getItem('token');
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
+            const api_url = localStorage.getItem('url_api');
             const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/${slug}/order_items`, {
                 headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
                 },
             });
             const data = response.data;
-            console.log('Fetched all items:', data);  // ตรวจสอบข้อมูลที่ดึงมา
-     
+
             if (Array.isArray(data) && data.length > 0) {
                 const itemSales = data.reduce((acc, item) => {
                     if (!acc[item.p_name]) {
@@ -79,45 +83,43 @@ export default function PaymentSummary() {
                     }
                     acc[item.p_name] += item.quantity;
                     return acc;
-                }, {}); 
-    
+                }, {});
+
                 const sortedItems = Object.entries(itemSales)
                     .sort((a, b) => b[1] - a[1])
                     .slice(0, 10)
                     .map(([name, quantity]) => ({ name, quantity }));
-    
-                console.log('Top selling items:', sortedItems);  // ตรวจสอบว่า sortedItems ถูกต้องหรือไม่
-     
+
                 setTopSellingItems(sortedItems);
             } else {
                 setTopSellingItems([]);
             }
         } catch (err) {
-            console.error("Error fetching top-selling items:", err.response ? err.response.data : err.message);
+            console.error('Error fetching top-selling items:', err.response ? err.response.data : err.message);
             setTopSellingItems([]);
         }
     };
-    
+
     const calculateTotalSales = (data) => {
-        const [selectedYear, selectedMonth] = startDate.split('-'); // แยกปีและเดือนจาก startDate
+        const [selectedYear, selectedMonth] = startDate.split('-');
         const total = data
-            .filter(item => {
+            .filter((item) => {
                 const date = new Date(item.order_date);
                 return (
-                    date.getFullYear() === parseInt(selectedYear, 10) && 
+                    date.getFullYear() === parseInt(selectedYear, 10) &&
                     (viewType === 'daily' ? date.getMonth() + 1 === parseInt(selectedMonth, 10) : true)
                 );
             })
             .reduce((acc, item) => acc + (parseFloat(item.net_amount) || 0), 0);
         setTotalSales(total);
     };
+
     const calculateMonthlySales = (data) => {
-        const currentYear = new Date().getFullYear();
-        const filteredData = data.filter(item => {
+        const filteredData = data.filter((item) => {
             const date = new Date(item.order_date);
-            return date.getFullYear() === parseInt(startDate.split('-')[0], 10); // ใช้ปีที่เลือก
+            return date.getFullYear() === parseInt(startDate.split('-')[0], 10);
         });
-    
+
         const monthlySales = filteredData.reduce((acc, item) => {
             const date = new Date(item.order_date);
             const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -127,17 +129,15 @@ export default function PaymentSummary() {
             acc[yearMonth] += parseFloat(item.net_amount) || 0;
             return acc;
         }, {});
-    
+
         setMonthlySalesData(monthlySales);
     };
-    
 
     const calculateTotalTransactions = (data) => {
         const total = data.length;
         setTotalTransactions(total);
     };
 
-    
 
     const prepareDailyChartData = () => {
         const dailySales = salesData.reduce((acc, item) => {
