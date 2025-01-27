@@ -19,23 +19,28 @@ export default function BackendSidebar() {
   }, [router.pathname]);
 
   const handleMenuClick = (menu) => {
-    if (menu === '/') {
-      // ใช้ SweetAlert2 สำหรับการแจ้งเตือน
+    if (menu === '/logout') {
+      // แสดงข้อความยืนยันก่อน Logout
       Swal.fire({
-        title: 'ยืนยันการย้อนกลับ',
-        text: 'คุณต้องการย้อนกลับใช่หรือไม่?',
+        title: 'ยืนยันการออกจากระบบ',
+        text: 'คุณต้องการออกจากระบบใช่หรือไม่?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'ใช่, ย้อนกลับ',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ใช่, ออกจากระบบ',
         cancelButtonText: 'ยกเลิก',
       }).then((result) => {
         if (result.isConfirmed) {
-          router.push(menu); // ดำเนินการย้อนกลับ
+          // ลบข้อมูลใน localStorage และเปลี่ยนเส้นทางไปยังหน้า Login
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          localStorage.removeItem('url_api');
+          localStorage.removeItem('slug');
+          router.push('/login');
         }
       });
-      return; // หยุดการทำงานต่อไปในฟังก์ชัน
+      return;
     }
 
     setActiveMenu(menu); // ตั้งค่าเมนูที่คลิกให้เป็น active
@@ -84,7 +89,7 @@ export default function BackendSidebar() {
           className={activeMenu === '/SalesReport' ? 'active' : ''}
           onClick={() => handleMenuClick('/SalesReport')}
         >
-          <Image src="/images/file.png" alt="Report" width={37} height={37} />
+          <Image src="/images/file.png" alt="Report" width={36} height={36} />
           {isExpanded && <span style={styles.iconLabel}>รายงานการขาย</span>}
         </div>
 
@@ -120,8 +125,16 @@ export default function BackendSidebar() {
           className={activeMenu === '/' ? 'active' : ''}
           onClick={() => handleMenuClick('/')}
         >
-          <Image src="/images/return.png" alt="Settings" width={35} height={35} />
+          <Image src="/images/left-arrow.png" alt="Settings" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
+        </div>
+        <div
+          style={styles.icon}
+          className={activeMenu === '/logout' ? 'active' : ''}
+          onClick={() => handleMenuClick('/logout')}
+        >
+          <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
+          {isExpanded && <span style={styles.iconLabel}>ออกจากระบบ</span>}
         </div>
       </div>
 
