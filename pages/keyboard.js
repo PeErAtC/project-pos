@@ -18,8 +18,8 @@ const DraggableKeyboard = ({ onKeyPress, onClose }) => {
       ],
       TH: [
         shift
-          ? ['๐', '“', '”', '๏', 'ฯ', 'ๆ', 'ํ', '๎', '์', '฿'] // Thai vowels and special characters
-          : ['ก', 'ข', 'ฃ', 'ค', 'ฅ', 'ฆ', 'ง', 'จ', 'ฉ', 'ช'], // Thai consonants
+          ? ['๐', '“', '”', 'ะ', 'ฯ', 'ๆ', 'ํ', '๎', '์', '฿']
+          : ['ก', 'ข', 'ฃ', 'ค', 'ฅ', 'ฆ', 'ง', 'จ', 'ฉ', 'ช'],
         shift
           ? ['ุ', 'ู', 'ิ', 'ี', 'ึ', '่', '้', '๊', '๋', '์']
           : ['ซ', 'ฌ', 'ญ', 'ฎ', 'ฏ', 'ฐ', 'ฑ', 'ฒ', 'ณ', 'ด'],
@@ -179,15 +179,16 @@ const styles = {
     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
   },
   deleteButton: {
-    backgroundColor: '#999', // สีแดง
+    backgroundColor: '#e74c3c', // สีแดง
     color: '#fff',
   },
   closeButton: {
-    backgroundColor: '#999', // สีเขียว
+    backgroundColor: '#2ecc71', // สีเขียว
     color: '#fff',
   },
   shiftButton: {
-    backgroundColor: '#999',
+    backgroundColor: '#347cae',
+    color: '#fff',
   },
   spaceButton: {
     flexGrow: 1,
@@ -214,5 +215,4 @@ const styles = {
     transition: 'background-color 0.2s',
   },
 };
-
 export default DraggableKeyboard;
