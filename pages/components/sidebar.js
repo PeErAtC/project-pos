@@ -102,7 +102,6 @@ export default function Sidebar() {
             ...styles.icon,
             ...(activeMenu === '/' ? styles.activeIcon : {}),
           }}
-          onClick={() => handleMenuClick('/')}
         >
           <Image src="/images/menu.png" alt="Homepage" width={35} height={35} />
           {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
