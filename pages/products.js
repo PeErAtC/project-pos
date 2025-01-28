@@ -8,10 +8,6 @@ import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/router';
 
-const api_url = "https://easyapp.clinic/pos-api";
-const slug = "abc";
-const authToken = "R42Wd3ep3aMza3KJay9A2T5RcjCZ81GKaVXqaZBH";
-
 
 export default function SalesPage() {
     const [products, setProducts] = useState([]);
@@ -40,57 +36,130 @@ export default function SalesPage() {
     const [isSplitPaymentPopupOpen, setIsSplitPaymentPopupOpen] = useState(false);
     const [splitPaymentCount, setSplitPaymentCount] = useState(0); // เก็บจำนวนรายการแยกชำระ
     
-    // Fetch products from API
+    const getApiConfig = () => {
+        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
+    
+        // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+        if (!api_url.endsWith('/api')) {
+            api_url += '/api';
+        }
+    
+        return { api_url, slug, authToken };
+    };
+    
+     // ประกาศตัวแปร api_url, slug, และ authToken ที่ส่วนต้นของคอมโพเนนต์
+     let api_url = "https://default.api.url";
+        let slug = "default_slug";
+        let authToken = "default_token";
+
+        // ตรวจสอบว่าอยู่ในเบราว์เซอร์ก่อนเรียกใช้ localStorage
+        if (typeof window !== "undefined") {
+            api_url = localStorage.getItem("url_api") || api_url;
+            slug = localStorage.getItem("slug") || slug;
+            authToken = localStorage.getItem("token") || authToken;
+        }
+
+        // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+        if (!api_url.endsWith("/api")) {
+            api_url += "/api";
+    }
+
     // ฟังก์ชัน fetchProducts
     const fetchProducts = async () => {
         try {
-
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             
-            const response = await axios.get(`${api_url}/api/${slug}/products`, {
+            const response = await axios.get(`${api_url}/${slug}/products`, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-            setProducts(response.data);
-        } catch (error) {
-            if (error.response && error.response.status === 404) {
-                console.error('API endpoint ไม่พบ:', error.response.config.url);
+    
+            if (response.data && Array.isArray(response.data)) {
+                setProducts(response.data);
             } else {
-                console.error('เกิดข้อผิดพลาด:', error.message);
+                console.warn('รูปแบบข้อมูลที่ได้รับจาก API ไม่ถูกต้อง');
+                setProducts([]);
+            }
+        } catch (error) {
+            if (error.response) {
+                console.error('API Error:', error.response.status, error.response.data);
+                if (error.response.status === 404) {
+                    console.error('API endpoint ไม่พบ:', error.response.config.url);
+                }
+            } else if (error.request) {
+                console.error('ไม่มีการตอบสนองจากเซิร์ฟเวอร์:', error.message);
+            } else {
+                console.error('เกิดข้อผิดพลาดในการตั้งค่า API:', error.message);
             }
             setProducts([]); // ตั้งค่า products เป็นค่าว่างหาก API ล้มเหลว
         }
     };
-
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            fetchProducts();
+            fetchCategories();
+            const interval = setInterval(fetchProducts, 5000);
+            return () => clearInterval(interval);
+        }
+    }, []);
+    
+    
 //  const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
 
 const fetchTableLastOrder = async (tableId) => {
     try {
+        let api_url = "https://default.api.url";
+        let slug = "default_slug";
+        let authToken = "default_token";
+
+        // ตรวจสอบว่าอยู่ในเบราว์เซอร์ก่อนเรียกใช้ localStorage
+        if (typeof window !== "undefined") {
+            api_url = localStorage.getItem("url_api") || api_url;
+            slug = localStorage.getItem("slug") || slug;
+            authToken = localStorage.getItem("token") || authToken;
+        }
+
+        // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+        if (!api_url.endsWith("/api")) {
+            api_url += "/api";
+        }
+
         const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
             headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
+                Accept: "application/json",
+                Authorization: `Bearer ${authToken}`,
             },
         });
 
         if (response.data && response.data.order) {
             const lastOrder = response.data.order;
 
-            // ตรวจสอบสถานะของออเดอร์ว่าเป็น 'N' หรือไม่
-            if (lastOrder.status === 'N') {
-                console.log('ข้อมูลออเดอร์ล่าสุดที่ยังไม่ได้ชำระเงิน:', lastOrder);
-                return lastOrder; // ส่งกลับข้อมูลออเดอร์
+            if (lastOrder.status === "N") {
+                console.log("ข้อมูลออเดอร์ล่าสุด:", lastOrder);
+                return lastOrder;
             } else {
-                console.warn('ออเดอร์ล่าสุดไม่ใช่สถานะ "N" (ยังไม่ได้ชำระเงิน)');
+                console.warn("ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
                 return null;
             }
         } else {
-            console.warn('ไม่มีข้อมูลออเดอร์ล่าสุด');
+            console.warn("ไม่มีข้อมูลออเดอร์ล่าสุด");
             return null;
         }
     } catch (error) {
-        console.error('เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:', error.response?.data || error.message);
+        console.error("เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:", error.response?.data || error.message);
         return null;
     }
 };
@@ -103,6 +172,16 @@ useEffect(() => {
         }
 
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             // เรียก API table_lastorder
             const lastOrder = await fetchTableLastOrder(tableCode);
 
@@ -126,6 +205,16 @@ useEffect(() => {
     //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     const fetchOrdersByTable = async (tableCode) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const today = new Date();
             const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
 
@@ -156,6 +245,16 @@ useEffect(() => {
 
     const fetchOrderItems = async (orderId) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/order-items`, {
                 params: { order_id: orderId },
                 headers: {
@@ -226,64 +325,69 @@ useEffect(() => {
     }, [payments]);
                                                                                    //******************** */
     const closeOrder = async (orderId) => {
-        try {
-            const response = await axios.put(
-                `${api_url}/api/${slug}/orders/${orderId}`,
-                { status: 'Y' }, // อัปเดตสถานะเป็นชำระเงินแล้ว
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                }
-            );
-    
-            if (response.data && response.data.success) {
-                Swal.fire('สำเร็จ', 'ปิดออเดอร์เรียบร้อยแล้ว', 'success');
-            } else {
-                throw new Error('การปิดออเดอร์ล้มเหลว');
-            }
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการปิดออเดอร์:', error.response?.data || error.message);
-            Swal.fire('ผิดพลาด', 'ไม่สามารถปิดออเดอร์ได้', 'error');
-        }
-    };
-    
-// ฟังก์ชัน fetchCategories
-const fetchCategories = () => {
-    const url = `${api_url}/api/${slug}/category`;
-    console.log('Fetching categories from:', url);
+    try {
+        console.log("🔍 Debug: กำลังปิดออเดอร์...");
+        console.log("📌 Order ID:", orderId);
 
-    axios.get(url, {
-        headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
-        },
-    })
-    .then((response) => setCategories(response.data.categories)) // ตั้งค่าหมวดหมู่หากสำเร็จ
-    .catch((error) => {
-        if (error.response) {
-            if (error.response.status === 404) {
-                console.warn('API ไม่พบเส้นทางสำหรับหมวดหมู่ (404)');
-            } else {
-                console.warn(`เกิดข้อผิดพลาด API: ${error.response.status}`);
+        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
+
+        if (!api_url.endsWith('/api')) api_url += '/api';
+
+        const response = await axios.put(
+            `${api_url}/${slug}/orders/${orderId}`,
+            { status: 'Y' }, // เปลี่ยนสถานะเป็น 'Y' (ชำระเงินแล้ว)
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
             }
+        );
+
+        if (response.data && response.data.success) {
+            Swal.fire('สำเร็จ', 'ปิดออเดอร์เรียบร้อยแล้ว', 'success');
         } else {
-            console.warn('เกิดข้อผิดพลาดในการเชื่อมต่อ API');
+            throw new Error('API ไม่สามารถปิดออเดอร์ได้');
         }
-        setCategories([]); // กำหนดหมวดหมู่ให้เป็นค่าว่าง
-    });
+    } catch (error) {
+        console.error("❌ Error closing order:", error.response?.data || error.message);
+        Swal.fire('ผิดพลาด', 'ไม่สามารถปิดออเดอร์ได้', 'error');
+    }
 };
 
-    useEffect(() => {
-        fetchProducts();
-        fetchCategories();
-        const interval = setInterval(fetchProducts, 5000);
-        return () => clearInterval(interval);
-    }, []);;
-    useEffect(() => {
-        fetchPaymentMethods(); // ดึงข้อมูลวิธีการชำระเงิน
-    }, []);
+    
+// ฟังก์ชัน fetchCategories
+const fetchCategories = async () => {
+    try {
+        //////////////////// ประกาศตัวแปร URL CALL   
+        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
+
+        // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+        if (!api_url.endsWith('/api')) {
+            api_url += '/api';
+        }
+        //////////////////// ประกาศตัวแปร  END URL CALL 
+
+        const url = `${api_url}/${slug}/category`;
+
+        const response = await axios.get(url, {
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+        });
+        setCategories(response.data.categories || []);
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        setCategories([]);
+    }
+};
+
+
     
     const handleCategorySelect = (categoryId) => {
         setSelectedCategoryId(categoryId);
@@ -331,6 +435,16 @@ const fetchCategories = () => {
     // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
     const addItemToDatabase = async (product) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             // ตรวจสอบค่า product ก่อนใช้
             if (!product || !product.id || !product.price) {
                 console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
@@ -429,34 +543,29 @@ const fetchCategories = () => {
     
     const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
-            // ตรวจสอบ slug
-            if (!slug || typeof slug !== "string") {
-                console.error('Slug is not defined or invalid:', slug);
-                throw new Error('Slug is not defined or invalid.');
-            }
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
     
-            // URL สำหรับเรียก API
+            if (!api_url.endsWith('/api')) api_url += '/api';
+    
             const url = `${api_url}/api/${slug}/partial-payments`;
     
-            // ตรวจสอบค่าข้อมูลก่อนส่ง
             if (!orderId || !paymentMethod || typeof amount !== "number" || amount <= 0) {
-                console.error('Invalid data:', { orderId, paymentMethod, amount });
-                throw new Error('Invalid payment data.');
+                console.error('❌ ข้อมูลไม่ถูกต้อง:', { orderId, paymentMethod, amount });
+                throw new Error('ข้อมูลชำระเงินไม่ถูกต้อง');
             }
     
-            // สร้างข้อมูลการชำระเงิน
             const paymentData = {
                 order_id: orderId,
-                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, // ตรวจสอบวิธีการชำระเงิน
-                payment_date: formatDateTime(new Date()), // วันที่ชำระเงิน
-                amount: parseFloat(amount).toFixed(2), // ยอดเงิน (ต้องเป็นตัวเลขและทศนิยม 2 ตำแหน่ง)
-                status: 'PARTIAL', // สถานะแยกชำระ
+                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, 
+                payment_date: new Date().toISOString(),
+                amount: parseFloat(amount).toFixed(2),
+                status: 'PARTIAL', 
             };
     
-            console.log("API URL:", url);
-            console.log("Data being sent:", paymentData);
+            console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
     
-            // ส่งคำร้องไปยัง API
             const response = await axios.post(url, paymentData, {
                 headers: {
                     'Accept': 'application/json',
@@ -464,28 +573,31 @@ const fetchCategories = () => {
                 },
             });
     
-            // ตรวจสอบการตอบกลับ
             if (response.data && response.data.success) {
-                console.log('Partial payment saved successfully:', response.data);
+                console.log('✅ บันทึกข้อมูลการแยกชำระสำเร็จ:', response.data);
             } else {
-                console.error('API response invalid or unsuccessful:', response.data);
-                throw new Error(response.data?.message || 'API response format invalid.');
+                throw new Error('API ไม่สามารถบันทึกข้อมูลแยกชำระได้');
             }
         } catch (error) {
-            // จัดการข้อผิดพลาด
-            console.error('Error saving partial payment:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
-            });
-    
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระเงินได้', 'error');
+            console.error('❌ Error saving partial payment:', error.response?.data || error.message);
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระได้', 'error');
         }
     };
+    
     
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/partial-payments`, {
                 params: { order_id: orderId },
                 headers: {
@@ -623,42 +735,67 @@ const fetchCategories = () => {
     };
     
     const handlePayment = () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
-        const totalPaid = calculateTotalPaid() + receivedAmount; // รวมยอดที่ชำระทั้งหมด
+        try {
+            const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
+            const totalPaid = calculateTotalPaid() + receivedAmount; // รวมยอดที่ชำระทั้งหมด
     
-        if (totalPaid < totalDue) {
+            if (isNaN(totalDue) || isNaN(totalPaid) || isNaN(receivedAmount)) {
+                console.error("❌ Error: ค่าที่ใช้คำนวณเป็น NaN", { totalDue, totalPaid, receivedAmount });
+                Swal.fire({
+                    icon: "error",
+                    title: "เกิดข้อผิดพลาด",
+                    text: "ข้อมูลการชำระเงินไม่ถูกต้อง กรุณาลองใหม่",
+                });
+                return;
+            }
+    
+            if (totalPaid < totalDue) {
+                Swal.fire({
+                    icon: "error",
+                    title: "ยอดเงินไม่เพียงพอ",
+                    text: `กรุณาชำระเงินให้ครบ: ${(totalDue - totalPaid).toFixed(2)} บาท`,
+                });
+                return;
+            }
+    
+            const change = Math.max(totalPaid - totalDue, 0); // คำนวณเงินทอน
+    
             Swal.fire({
-                icon: 'error',
-                title: 'ยอดเงินไม่เพียงพอ',
-                text: `กรุณาชำระเงินให้ครบ: ${(totalDue - totalPaid).toFixed(2)} บาท`,
+                icon: "success",
+                title: "ชำระเงินสำเร็จ!",
+                text: `ยอดชำระ: ${receivedAmount.toFixed(2)} บาท\nเงินทอน: ${change.toFixed(2)} บาท`,
+                timer: 2000, // ปิดการแจ้งเตือนอัตโนมัติหลัง 2 วินาที
+                showConfirmButton: false,
+            }).then(() => {
+                if (!temporaryPayments || !Array.isArray(temporaryPayments)) {
+                    console.error("❌ Error: temporaryPayments ไม่ใช่อาร์เรย์", { temporaryPayments });
+                    return;
+                }
+    
+                // อัปเดตเงินทอนและยอดชำระไปยังใบเสร็จ
+                setTemporaryPayments([
+                    ...temporaryPayments,
+                    {
+                        amount: receivedAmount,
+                        paymentMethod,
+                        timestamp: new Date(),
+                    },
+                ]);
+    
+                // บันทึกการชำระและเปิดหน้าต่างใบเสร็จ
+                setShowReceipt(true);
+                setReceivedAmount(0); // รีเซ็ตยอดเงินที่รับหลังชำระ
             });
-            return;
+        } catch (error) {
+            console.error("❌ Error ใน handlePayment:", error);
+            Swal.fire({
+                icon: "error",
+                title: "เกิดข้อผิดพลาด",
+                text: "ไม่สามารถดำเนินการชำระเงินได้ กรุณาลองใหม่",
+            });
         }
-    
-        const change = Math.max(totalPaid - totalDue, 0); // คำนวณเงินทอน
-    
-        Swal.fire({
-            icon: 'success',
-            title: 'ชำระเงินสำเร็จ!',
-            text: `ยอดชำระ: ${receivedAmount.toFixed(2)} บาท\nเงินทอน: ${change.toFixed(2)} บาท`,
-            timer: 2000, // ปิดการแจ้งเตือนอัตโนมัติหลัง 2 วินาที
-            showConfirmButton: false,
-        }).then(() => {
-            // อัปเดตเงินทอนและยอดชำระไปยังใบเสร็จ
-            setTemporaryPayments([
-                ...temporaryPayments,
-                {
-                    amount: receivedAmount,
-                    paymentMethod,
-                    timestamp: new Date(),
-                },
-            ]);
-    
-            // บันทึกการชำระและเปิดหน้าต่างใบเสร็จ
-            setShowReceipt(true);
-            setReceivedAmount(0); // รีเซ็ตยอดเงินที่รับหลังชำระ
-        });
     };
+    
     
     const calculateTotalWithBillDiscount = () => {
         const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
@@ -686,7 +823,24 @@ const fetchCategories = () => {
     
     const sendOrder = async (orderData) => {
         try {
-            const response = await axios.post(`${api_url}/api/${slug}/orders`, orderData, {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+        
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
+    
+            console.log("API URL:", api_url);
+            console.log("Slug:", slug);
+            console.log("Auth Token:", authToken);
+            console.log("Order Data to send:", orderData);
+    
+            // ส่งคำขอ POST ไปยัง API
+            const response = await axios.post(`${api_url}/${slug}/orders`, orderData, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
@@ -697,13 +851,26 @@ const fetchCategories = () => {
                 console.log('Order sent successfully:', response.data.order);
                 return response.data.order; // Return the created order
             } else {
+                console.error('Invalid API response format:', response.data);
                 throw new Error('API response format is invalid');
             }
         } catch (error) {
-            console.error('Error creating order:', error.response?.data || error.message);
-            throw new Error(`Unable to create order: ${error.response?.data?.message || error.message}`);
+            console.error('Error creating order:', error.message);
+    
+            if (error.response) {
+                // กรณีที่เซิร์ฟเวอร์ตอบกลับแต่มีข้อผิดพลาด
+                console.error('Response Data:', error.response.data);
+                console.error('Response Status:', error.response.status);
+            } else if (error.request) {
+                // กรณีที่คำขอส่งไป แต่ไม่มีการตอบกลับจากเซิร์ฟเวอร์
+                console.error('Network Error: No response received from server.');
+            }
+    
+            throw new Error(`Unable to create order: ${error.message}`);
         }
     };
+    
+    
     
     useEffect(() => {
         calculateTotalWithVAT();
@@ -713,13 +880,12 @@ const fetchCategories = () => {
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
-            const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
+            const { api_url, slug, authToken } = getApiConfig(); // ดึงค่าจากฟังก์ชัน getApiConfig
     
-            // คำนวณยอดรวม (Total Amount)
+            const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
             const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0;
             console.log("Total Amount with VAT (ยอดรวม):", totalAmountWithVAT);
     
-            // คำนวณ VAT
             let vatAmount = 0;
     
             if (vatType === 'includeVat7') {
@@ -732,10 +898,8 @@ const fetchCategories = () => {
                 vatAmount = totalAmountWithVAT * 0.03;
             }
     
-            // ตรวจสอบ % VAT
             const vatPercentage = vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0;
     
-            // สร้างข้อมูลสำหรับการส่งคำสั่งซื้อ
             const orderData = {
                 total_amount: totalAmountWithVAT.toFixed(2),
                 vat_per: vatPercentage,
@@ -761,62 +925,71 @@ const fetchCategories = () => {
                         item.discountType
                     ) * Number(item.quantity) || 0,
                 })),
+                payment_method: paymentMethod || 'cash',
             };
     
-            orderData.payment_method = paymentMethod || 'cash';
+            console.log("Order Data to send:", orderData);
     
-            console.log("ข้อมูลออเดอร์ที่ส่ง:", orderData);
-    
-            // ส่งข้อมูลคำสั่งซื้อไปยัง API
-            const newOrder = await sendOrder(orderData);
+            // ส่งคำขอสร้างออเดอร์
+            const newOrder = await sendOrder(orderData, api_url, slug, authToken); 
             setOrderNumber(newOrder.order_number);
             setOrderId(newOrder.id);
             setOrderReceived(true);
     
-            // อัปเดตสถานะของโต๊ะ
+            // ตรวจสอบว่า tableCode มีค่าหรือไม่
             if (tableCode) {
-                const tableUpdateData = { status: 'N' };
-                const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
-    
+                const tableUpdateData = { status: 'N' }; // กำหนดสถานะใหม่ของโต๊ะ
+                const url = `${api_url}/${slug}/table_codes/${tableCode}`; // แก้ไข URL ให้ถูกต้อง
                 console.log("Updating table status with URL:", url);
     
                 try {
                     const response = await axios.put(url, tableUpdateData, {
                         headers: {
-                            'Accept': 'application/json',
-                            'Authorization': `Bearer ${authToken}`,
+                            Accept: 'application/json',
+                            Authorization: `Bearer ${authToken}`,
                         },
                     });
     
                     if (response.status === 200 || response.status === 204) {
-                        console.log(`สถานะโต๊ะ ${tableCode} ถูกอัปเดตเป็น "ไม่ว่าง"`);
+                        console.log(`Table ${tableCode} status updated to "Not Available"`);
                     } else {
                         throw new Error(`Unexpected response status: ${response.status}`);
                     }
                 } catch (error) {
-                    console.error(`ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`);
+                    console.error('Failed to update table status:', error.response?.data || error.message);
                     Swal.fire(
-                        'เกิดข้อผิดพลาด',
-                        `ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`,
+                        'Error',
+                        `Failed to update table status: ${error.response?.data?.message || error.message}`,
                         'error'
                     );
                 }
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการรับออเดอร์:', error);
+            console.error('Error receiving order:', error);
     
-            // ตรวจสอบรายละเอียดข้อผิดพลาด
             if (error.response) {
                 console.error("Response Data:", error.response.data);
                 console.error("Response Status:", error.response.status);
             }
     
-            Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถรับออเดอร์ได้: ${error.message}`, 'error');
+            Swal.fire('Error', `Could not receive order: ${error.message}`, 'error');
         }
     };
     
+    
+    
     const saveOrderData = async (orderId, paymentMethod, receivedAmount, cart, billDiscount, billDiscountType, vatType, calculateTotalWithBillDiscountAndVAT, calculateVAT) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             // คำนวณส่วนลดรวมต่อสินค้า
             const totalItemDiscount = cart.reduce((acc, item) => {
                 const itemDiscountAmount = (item.discountType === 'THB') 
@@ -912,6 +1085,16 @@ const fetchCategories = () => {
     
     const addToOrder = async (orderId, newItems) => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             // ตรวจสอบให้แน่ใจว่า newItems ไม่ว่าง และมีค่า product_id
             if (!newItems || newItems.length === 0) {
                 throw new Error('ไม่มีรายการสินค้าที่จะเพิ่ม');
@@ -960,6 +1143,16 @@ const fetchCategories = () => {
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -1000,96 +1193,126 @@ const fetchCategories = () => {
     
 
     const closeReceipt = async () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมหลังส่วนลดและ VAT
-    
         try {
-            // คำนวณส่วนลดรวมต่อสินค้า
-            const totalItemDiscount = cart.reduce((acc, item) => {
-                const itemDiscountAmount = (item.discountType === 'THB') 
-                    ? item.discount * item.quantity 
-                    : (item.price * item.discount / 100) * item.quantity;
-                return acc + itemDiscountAmount;
-            }, 0);
+            const totalDue = calculateTotalWithBillDiscountAndVAT(); 
+            const amountToPay = receivedAmount || calculateTotalPaid(); // ใช้ receivedAmount หรือรวมยอดที่จ่ายไปแล้ว
     
-            // คำนวณส่วนลดรวมทั้งบิล
-            const totalBillDiscount = (billDiscountType === 'THB') 
-                ? billDiscount 
-                : totalDue * (billDiscount / 100);
+            if (!orderId) {
+                Swal.fire('ผิดพลาด', 'ไม่พบเลขที่ออเดอร์ กรุณาลองอีกครั้ง', 'error');
+                return;
+            }
     
-            const totalDiscount = totalItemDiscount + totalBillDiscount; // รวมส่วนลดทั้งหมด
+            if (!paymentMethod) {
+                Swal.fire('ผิดพลาด', 'กรุณาเลือกวิธีการชำระเงินก่อนปิดบิล', 'error');
+                return;
+            }
     
-            // คำนวณ VAT
-            const vatAmount = vatType.includes('exclude') ? parseFloat(calculateVAT().toFixed(2)) : 0;
+            if (amountToPay <= 0) {
+                Swal.fire('ผิดพลาด', 'จำนวนเงินที่ชำระต้องมากกว่า 0', 'error');
+                return;
+            }
     
-            // ยอดสุทธิ
-            const netAmount = totalDue;
+            console.log("📌 ค่า orderId:", orderId);
+            console.log("📌 ค่า netAmount:", totalDue);
+            console.log("📌 ค่า paymentMethod:", paymentMethod);
+            console.log("📌 ค่า receivedAmount:", amountToPay);
     
-            // บันทึกข้อมูลการชำระเงิน
-            await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
+            // ✅ ตรวจสอบให้แน่ใจว่าการบันทึกข้อมูลการชำระเงินสำเร็จ
+            const paymentResponse = await savePaymentToDatabase(orderId, paymentMethod, amountToPay);
+            if (!paymentResponse || !paymentResponse.success) {
+                throw new Error('❌ บันทึกข้อมูลการชำระเงินล้มเหลว');
+            }
     
-            // อัปเดตข้อมูลบิลในฐานข้อมูล
-            await axios.put(
-                `${api_url}/api/${slug}/orders/${orderId}`,
+            const response = await axios.put(
+                `${api_url}/${slug}/orders/${orderId}`,
                 {
-                    status: 'Y', // บิลชำระแล้ว
-                    vat_amt: vatType.includes('exclude') ? vatAmount : "", // จำนวน VAT
-                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, // เปอร์เซ็นต์ VAT
-                    net_amount: netAmount, // ยอดสุทธิ
-                    discount: totalDiscount.toFixed(2), // บันทึกส่วนลดรวมในฟิลด์เดียว
+                    status: 'Y',
+                    vat_amt: vatType.includes('exclude') ? calculateVAT() : 0, 
+                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, 
+                    net_amount: totalDue,
+                    discount: billDiscount.toFixed(2),
+                    payment_method: paymentMethod, 
+                    updated_by: 1, // ✅ อาจต้องกำหนดค่า updated_by เพื่อให้ API ยอมรับ
                 },
                 {
                     headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
+                        Accept: "application/json",
+                        Authorization: `Bearer ${authToken}`,
                     },
                 }
             );
     
-            // เปลี่ยนสถานะโต๊ะเป็นว่าง
-            // เปลี่ยนสถานะโต๊ะเป็น "ว่าง" (Y)
+            console.log("📌 API Response:", response.data);
+    
+            // ✅ แก้ไขเงื่อนไขการตรวจสอบ response
+            if (response && (response.status === 200 || response.status === 201) && response.data?.order) {
+                console.log("✅ บันทึกข้อมูลบิลสำเร็จ:", response.data.order);
+            } else {
+                console.warn("⚠️ API ตอบกลับสำเร็จแต่ไม่มีข้อมูล order:", response.data);
+                Swal.fire("แจ้งเตือน", "บิลถูกบันทึกแต่ไม่มีข้อมูล order", "warning");
+            }
+    
+            // ✅ ตรวจสอบ response.data.items ว่ามีสินค้าในบิลหรือไม่
+            if (response.data?.items && response.data.items.length === 0) {
+                console.warn("⚠️ บิลนี้ไม่มีสินค้า (Empty items array)");
+            }
+    
+            // ✅ อัปเดตสถานะโต๊ะ
             if (tableCode) {
-                const tableUpdateData = { status: 'Y' }; // กำหนดสถานะโต๊ะเป็น "ว่าง"
-                const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
-
                 try {
-                    console.log('กำลังอัปเดตสถานะโต๊ะ:', tableCode, 'เป็น "ว่าง" ด้วยข้อมูล:', tableUpdateData);
-
-                    const response = await axios.patch(url, tableUpdateData, { // ใช้ PATCH เพื่ออัปเดตเฉพาะสถานะ
-                        headers: {
-                            'Accept': 'application/json',
-                            'Authorization': `Bearer ${authToken}`,
-                        },
+                    const tableResponse = await axios.patch(`${api_url}/${slug}/table_codes/${tableCode}`, { status: 'Y' }, {
+                        headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` },
                     });
-
-                    if (response.status === 200 || response.status === 204) {
-                        console.log(`สถานะโต๊ะ ${tableCode} ถูกอัปเดตเป็น "ว่าง" สำเร็จ`);
+    
+                    if (tableResponse.status === 200 || tableResponse.status === 204) {
+                        console.log(`✅ โต๊ะ ${tableCode} ถูกอัปเดตเป็น "ว่าง" สำเร็จ`);
                     } else {
-                        throw new Error(`Unexpected response status: ${response.status}`);
+                        throw new Error(`❌ Response status: ${tableResponse.status}`);
                     }
                 } catch (error) {
-                    console.error(`ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`);
-                    Swal.fire(
-                        'เกิดข้อผิดพลาด',
-                        `ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`,
-                        'error'
-                    );
+                    console.error(`❌ ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`);
                 }
             }
-
     
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกบิลสำเร็จ',
-                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount.toFixed(2)} บาท`,
+                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${totalDue.toFixed(2)} บาท`,
                 confirmButtonText: 'ตกลง',
             }).then(() => {
                 resetStateAfterSuccess();
             });
+    
         } catch (error) {
-            console.error('เกิดข้อผิดพลาด:', error.message);
+            console.error('❌ เกิดข้อผิดพลาด:', error.message);
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
+    
+    
+    
+    
+    
+    // ฟังก์ชันช่วยสำหรับอัปเดตสถานะโต๊ะ
+    const updateTableStatus = async (tableCode, status) => {
+        const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
+        const tableUpdateData = { status };
+    
+        const response = await axios.patch(url, tableUpdateData, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${authToken}`,
+            },
+        });
+    
+        if (response.status === 200 || response.status === 204) {
+            console.log(`สถานะโต๊ะ ${tableCode} ถูกอัปเดตเป็น "${status}" สำเร็จ`);
+        } else {
+            throw new Error(`Unexpected response status: ${response.status}`);
+        }
+    };
+    
+    
     
     const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
     // ฟังก์ชันคำนวณยอดสุทธิ
@@ -1141,35 +1364,80 @@ const fetchCategories = () => {
     };
     const savePaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
-            const url = `${api_url}/api/${slug}/payments`;
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            if (!api_url.endsWith('/api')) api_url += '/api';
+            const url = `${api_url}/${slug}/payments`;
+    
+            if (!orderId || !paymentMethod || isNaN(amount) || amount <= 0) {
+                console.error("❌ ข้อมูลชำระเงินไม่ถูกต้อง:", { orderId, paymentMethod, amount });
+                Swal.fire("เกิดข้อผิดพลาด", "ข้อมูลชำระเงินไม่ถูกต้อง", "error");
+                return { success: false };
+            }
+    
+            const formattedAmount = parseFloat(amount).toFixed(2);
+            const paymentDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+    
+            const payChannelId = paymentMethod === "cash" ? 1 : 2;
+    
             const paymentData = {
                 order_id: orderId,
-                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, // เปลี่ยน ID ตามวิธีชำระเงิน
-                payment_date: formatDateTime(new Date()), // วันที่ชำระเงิน
-                amount, // ยอดเงินชำระ
-                status: 'Y', // ชำระเงินเสร็จสมบูรณ์
+                pay_channel_id: payChannelId,
+                payment_date: paymentDate,
+                amount: formattedAmount,
+                status: "Y",
             };
+    
+            console.log("📤 Data ที่ส่งไปยัง API:", paymentData);
     
             const response = await axios.post(url, paymentData, {
                 headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
+                    Accept: "application/json",
+                    Authorization: `Bearer ${authToken}`,
                 },
             });
     
-            if (response.data && response.data.success) {
-                console.log('บันทึกข้อมูลการชำระเงินสำเร็จ:', response.data);
+            console.log("✅ Response จาก API:", response.data);
+            console.log("📌 Response Status:", response.status);
+    
+            // ✅ แก้ไขเงื่อนไขให้รองรับทั้ง 200 และ 201
+            if (response && (response.status === 200 || response.status === 201) && response.data?.id) {
+                console.log("✅ บันทึกข้อมูลการชำระเงินสำเร็จ:", response.data);
+                return { success: true, data: response.data };
             } else {
-                console.error('บันทึกข้อมูลการชำระเงินล้มเหลว:', response.data.message);
+                console.error("❌ บันทึกข้อมูลการชำระเงินล้มเหลว:", response.data);
+                Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกการชำระเงินได้", "error");
+                return { success: false };
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลการชำระเงิน:', error.response?.data || error.message);
-            throw new Error('ไม่สามารถบันทึกข้อมูลการชำระเงินได้');
+            console.error("❌ Error saving payment:", error.response?.data || error.message);
+            Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลการชำระเงินได้", "error");
+            return { success: false };
         }
     };
     
+    
+    
+    
+    
+    
+    
+    
+    
     const fetchPaymentChannels = async () => {
         try {
+            //////////////////// ประกาศตัวแปร URL CALL   
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+            //////////////////// ประกาศตัวแปร  END URL CALL 
             const response = await axios.get(`${api_url}/api/${slug}/payChannels`, {
                 headers: {
                     'Accept': 'application/json',
@@ -1370,7 +1638,7 @@ const fetchCategories = () => {
                                 )}
                                 {product.image ? (
                                     <Image
-                                        src={`${api_url}/storage/app/public/product/${slug}/${product.image}`}
+                                        src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${product.image}`}
                                         alt={product.p_name}
                                         width={100}
                                         height={100}
@@ -1427,8 +1695,8 @@ const fetchCategories = () => {
                     <div key={item.id} style={styles.cartItem}>
                         {item.image ? (
                             <Image
-                                src={`${api_url}/storage/app/public/product/${slug}/${item.image}`}
-                                alt={item.p_name}
+                            src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${item.image}`}
+                            alt={item.p_name}
                                 width={100}
                                 height={100}
                                 quality={100}
