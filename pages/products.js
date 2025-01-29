@@ -172,52 +172,115 @@ useEffect(() => {
         }
 
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
+            // ประกาศตัวแปร URL CALL
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
-    
+
             // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
             if (!api_url.endsWith('/api')) {
                 api_url += '/api';
             }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            // เรียก API table_lastorder
-            const lastOrder = await fetchTableLastOrder(tableCode);
 
-            if (lastOrder) {
-                setOrderId(lastOrder.id); // เก็บ ID ของออเดอร์ล่าสุด
-                setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
-                setCart(lastOrder.items || []); // อัปเดตรายการสินค้าในตะกร้า
+            // แก้ไข URL ที่เรียก
+            const url = `${api_url}/${slug}/orders/${tableCode}/table_lastorder`; // ตรวจสอบ URL นี้ให้แน่ใจ
+
+            // เรียก API
+            const response = await axios.get(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+
+            if (response.data && response.data.order) {
+                const lastOrder = response.data.order;
+                if (lastOrder.status === 'N') {
+                    console.log("ข้อมูลออเดอร์ล่าสุด:", lastOrder);
+                    setOrderId(lastOrder.id); // เก็บ ID ของออเดอร์ล่าสุด
+                    setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
+                    setCart(lastOrder.items || []); // อัปเดตรายการสินค้าในตะกร้า
+                } else {
+                    console.warn("ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
+                    setCart([]); // ล้างตะกร้าหากไม่มีออเดอร์ที่มีสถานะ 'N'
+                }
             } else {
-                console.warn('ไม่มีออเดอร์ล่าสุดสำหรับโต๊ะนี้ หรือสถานะไม่ใช่ "N"');
-                setCart([]); // ล้างตะกร้าหากไม่มีออเดอร์
+                console.warn("ไม่มีข้อมูลออเดอร์ล่าสุด");
+                setCart([]); // ล้างตะกร้า หากไม่มีข้อมูลออเดอร์
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการโหลดออเดอร์ล่าสุด:', error.message);
+            console.error("เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:", error.response?.data || error.message);
+            setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
         }
     };
 
-    loadTableLastOrder();
-}, [tableCode]); // ทำงานเมื่อ tableCode เปลี่ยน
+    loadTableLastOrder(); // เรียกฟังก์ชันเพื่อโหลดข้อมูลออเดอร์
 
-    
+}, [tableCode]); // ทำงานเมื่อ tableCode เปลี่ยนแปลง
+
+
+const loadTableLastOrder = async () => {
+    if (!tableCode) {
+        console.warn('ไม่มี tableCode');
+        return;
+    }
+
+    try {
+        // ประกาศตัวแปร URL CALL
+        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
+
+        // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+        if (!api_url.endsWith('/api')) {
+            api_url += '/api';
+        }
+
+        // แก้ไข URL ที่เรียก
+        const url = `${api_url}/${slug}/orders/${tableCode}/table_lastorder`; // ตรวจสอบ URL นี้ให้แน่ใจ
+
+        // เรียก API
+        const response = await axios.get(url, {
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+        });
+
+        if (response.data && response.data.order) {
+            const lastOrder = response.data.order;
+            if (lastOrder.status === 'N') {
+                console.log("ข้อมูลออเดอร์ล่าสุด:", lastOrder);
+                return lastOrder;
+            } else {
+                console.warn("ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
+                return null;
+            }
+        } else {
+            console.warn("ไม่มีข้อมูลออเดอร์ล่าสุด");
+            return null;
+        }
+    } catch (error) {
+        console.error("เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:", error.response?.data || error.message);
+        return null;
+    }
+};
+
     //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     const fetchOrdersByTable = async (tableCode) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
-    
+        
             // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
             if (!api_url.endsWith('/api')) {
                 api_url += '/api';
             }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
+    
             const today = new Date();
             const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
-
+    
             const response = await axios.get(`${api_url}/api/${slug}/orders`, {
                 params: {
                     table_code: tableCode, // กรองตามโต๊ะ
@@ -231,7 +294,7 @@ useEffect(() => {
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-
+    
             if (response.data && response.data.orders) {
                 return response.data.orders; // ส่งกลับรายการออเดอร์
             } else {
@@ -241,7 +304,8 @@ useEffect(() => {
             console.error('เกิดข้อผิดพลาดในการดึงข้อมูลออเดอร์:', error.message);
             return [];
         }
-    };                                                                         
+    };
+                                                                             
 
     const fetchOrderItems = async (orderId) => {
         try {
