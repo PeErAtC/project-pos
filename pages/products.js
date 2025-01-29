@@ -325,37 +325,48 @@ useEffect(() => {
     }, [payments]);
                                                                                    //******************** */
     const closeOrder = async (orderId) => {
-    try {
-        console.log("🔍 Debug: กำลังปิดออเดอร์...");
-        console.log("📌 Order ID:", orderId);
+        try {
+            console.log("🔍 Debug: กำลังปิดออเดอร์...");
+            console.log("📌 Order ID:", orderId);
 
-        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-        const slug = localStorage.getItem('slug') || 'default_slug';
-        const authToken = localStorage.getItem('token') || 'default_token';
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
 
-        if (!api_url.endsWith('/api')) api_url += '/api';
-
-        const response = await axios.put(
-            `${api_url}/${slug}/orders/${orderId}`,
-            { status: 'Y' }, // เปลี่ยนสถานะเป็น 'Y' (ชำระเงินแล้ว)
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
+            // ตรวจสอบว่า api_url, slug, และ authToken มีค่า
+            if (!api_url || !slug || !authToken) {
+                Swal.fire('ผิดพลาด', 'ไม่พบข้อมูลสำหรับการเชื่อมต่อกับ API', 'error');
+                return;
             }
-        );
 
-        if (response.data && response.data.success) {
-            Swal.fire('สำเร็จ', 'ปิดออเดอร์เรียบร้อยแล้ว', 'success');
-        } else {
-            throw new Error('API ไม่สามารถปิดออเดอร์ได้');
+            if (!api_url.endsWith('/api')) api_url += '/api';
+
+            // เรียก API เพื่อปิดออเดอร์
+            const response = await axios.put(
+                `${api_url}/${slug}/orders/${orderId}`,
+                { status: 'Y' }, // เปลี่ยนสถานะเป็น 'Y' (ชำระเงินแล้ว)
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                }
+            );
+
+            // ตรวจสอบการตอบกลับจาก API
+            if (response.status === 200 && response.data && response.data.success) {
+                Swal.fire('สำเร็จ', 'ปิดออเดอร์เรียบร้อยแล้ว', 'success');
+            } else {
+                console.error("❌ API Response Error:", response.data);
+                throw new Error('ไม่สามารถปิดออเดอร์ได้');
+            }
+        } catch (error) {
+            console.error("❌ Error closing order:", error.response?.data || error.message);
+            Swal.fire('ผิดพลาด', `ไม่สามารถปิดออเดอร์ได้: ${error.message}`, 'error');
         }
-    } catch (error) {
-        console.error("❌ Error closing order:", error.response?.data || error.message);
-        Swal.fire('ผิดพลาด', 'ไม่สามารถปิดออเดอร์ได้', 'error');
-    }
-};
+    };
+
+
 
     
 // ฟังก์ชัน fetchCategories
