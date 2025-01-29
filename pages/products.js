@@ -1622,7 +1622,7 @@ const fetchCategories = async () => {
                                             position: 'absolute',
                                             top: 0,
                                             left: 0,
-                                            width: '100xp',
+                                            width: '100%',
                                             height: '100%',
                                             backgroundColor: 'rgba(0, 0, 0, 0.5)',
                                             display: 'flex',
