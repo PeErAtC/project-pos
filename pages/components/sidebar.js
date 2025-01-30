@@ -6,7 +6,9 @@ import Swal from 'sweetalert2';
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
-  const [username, setUsername] = useState(''); // State to store the username
+  const [username, setUsername] = useState('');
+  const [focused, setFocused] = useState(null); // สถานะสำหรับการโฟกัสปุ่ม
+  const [active, setActive] = useState(null); // สถานะสำหรับปุ่มที่ถูกคลิก
   const router = useRouter();
 
   useEffect(() => {
@@ -22,6 +24,7 @@ export default function Sidebar() {
 
   const handleMenuClick = (menu) => {
     setActiveMenu(menu);
+    setActive(menu); // เมื่อคลิกเปลี่ยนสถานะ active
     router.push(menu);
   };
 
@@ -62,6 +65,15 @@ export default function Sidebar() {
     });
   };
 
+  useEffect(() => {
+    // Set the active menu based on the current pathname
+    if (router.pathname === '/') {
+      setActiveMenu('/');
+    } else if (router.pathname === '/back') {
+      setActiveMenu('back');
+    }
+  }, [router.pathname]);
+
   return (
     <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
       <div style={styles.toggleButton} onClick={toggleSidebar}>
@@ -80,12 +92,7 @@ export default function Sidebar() {
       </div>
 
       <div style={styles.iconContainer(isExpanded)}>
-        <div
-          style={{
-            ...styles.iconWrapper,
-            width: isExpanded ? '160px' : '40px',
-          }}
-        >
+        <div style={styles.iconWrapper}>
           <div style={styles.storeInfo}>
             <Image src="/images/store.png" alt="Store" width={40} height={40} />
             {isExpanded && (
@@ -101,7 +108,15 @@ export default function Sidebar() {
           style={{
             ...styles.icon,
             ...(activeMenu === '/' ? styles.activeIcon : {}),
+            ...(focused === '/' ? styles.focusedIcon : {}),
           }}
+          onClick={() => {
+            setActiveMenu('/');
+            handleMenuClick('/');
+          }}
+          onMouseEnter={() => setFocused('/') } // เอฟเฟกต์เมื่อเมาส์ไปที่ปุ่ม
+          onMouseLeave={() => setFocused(null)} // ลบเอฟเฟกต์เมื่อเมาส์ออก
+          tabIndex={0}
         >
           <Image src="/images/menu.png" alt="Homepage" width={35} height={35} />
           {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
@@ -111,8 +126,12 @@ export default function Sidebar() {
           style={{
             ...styles.icon,
             ...(activeMenu === 'back' ? styles.activeIcon : {}),
+            ...(focused === 'back' ? styles.focusedIcon : {}),
           }}
           onClick={handleBack}
+          onMouseEnter={() => setFocused('back')}
+          onMouseLeave={() => setFocused(null)}
+          tabIndex={0}
         >
           <Image src="/images/left-arrow.png" alt="Return" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
@@ -122,11 +141,15 @@ export default function Sidebar() {
           style={{
             ...styles.icon,
             ...(activeMenu === 'logout' ? styles.activeIcon : {}),
+            ...(focused === 'logout' ? styles.focusedIcon : {}),
           }}
           onClick={() => {
             setActiveMenu('logout');
             handleLogout();
           }}
+          onMouseEnter={() => setFocused('logout')}
+          onMouseLeave={() => setFocused(null)}
+          tabIndex={0}
         >
           <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ออกจากระบบ</span>}
@@ -218,10 +241,11 @@ const styles = {
     gap: '10px',
     padding: '13px',
     cursor: 'pointer',
-    transition: 'background 0.3s ease',
+    transition: 'all 0.3s ease',
     color: '#fff',
     fontSize: '16px',
     fontWeight: 'normal',
+    borderRadius: '10px',
   },
   activeIcon: {
     backgroundColor: 'rgb(12, 62, 95)',
@@ -230,9 +254,32 @@ const styles = {
     padding: '15px',
     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
   },
+  focusedIcon: {
+    animation: 'pulsing 1s infinite',  // เพิ่มการเคลื่อนไหวของสี
+    boxShadow: '0px 0px 18px 5px rgba(0, 123, 255, 0.8)',  // แสงที่เด่นขึ้น
+    transform: 'scale(1.1)',  // เพิ่มขนาดเล็กน้อยเมื่อโฟกัส
+  },
   iconLabel: {
     fontSize: '16px',
     fontWeight: 'normal',
     color: '#ffffff',
   },
 };
+
+// Keyframes animation สำหรับเคลื่อนไหวรอบๆ
+const keyframes = `
+  @keyframes pulsing {
+    0% {
+      box-shadow: 0 0 8px rgba(0, 123, 255, 0.8);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(0, 123, 255, 1.2);
+    }
+    100% {
+      box-shadow: 0 0 8px rgba(0, 123, 255, 0.8);
+    }
+  }
+`;
+
+// เพิ่ม keyframes ลงใน style tag
+document.styleSheets[0].insertRule(keyframes, document.styleSheets[0].cssRules.length);
