@@ -546,6 +546,7 @@ const fetchCategories = async () => {
                 api_url += '/api';
             }
             //////////////////// ประกาศตัวแปร  END URL CALL 
+    
             // ตรวจสอบค่า product ก่อนใช้
             if (!product || !product.id || !product.price) {
                 console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
@@ -1189,62 +1190,51 @@ const fetchCategories = async () => {
         await addToOrder(orderId, newItems);
     };
     
-    const addToOrder = async (orderId, newItems) => {
-        try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
+    const addToOrder = async (product) => {
+        if (product.status !== 'Y') return;
     
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            // ตรวจสอบให้แน่ใจว่า newItems ไม่ว่าง และมีค่า product_id
-            if (!newItems || newItems.length === 0) {
-                throw new Error('ไม่มีรายการสินค้าที่จะเพิ่ม');
-            }
+        const element = document.querySelector(`#product-${product.id}`);
+        if (element) {
+            element.style.animation = "none"; // รีเซ็ตการแอนิเมชั่นก่อนหน้า
+            requestAnimationFrame(() => {
+                element.style.animation = "shake 0.5s ease, highlight 1s ease";
+            });
+        }
     
-            // ตรวจสอบว่าแต่ละรายการใน newItems มี product_id
-            for (let item of newItems) {
-                if (!item.product_id) {
-                    throw new Error(`สินค้า ${item.p_name || 'Unnamed Product'} ไม่มี product_id`);
-                }
-            }
+        // ตรวจสอบว่า product มีข้อมูลครบถ้วน
+        if (!product || !product.id || !product.price) {
+            console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
+            throw new Error('ข้อมูลสินค้าไม่ครบถ้วน');
+        }
     
-            // ส่งข้อมูลสินค้าใหม่ไปยัง API เพื่อเพิ่มลงในออเดอร์ที่มีอยู่
-            const response = await axios.post(
-                `${api_url}/api/${slug}/orders/${orderId}/addItem`,
-                { items: newItems },
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                }
-            );
-    
-            // ตรวจสอบว่า response มี success หรือไม่
-            if (response.data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'เพิ่มรายการสินค้าเรียบร้อย',
-                    text: 'รายการสินค้าใหม่ถูกเพิ่มเข้าไปในออเดอร์สำเร็จ!',
-                    confirmButtonText: 'ตกลง',
-                });
+        // เพิ่มสินค้าในตะกร้า (local state)
+        setCart((prevCart) => {
+            const existingItem = prevCart.find((item) => item.id === product.id);
+            if (existingItem) {
+                return prevCart.map((item) =>
+                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                );
             } else {
-                throw new Error('ไม่สามารถเพิ่มรายการสินค้าได้');
+                return [
+                    ...prevCart,
+                    {
+                        ...product,
+                        quantity: 1,
+                        discount: product.discount || 0, // กำหนดส่วนลดเริ่มต้น (ถ้ามี)
+                        discountType: product.discountType || "THB", // กำหนดประเภทส่วนลดเริ่มต้น
+                    },
+                ];
             }
+        });
+    
+        // ส่งข้อมูลสินค้าไปที่ฐานข้อมูล
+        try {
+            await addItemToDatabase(product);
         } catch (error) {
-            console.error('Error adding order items:', error);
-            Swal.fire(
-                'ผิดพลาด',
-                `ไม่สามารถเพิ่มรายการสินค้าได้: ${error.response?.data?.message || error.message}`,
-                'error'
-            );
+            console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
         }
     };
+    
     
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
@@ -1527,6 +1517,54 @@ const fetchCategories = async () => {
             Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลการชำระเงินได้", "error");
             return { success: false };
         }
+    };
+    const updateOrderItems = async (cartItems) => {
+        try {
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+            
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+            if (!api_url.endsWith('/api')) {
+                api_url += '/api';
+            }
+    
+            const orderId = 'your-order-id'; // ใช้ orderId ที่ได้รับจากการสร้างคำสั่งซื้อก่อนหน้านี้
+            
+            // ส่งข้อมูลไปยัง API
+            const response = await axios.put(`${api_url}/${slug}/orders/${orderId}/items`, {
+                items: cartItems, // ส่งรายการสินค้า (cartItems) ที่จะอัพเดต
+            }, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            if (response.status === 200) {
+                // ถ้าอัพเดตสำเร็จ
+                console.log("อัพเดตรายการอาหารสำเร็จ", response.data);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'รายการอาหารถูกอัพเดตแล้ว',
+                    text: 'รายการอาหารในออเดอร์ของคุณได้รับการอัพเดต',
+                });
+            } else {
+                throw new Error('ไม่สามารถอัพเดตรายการอาหารได้');
+            }
+        } catch (error) {
+            console.error('เกิดข้อผิดพลาดในการอัพเดตรายการอาหาร:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด',
+                text: `ไม่สามารถอัพเดตรายการอาหาร: ${error.message}`,
+            });
+        }
+    };
+    
+    // เรียกใช้ฟังก์ชันเมื่อผู้ใช้คลิกปุ่มอัพเดต
+    const handleUpdateItems = () => {
+        updateOrderItems(cart); // ส่งข้อมูลตะกร้าที่ถูกอัพเดตไปยัง API
     };
     
     const fetchPaymentChannels = async () => {
