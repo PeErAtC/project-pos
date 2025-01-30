@@ -7,8 +7,7 @@ export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [username, setUsername] = useState('');
-  const [focused, setFocused] = useState(null); // สถานะสำหรับการโฟกัสปุ่ม
-  const [active, setActive] = useState(null); // สถานะสำหรับปุ่มที่ถูกคลิก
+  const [focused, setFocused] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -18,13 +17,20 @@ export default function Sidebar() {
     }
   }, []);
 
+  useEffect(() => {
+    if (router.pathname.startsWith('/products')) {
+      setActiveMenu('/products');
+    } else {
+      setActiveMenu(router.pathname);
+    }
+  }, [router.pathname]);
+
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
   };
 
   const handleMenuClick = (menu) => {
     setActiveMenu(menu);
-    setActive(menu); // เมื่อคลิกเปลี่ยนสถานะ active
     router.push(menu);
   };
 
@@ -51,7 +57,7 @@ export default function Sidebar() {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('token');
         localStorage.removeItem('username');
-
+        
         Swal.fire({
           title: 'ออกจากระบบสำเร็จ',
           text: 'คุณได้ออกจากระบบเรียบร้อยแล้ว',
@@ -64,15 +70,6 @@ export default function Sidebar() {
       }
     });
   };
-
-  useEffect(() => {
-    // Set the active menu based on the current pathname
-    if (router.pathname === '/') {
-      setActiveMenu('/');
-    } else if (router.pathname === '/back') {
-      setActiveMenu('back');
-    }
-  }, [router.pathname]);
 
   return (
     <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
@@ -103,35 +100,25 @@ export default function Sidebar() {
             )}
           </div>
         </div>
-
         <div
           style={{
             ...styles.icon,
-            ...(activeMenu === '/' ? styles.activeIcon : {}),
-            ...(focused === '/' ? styles.focusedIcon : {}),
+            ...(activeMenu === '/products' ? styles.activeIcon : {}),
+            pointerEvents: 'none', // ปิดการคลิก
+            cursor: 'default', // เปลี่ยน cursor เป็น default
           }}
-          onClick={() => {
-            setActiveMenu('/');
-            handleMenuClick('/');
-          }}
-          onMouseEnter={() => setFocused('/') } // เอฟเฟกต์เมื่อเมาส์ไปที่ปุ่ม
-          onMouseLeave={() => setFocused(null)} // ลบเอฟเฟกต์เมื่อเมาส์ออก
-          tabIndex={0}
         >
-          <Image src="/images/menu.png" alt="Homepage" width={35} height={35} />
-          {isExpanded && <span style={styles.iconLabel}>หน้าหลัก</span>}
+          <Image src="/images/menu.png" alt="Products" width={35} height={35} />
+          {isExpanded && <span style={styles.iconLabel}>สินค้า</span>}
         </div>
+
 
         <div
           style={{
             ...styles.icon,
             ...(activeMenu === 'back' ? styles.activeIcon : {}),
-            ...(focused === 'back' ? styles.focusedIcon : {}),
           }}
           onClick={handleBack}
-          onMouseEnter={() => setFocused('back')}
-          onMouseLeave={() => setFocused(null)}
-          tabIndex={0}
         >
           <Image src="/images/left-arrow.png" alt="Return" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ย้อนกลับ</span>}
@@ -140,16 +127,13 @@ export default function Sidebar() {
         <div
           style={{
             ...styles.icon,
-            ...(activeMenu === 'logout' ? styles.activeIcon : {}),
-            ...(focused === 'logout' ? styles.focusedIcon : {}),
+            ...(activeMenu === '/logout' ? styles.activeIcon : {}),
+            animation: activeMenu === '/logout' ? 'pulsing 1s infinite' : 'none', // ปรับ animation ให้กับปุ่มออกจากระบบ
           }}
           onClick={() => {
-            setActiveMenu('logout');
+            setActiveMenu('/logout'); // เปลี่ยน activeMenu เมื่อกดออกจากระบบ
             handleLogout();
           }}
-          onMouseEnter={() => setFocused('logout')}
-          onMouseLeave={() => setFocused(null)}
-          tabIndex={0}
         >
           <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
           {isExpanded && <span style={styles.iconLabel}>ออกจากระบบ</span>}
@@ -266,20 +250,3 @@ const styles = {
   },
 };
 
-// Keyframes animation สำหรับเคลื่อนไหวรอบๆ
-const keyframes = `
-  @keyframes pulsing {
-    0% {
-      box-shadow: 0 0 8px rgba(0, 123, 255, 0.8);
-    }
-    50% {
-      box-shadow: 0 0 20px rgba(0, 123, 255, 1.2);
-    }
-    100% {
-      box-shadow: 0 0 8px rgba(0, 123, 255, 0.8);
-    }
-  }
-`;
-
-// เพิ่ม keyframes ลงใน style tag
-document.styleSheets[0].insertRule(keyframes, document.styleSheets[0].cssRules.length);
