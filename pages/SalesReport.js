@@ -398,16 +398,16 @@
                         <table style={styles.table}>
                             <thead>
                                 <tr>
-                                    <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
-                                    <th style={styles.th}><FaTable /> โต๊ะ</th>
-                                    <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
-                                    <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
-                                    <th style={styles.th}><FaTag /> ส่วนลด</th>
-                                    <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
-                                    <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
+                                    <th style={styles.th}> หมายเลขบิล</th>
+                                    <th style={styles.th}>โต๊ะ</th>
+                                    <th style={styles.th}>วันที่และเวลา</th>
+                                    <th style={styles.th}>ยอดรวม</th>
+                                    <th style={styles.th}>ส่วนลด</th>
+                                    <th style={styles.th}>ภาษีมูลค่าเพิ่ม</th>
+                                    <th style={styles.th}>ยอดสุทธิ</th>
                                     <th style={styles.th}>ชำระเงินด้วย</th> {/* New Column */}
                                     <th style={styles.th}>สถานะ</th>
-                                    <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
+                                    <th style={styles.th}>รายละเอียด</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -461,16 +461,16 @@
                         <table style={styles.table}>
                             <thead>
                                 <tr>
-                                    <th style={styles.th}><FaClipboardList /> หมายเลขบิล</th>
-                                    <th style={styles.th}><FaTable /> โต๊ะ</th>
-                                    <th style={styles.th}><FaCalendarAlt /> วันที่และเวลา</th>
-                                    <th style={styles.th}><FaDollarSign /> ยอดรวม</th>
-                                    <th style={styles.th}><FaTag /> ส่วนลด</th>
-                                    <th style={styles.th}><FaPercentage /> ภาษีมูลค่าเพิ่ม</th>
-                                    <th style={styles.th}><FaMoneyBill /> ยอดสุทธิ</th>
+                                    <th style={styles.th}>หมายเลขบิล</th>
+                                    <th style={styles.th}>โต๊ะ</th>
+                                    <th style={styles.th}>วันที่และเวลา</th>
+                                    <th style={styles.th}>ยอดรวม</th>
+                                    <th style={styles.th}>ส่วนลด</th>
+                                    <th style={styles.th}>ภาษีมูลค่าเพิ่ม</th>
+                                    <th style={styles.th}>ยอดสุทธิ</th>
                                     <th style={styles.th}>ชำระเงินด้วย</th>
-                                    <th style={styles.th}><FaCheckCircle /> สถานะ</th>
-                                    <th style={styles.th}><FaClipboardList /> รายละเอียด</th>
+                                    <th style={styles.th}>สถานะ</th>
+                                    <th style={styles.th}>รายละเอียด</th>
                                 </tr>
                             </thead>
                             <tbody>
