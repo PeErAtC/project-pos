@@ -1076,6 +1076,11 @@ const fetchCategories = async () => {
             Swal.fire('Error', `Could not receive order: ${error.message}`, 'error');
         }
     };
+    useEffect(() => {
+        if (orderId) {
+            setOrderReceived(true);  // เมื่อออเดอร์ถูกดึงมาแล้ว ให้แสดงบล็อกคำนวณ
+        }
+    }, [orderId]);
     
     
     
@@ -1375,13 +1380,17 @@ const fetchCategories = async () => {
                 }
             }
     
+            // รีเซ็ตตะกร้าเมื่อบันทึกบิลเสร็จสิ้น
+            setCart([]); // ล้างตะกร้า
+            localStorage.removeItem(`cart_${tableCode}`); // ลบข้อมูลตะกร้าจาก localStorage
+    
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกบิลสำเร็จ',
                 text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${totalDue.toFixed(2)} บาท`,
                 confirmButtonText: 'ตกลง',
             }).then(() => {
-                resetStateAfterSuccess();
+                resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
             });
     
         } catch (error) {
@@ -1389,6 +1398,7 @@ const fetchCategories = async () => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
+    
     
     
     
@@ -1518,14 +1528,6 @@ const fetchCategories = async () => {
             return { success: false };
         }
     };
-    
-    
-    
-    
-    
-    
-    
-    
     
     const fetchPaymentChannels = async () => {
         try {
@@ -1861,195 +1863,190 @@ const fetchCategories = async () => {
             </div>
 
                 {/* บล็อกรวมยอดรวม */}
-            <div
+                <div
+    style={{
+        ...styles.totalContainer,
+        boxShadow: '0 8px 15px rgba(0, 0, 0, 0.15)', // เงาชัดเจนขึ้น
+        position: 'sticky', // ใช้ sticky เพื่อให้บล็อคติดอยู่
+        bottom: '0', // ให้อยู่ด้านล่างสุดของพื้นที่แสดงรายการสินค้า
+        width: '100%',
+        maxWidth: '380px', // ไม่ให้มันยาวเกิน
+        margin: '0 auto', // จัดให้อยู่กลาง
+        backgroundColor: '#fff', // สีพื้นหลัง
+        zIndex: 10, // ทำให้บล็อคอยู่ด้านบนเมื่อเลื่อน
+    }}
+>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+        <h3
+            style={{
+                ...styles.totalText,
+                fontSize: '1.1rem',
+                fontWeight: '400',
+                textAlign: 'left',
+                marginTop: '0',
+                marginBottom: '0',
+                color: '#444',
+                paddingLeft: '5px',
+                lineHeight: '1.2',
+                fontFamily: 'Impact, sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+            }}
+        >
+            รวม: {calculateTotalWithBillDiscountAndVAT().toFixed(2)} ฿
+        </h3>
+        <div style={{ width: '220px', marginRight: '-70px' }}>
+            <select
+                value={paymentMethod}
+                onChange={(e) => handlePaymentChange(e.target.value)}
                 style={{
-                    ...styles.totalContainer,
-                    boxShadow: '0 8px 15px rgba(0, 0, 0, 0.15)', // เงาชัดเจนขึ้น
-                    position: 'sticky', // ใช้ sticky เพื่อให้บล็อคติดอยู่
-                    bottom: '0', // ให้อยู่ด้านล่างสุดของพื้นที่แสดงรายการสินค้า
+                    padding: '7px 10px',
                     width: '100%',
-                    maxWidth: '380px', // ไม่ให้มันยาวเกิน
-                    margin: '0 auto', // จัดให้อยู่กลาง
-                    backgroundColor: '#fff', // สีพื้นหลัง
-                    zIndex: 10, // ทำให้บล็อคอยู่ด้านบนเมื่อเลื่อน
+                    border: '2px solid #6c5ce7',
+                    borderRadius: '5px',
+                    background: 'linear-gradient(145deg, #ffffff, #f2f2f2)', // พื้นหลังแบบเกรเดียนท์
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // เงาบางๆ
+                    fontSize: '13px',
+                    color: '#010101',
+                    cursor: 'pointer',
+                    maxWidth: '160px',
+                    transition: 'all 0.3s ease',
+                    marginBottom: '7px',
+                    textAlign: 'center',
+                    marginLeft: '-10px',
+                    textAlign: 'left',
                 }}
+                onFocus={(e) => (e.target.style.borderColor = '#6c5ce7')}
+                onBlur={(e) => (e.target.style.borderColor = '#ccc')}
             >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                    <h3
-                        style={{
-                            ...styles.totalText,
-                            fontSize: '1.1rem',
-                            fontWeight: '400',
-                            textAlign: 'left',
-                            marginTop: '0', // ลด marginTop เพื่อให้ข้อความรวมอยู่ใกล้กับส่วนอื่นๆ
-                            marginBottom: '0', // ปรับ marginBottom ให้ไม่มีระยะห่างด้านล่าง
-                            color: '#444',
-                            paddingLeft: '5px',
-                            lineHeight: '1.2', // เพิ่ม lineHeight เพื่อให้ข้อความมีระยะห่างที่สบายตา
-                            fontFamily: 'Impact, sans-serif',
-                            textTransform: 'uppercase',
-                            letterSpacing: '2px',
-                        }}
-                    >
-                    รวม: {calculateTotalWithBillDiscountAndVAT().toFixed(2)} ฿
-                </h3>
-                    <div style={{ width: '220px', marginRight: '-70px' }}>
-                        <select
-                            value={paymentMethod}
-                            onChange={(e) => handlePaymentChange(e.target.value)}
-                            style={{
-                                padding: '7px 10px',
-                                width: '100%', // กว้างเต็มที่ตามขนาดของพื้นที่
-                                border: '2px solid #6c5ce7', // ขอบสีสดใส
-                                borderRadius: '5px',
-                                background: 'linear-gradient(145deg, #ffffff, #f2f2f2)', // พื้นหลังแบบเกรเดียนท์
-                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // เงาบางๆ
-                                fontSize: '13px', // ขนาดฟอนต์ปรับให้ดูชัดเจนขึ้น
-                                color: '#010101',
-                                cursor: 'pointer',
-                                maxWidth: '160px', // กำหนดความยาวเฉพาะเจาะจง
-                                transition: 'all 0.3s ease',
-                                marginBottom: '7px',
-                                textAlign: 'center', // จัดข้อความให้ตรงกลางใน select
-                                marginLeft: '-10px', // ขยับไปทางซ้ายสุด
-                                textAlign: 'left', // จัดข้อความให้ตรงซ้าย
-                            }}
-                            onFocus={(e) => (e.target.style.borderColor = '#6c5ce7')} // เมื่อโฟกัสจะเปลี่ยนสีขอบ
-                            onBlur={(e) => (e.target.style.borderColor = '#ccc')} // เมื่อเลิกโฟกัสจะกลับเป็นสีปกติ
-                        >
-                            <option value="" disabled>
-                                เลือกวิธีการชำระเงิน
-                            </option>
-                            <option value="cash">เงินสด</option>
-                            <option value="qr">QR Code พร้อมเพย์</option>
-                        </select>
-                    </div>
-                </div>
-                {orderReceived ? (
-                    <>
-                        <div style={styles.discountAndReceivedAmountRow}>
+                <option value="" disabled>
+                    เลือกวิธีการชำระเงิน
+                </option>
+                <option value="cash">เงินสด</option>
+                <option value="qr">QR Code พร้อมเพย์</option>
+            </select>
+        </div>
+    </div>
+
+    {orderReceived && (
+        <>
+            <div style={styles.discountAndReceivedAmountRow}>
                 {/* ปุ่มเลือก VAT */}
                 <div
-                style={{
-                    display: 'flex', // ใช้ Flexbox จัดตำแหน่งให้อยู่ในแถวเดียวกัน
-                    alignItems: 'center', // จัดให้อยู่แนวตั้งตรงกลาง
-                    gap: '4px', // เพิ่มช่องว่างระหว่างองค์ประกอบ
-                }}
-            >  
-                {/* เลือก VAT */}
-                <select
-                    value={vatType}
-                    onChange={(e) => setVatType(e.target.value)}
                     style={{
-                        backgroundColor: 'white',
-                        border: '1px solid #cccccc',
-                        borderRadius: '4px',
-                        padding: '8px 12px',
-                        fontSize: '13px',
-                        color: '#333',
-                        outline: 'none',
-                        boxShadow: 'none',
-                        flex: 1, // ให้ขนาดพอดีกับพื้นที่
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
                     }}
                 >
-                    <option value="noTax">ไม่มีภาษี</option>
-                    <option value="includeVat7">รวมภาษีมูลค่าเพิ่ม 7%</option>
-                    <option value="excludeVat7">ไม่รวมภาษีมูลค่าเพิ่ม 7%</option>
-                    <option value="includeVat3">รวมภาษีมูลค่าเพิ่ม 3%</option>
-                    <option value="excludeVat3">ไม่รวมภาษีมูลค่าเพิ่ม 3%</option>
-                </select>
+                    <select
+                        value={vatType}
+                        onChange={(e) => setVatType(e.target.value)}
+                        style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #cccccc',
+                            borderRadius: '4px',
+                            padding: '8px 12px',
+                            fontSize: '13px',
+                            color: '#333',
+                            outline: 'none',
+                            boxShadow: 'none',
+                            flex: 1,
+                        }}
+                    >
+                        <option value="noTax">ไม่มีภาษี</option>
+                        <option value="includeVat7">รวมภาษีมูลค่าเพิ่ม 7%</option>
+                        <option value="excludeVat7">ไม่รวมภาษีมูลค่าเพิ่ม 7%</option>
+                        <option value="includeVat3">รวมภาษีมูลค่าเพิ่ม 3%</option>
+                        <option value="excludeVat3">ไม่รวมภาษีมูลค่าเพิ่ม 3%</option>
+                    </select>
 
-                {/* ส่วนลดรวม */}
-                <input
-                    type="number"
-                    placeholder="ส่วนลดรวม"
-                    value={billDiscount || ''}
-                    onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
-                    style={{
-                        backgroundColor: 'white',
-                        border: '1px solid #cccccc',
-                        borderRadius: '4px',
-                        padding: '8px 1px',
-                        fontSize: '13px',
-                        width:'75px',
-                        color: '#333',
-                        outline: 'none',
-                        flex: 1, // ให้ขนาดพอดีกับพื้นที่
-                    }}
-                />
+                    <input
+                        type="number"
+                        placeholder="ส่วนลดรวม"
+                        value={billDiscount || ''}
+                        onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
+                        style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #cccccc',
+                            borderRadius: '4px',
+                            padding: '8px 1px',
+                            fontSize: '13px',
+                            width:'75px',
+                            color: '#333',
+                            outline: 'none',
+                            flex: 1,
+                        }}
+                    />
 
-                {/* ประเภทส่วนลด */}
-                <select
-                    value={billDiscountType}
-                    onChange={(e) => setBillDiscountType(e.target.value)}
-                    style={{
-                        backgroundColor: 'white',
-                        border: '1px solid #cccccc',
-                        borderRadius: '4px',
-                        padding: '8px 12px',
-                        fontSize: '13px',
-                        color: '#333',
-                        outline: 'none',
-                        boxShadow: 'none',
-                        flex: 1, // ให้ขนาดพอดีกับพื้นที่
-                    }}
-                >
-                    <option value="THB">บาท (฿)</option>
-                    <option value="%">%</option>
-                </select>
+                    <select
+                        value={billDiscountType}
+                        onChange={(e) => setBillDiscountType(e.target.value)}
+                        style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #cccccc',
+                            borderRadius: '4px',
+                            padding: '8px 12px',
+                            fontSize: '13px',
+                            color: '#333',
+                            outline: 'none',
+                            boxShadow: 'none',
+                            flex: 1,
+                        }}
+                    >
+                        <option value="THB">บาท (฿)</option>
+                        <option value="%">%</option>
+                    </select>
+                </div>
             </div>
-        </div>
-            {/* ปุ่มเพิ่มจำนวนเงิน */}
+
             <div style={styles.amountButtons}>
                 {[1, 20, 50, 100, 500, 1000].map((amount) => (
                     <button key={amount} onClick={() => handleAmountButton(amount)} style={styles.amountButton}>
                         +{amount}.00
                     </button>
                 ))}
-               <div
+                <div
                     style={{
-                        display: 'flex', // ใช้ Flexbox
-                        alignItems: 'center', // จัดตำแหน่งแนวตั้งให้อยู่ตรงกลาง
-                        justifyContent: 'space-between', // กระจายพื้นที่ระหว่างแต่ละองค์ประกอบ
-                        gap: '3px', // เพิ่มช่องว่างระหว่างองค์ประกอบ
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '3px',
                     }}
                 >
-                    {/* Input ช่องรับเงิน */}
-                <input
-                    type="number"
-                    placeholder="รับเงิน"
-                    value={receivedAmount || ''}
-                    onChange={(e) => {
-                        const inputAmount = parseFloat(e.target.value) || 0;
-                        setReceivedAmount(inputAmount); // อนุญาตให้กรอกจำนวนเงินเกินยอดรวมได้
-                    }}
-                    style={{
-                        ...styles.amountInputHalf,
-                        flex: 2, // ปรับให้ input มีพื้นที่ใหญ่กว่า
-                    }}
-                />
+                    <input
+                        type="number"
+                        placeholder="รับเงิน"
+                        value={receivedAmount || ''}
+                        onChange={(e) => {
+                            const inputAmount = parseFloat(e.target.value) || 0;
+                            setReceivedAmount(inputAmount);
+                        }}
+                        style={{
+                            ...styles.amountInputHalf,
+                            flex: 2,
+                        }}
+                    />
 
-
-                {/* ปุ่มรับเงินเต็มจำนวน */}
-                <button
-                    onClick={handleFullAmount}
-                    style={{
-                        ...styles.amountButton,
-                        background: '#3cad13', // สีพื้นหลังแบบสีเขียวธรรมดา
-                        color: '#ffffff',
-                        fontWeight: 'bold',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        width: 'auto',
-                        padding: '8px 25px',
-                        whiteSpace: 'nowrap',
-                        textAlign: 'center',
-                    }}
-                >
-                    รับเงินเต็มจำนวน
-                </button>
+                    <button
+                        onClick={handleFullAmount}
+                        style={{
+                            ...styles.amountButton,
+                            background: '#3cad13', // สีพื้นหลังแบบสีเขียวธรรมดา
+                            color: '#ffffff',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            width: 'auto',
+                            padding: '8px 25px',
+                            whiteSpace: 'nowrap',
+                            textAlign: 'center',
+                        }}
+                    >
+                        รับเงินเต็มจำนวน
+                    </button>
 
                     <button
                         onClick={resetAmount}
@@ -2060,63 +2057,60 @@ const fetchCategories = async () => {
                             borderRadius: '8px',
                             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
                             cursor: 'pointer',
-                            padding: '8px 20px', // เพิ่ม padding ให้ปุ่มใหญ่ขึ้น
+                            padding: '8px 20px',
                             transition: 'all 0.3s ease',
-                            flex: 1, // ให้ปุ่มนี้มีขนาดพื้นที่รองลงมา
+                            flex: 1,
                         }}
                     >
                         C
                     </button>
-            </div>
+                </div>
             </div>
 
-            {/* การแสดงเงินทอน */}
             <div style={styles.changeDi}>
                 ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท
             </div>
-            {/* การแสดงเงินทอน และปุ่มดูประวัติการแยกชำระ */}
-            <div
-            style={{
-                display: 'flex', // ใช้ Flexbox จัดให้อยู่ในแถวเดียวกัน
-                justifyContent: 'space-between', // กระจายพื้นที่ระหว่างองค์ประกอบ
-                alignItems: 'center', // จัดตำแหน่งให้อยู่ตรงกลางในแนวตั้ง
-                padding: '10px 0', // เพิ่ม Padding ด้านบนและล่าง
-            }}
-            >
-            {/* แสดงเงินทอน */}
+
             <div
                 style={{
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    color: '#0d1b13',
-                    marginRight: '10px', // เพิ่มระยะห่างจากปุ่ม
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '10px 0',
                 }}
             >
-                เงินทอน: {calculateChange()} บาท
-            </div>
+                <div
+                    style={{
+                        fontSize: '1rem',
+                        fontWeight: 'bold',
+                        color: '#0d1b13',
+                        marginRight: '10px',
+                    }}
+                >
+                    เงินทอน: {calculateChange()} บาท
+                </div>
 
-            {/* ปุ่มดูประวัติการแยกชำระ */}
-            <div style={{ position: 'relative', textAlign: 'right' }}>
-                {splitPaymentCount > 0 && (
-                    <span
-                        style={{
-                            position: 'absolute',
-                            top: '-5px',
-                            right: '-5px',
-                            backgroundColor: 'red',
-                            color: 'white',
-                            borderRadius: '50%',
-                            width: '20px',
-                            height: '20px',
-                            fontSize: '12px',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                    >
-                        {splitPaymentCount}
-                    </span>
-                )}
+                <div style={{ position: 'relative', textAlign: 'right' }}>
+                    {splitPaymentCount > 0 && (
+                        <span
+                            style={{
+                                position: 'absolute',
+                                top: '-5px',
+                                right: '-5px',
+                                backgroundColor: 'red',
+                                color: 'white',
+                                borderRadius: '50%',
+                                width: '20px',
+                                height: '20px',
+                                fontSize: '12px',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}
+                        >
+                            {splitPaymentCount}
+                        </span>
+                    )}
                     <button
                         style={{
                             padding: '10px',
@@ -2125,8 +2119,8 @@ const fetchCategories = async () => {
                             color: 'white',
                             fontWeight: 'bold',
                             cursor: 'pointer',
-                            border: 'none', // เอากรอบออก
-                            boxShadow: 'none', // เอาเงาออก
+                            border: 'none',
+                            boxShadow: 'none',
                         }}
                         onClick={toggleSplitPaymentPopup}
                     >
@@ -2134,68 +2128,70 @@ const fetchCategories = async () => {
                     </button>
                 </div>
             </div>
-                    </>
-                ) : null}
+        </>
+    )}
 
-        {/* ปุ่มการทำงาน */}
-        <div style={styles.paymentRow}>
-            {orderReceived ? (
-                <button
-                    style={{
-                        ...styles.receiveOrderButton,
-                        ...(cart.length === 0 ? styles.buttonDisabled : {}),
-                    }}
-                    onClick={addOrderItems}
-                    disabled={cart.length === 0}
-                >
-                    อัพเดทอาหาร
-                </button>
-            ) : (
-                <button
-                    style={{
-                        ...styles.receiveOrderButton,
-                        ...(cart.length === 0 ? styles.buttonDisabled : {}),
-                    }}
-                    onClick={receiveOrder}
-                    disabled={cart.length === 0}
-                >
-                    รับออเดอร์
-                </button>
-            )}
-
-                        {/* ปุ่มแยกชำระเงิน */}
+    {/* ปุ่มการทำงาน */}
+    <div style={styles.paymentRow}>
+        {orderReceived ? (
             <button
                 style={{
-                    ...styles.paymentButton,
-                    backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#f39c12', // สีเขียวเมื่อยอดคงเหลือ 0, สีส้มเมื่อยังมีคงเหลือ
-                    ...(orderReceived && paymentMethod && (receivedAmount > 0 || calculateRemainingDue() === 0) ? {} : styles.paymentButtonDisabled), // ปิดการใช้งานถ้าไม่มีการรับออเดอร์ หรือไม่เลือกวิธีชำระเงิน
+                    ...styles.receiveOrderButton,
+                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
                 }}
-                onClick={() => {
-                    if (orderReceived && calculateRemainingDue() === 0) {
-                        setShowReceipt(true); // เปิดหน้าต่างแสดงบิล
-                    } else if (orderReceived) {
-                        handlePartialPayment(); // ดำเนินการแยกชำระเงิน
-                    }
-                }}
-                disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)} // ปิดการใช้งานถ้าไม่มีการรับออเดอร์หรือไม่เลือกวิธีชำระเงิน
+                onClick={addOrderItems}
+                disabled={cart.length === 0}
             >
-                {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'แยกชำระเงิน'}
+                อัพเดทอาหาร
             </button>
-
+        ) : (
             <button
                 style={{
-                    ...styles.paymentButton,
-                    ...(orderReceived && cart.length > 0 && paymentMethod && receivedAmount >= calculateTotalWithBillDiscountAndVAT() 
-                        ? {} 
-                        : styles.paymentButtonDisabled),
+                    ...styles.receiveOrderButton,
+                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
                 }}
-                onClick={handlePayment}
-                disabled={!orderReceived || !paymentMethod || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+                onClick={receiveOrder}
+                disabled={cart.length === 0}
             >
-                ชำระเงิน
+                รับออเดอร์
             </button>
-            </div>
-            </div>
+        )}
+
+        {/* ปุ่มแยกชำระเงิน */}
+        <button
+            style={{
+                ...styles.paymentButton,
+                backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#f39c12',
+                ...(orderReceived && paymentMethod && (receivedAmount > 0 || calculateRemainingDue() === 0)
+                    ? {}
+                    : styles.paymentButtonDisabled),
+            }}
+            onClick={() => {
+                if (orderReceived && calculateRemainingDue() === 0) {
+                    setShowReceipt(true); // เปิดหน้าต่างแสดงบิล
+                } else if (orderReceived) {
+                    handlePartialPayment(); // ดำเนินการแยกชำระเงิน
+                }
+            }}
+            disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)}
+        >
+            {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'แยกชำระเงิน'}
+        </button>
+
+        <button
+            style={{
+                ...styles.paymentButton,
+                ...(orderReceived && cart.length > 0 && paymentMethod && receivedAmount >= calculateTotalWithBillDiscountAndVAT()
+                    ? {}
+                    : styles.paymentButtonDisabled),
+            }}
+            onClick={handlePayment}
+            disabled={!orderReceived || !paymentMethod || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
+        >
+            ชำระเงิน
+        </button>
+    </div>
+</div>
             </div>
             {isSplitPaymentPopupOpen && (
                 <div
