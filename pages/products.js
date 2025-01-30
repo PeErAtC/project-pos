@@ -1639,7 +1639,7 @@ const fetchCategories = async () => {
                         className="categoryCircle"
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #4c9eff' }} // ขีดข้างล่างสีฟ้า
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ทั้งหมด</span>
@@ -1648,7 +1648,7 @@ const fetchCategories = async () => {
                         onClick={() => handleCategorySelect(1)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #b97aff' }} // ขีดข้างล่างสีม่วง
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เมนูผัด</span>
@@ -1657,7 +1657,7 @@ const fetchCategories = async () => {
                         onClick={() => handleCategorySelect(2)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #ff7dbf' }} // ขีดข้างล่างสีชมพู
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ข้าวผัด</span>
@@ -1666,7 +1666,7 @@ const fetchCategories = async () => {
                         onClick={() => handleCategorySelect(3)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #78d259' }} // ขีดข้างล่างสีเขียว
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เมนูยำ</span>
@@ -1675,17 +1675,16 @@ const fetchCategories = async () => {
                         onClick={() => handleCategorySelect(4)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #ffeb4b' }} // ขีดข้างล่างสีเหลือง
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ข้าวต้ม</span>
                     </div>
                     <div
-
                         onClick={() => handleCategorySelect(5)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff' }}
+                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #ff9f0f' }} // ขีดข้างล่างสีส้ม
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เครื่องดื่ม</span>
@@ -1860,7 +1859,7 @@ const fetchCategories = async () => {
                         </div>
                     </div>
                 ))}
-            </div>
+                </div>
 
                 {/* บล็อกรวมยอดรวม */}
                 <div
