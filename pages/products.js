@@ -1639,58 +1639,114 @@ const fetchCategories = async () => {
                         className="categoryCircle"
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #4c9eff' }} // ขีดข้างล่างสีฟ้า
+                        style={{
+                            ...styles.categoryCircle,
+                            backgroundColor: '#fff',
+                            borderBottom: '5px solid #4c9eff', // สีฟ้า
+                            animation: 'colorTransitionBlue 4s ease-in-out infinite',
+                        }}
+                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(76, 158, 255, 0.8)'} // เอฟเฟกต์สีฟ้าตอนโฟกัส
+                        onBlur={(e) => e.target.style.boxShadow = 'none'} // ลบเอฟเฟกต์เมื่อเลิกโฟกัส
+                        tabIndex={0} 
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ทั้งหมด</span>
                     </div>
+
                     <div
                         onClick={() => handleCategorySelect(1)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #b97aff' }} // ขีดข้างล่างสีม่วง
+                        style={{
+                            ...styles.categoryCircle,
+                            backgroundColor: '#fff',
+                            borderBottom: '5px solid #b97aff', // สีม่วง
+                            animation: 'colorTransitionPurple 4s ease-in-out infinite',
+                        }}
+                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(185, 122, 255, 0.8)'} // เอฟเฟกต์สีม่วงตอนโฟกัส
+                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
+                        tabIndex={0}
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เมนูผัด</span>
                     </div>
+
                     <div
                         onClick={() => handleCategorySelect(2)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #ff7dbf' }} // ขีดข้างล่างสีชมพู
+                        style={{
+                            ...styles.categoryCircle,
+                            backgroundColor: '#fff',
+                            borderBottom: '5px solid #ff7dbf', // สีชมพู
+                            animation: 'colorTransitionPink 4s ease-in-out infinite',
+                        }}
+                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(255, 125, 191, 0.8)'} // เอฟเฟกต์สีชมพูตอนโฟกัส
+                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
+                        tabIndex={0}
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ข้าวผัด</span>
                     </div>
+
                     <div
                         onClick={() => handleCategorySelect(3)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #78d259' }} // ขีดข้างล่างสีเขียว
+                        style={{
+                            ...styles.categoryCircle,
+                            backgroundColor: '#fff',
+                            borderBottom: '5px solid #78d259', // สีเขียว
+                            animation: 'colorTransitionGreen 4s ease-in-out infinite',
+                        }}
+                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(120, 210, 89, 0.8)'} // เอฟเฟกต์สีเขียวตอนโฟกัส
+                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
+                        tabIndex={0}
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เมนูยำ</span>
                     </div>
+
                     <div
                         onClick={() => handleCategorySelect(4)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #ffeb4b' }} // ขีดข้างล่างสีเหลือง
+                        style={{
+                            ...styles.categoryCircle,
+                            backgroundColor: '#fff',
+                            borderBottom: '5px solid #ffeb4b', // สีเหลือง
+                            animation: 'colorTransitionYellow 4s ease-in-out infinite',
+                        }}
+                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(255, 235, 75, 0.8)'} // เอฟเฟกต์สีเหลืองตอนโฟกัส
+                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
+                        tabIndex={0}
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>ข้าวต้ม</span>
                     </div>
+
                     <div
                         onClick={() => handleCategorySelect(5)}
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{ ...styles.categoryCircle, backgroundColor: '#fff', borderBottom: '5px solid #ff9f0f' }} // ขีดข้างล่างสีส้ม
+                        style={{
+                            ...styles.categoryCircle,
+                            backgroundColor: '#fff',
+                            borderBottom: '5px solid #ff9f0f', // สีส้ม
+                            animation: 'colorTransitionOrange 4s ease-in-out infinite',
+                        }}
+                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(255, 159, 15, 0.8)'} // เอฟเฟกต์สีส้มตอนโฟกัส
+                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
+                        tabIndex={0}
                     >
                         <span style={styles.iconText}></span>
                         <span style={styles.labelText}>เครื่องดื่ม</span>
                     </div>
                 </div>
-            </div>
+
+
+
+                </div>
                         <div style={styles.searchAndTableCodeContainer}>
                             <div style={styles.searchContainer}>
                                 <h5 style={styles.tableCode}>โต๊ะ: {formattedTableCode}</h5>
@@ -2578,6 +2634,52 @@ const styles = {
         }
         100% {transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
         }
+    }
+    @@keyframes colorTransitionBlue {
+    0% { border-color: #4c9eff; }
+    50% { border-color: #80b9ff; }
+    100% { border-color: #4c9eff; }
+    }
+
+    @keyframes colorTransitionPurple {
+        0% { border-color: #b97aff; }
+        50% { border-color: #d09eff; }
+        100% { border-color: #b97aff; }
+    }
+
+    @keyframes colorTransitionPink {
+        0% { border-color: #ff7dbf; }
+        50% { border-color: #ff99d9; }
+        100% { border-color: #ff7dbf; }
+    }
+
+    @keyframes colorTransitionGreen {
+        0% { border-color: #78d259; }
+        50% { border-color: #98e78b; }
+        100% { border-color: #78d259; }
+    }
+
+    @keyframes colorTransitionYellow {
+        0% { border-color: #ffeb4b; }
+        50% { border-color: #ffea76; }
+        100% { border-color: #ffeb4b; }
+    }
+
+    @keyframes colorTransitionOrange {
+        0% { border-color: #ff9f0f; }
+        50% { border-color: #ffb84f; }
+        100% { border-color: #ff9f0f; }
+    }
+
+    /* กำหนดเอฟเฟกต์การคลิกและการโฟกัส */
+    .categoryCircle:active {
+        transform: scale(0.95);
+        box-shadow: 0px 5px 15px rgba(0, 123, 255, 0.8); /* เอฟเฟกต์เมื่อกด */
+    }
+
+    .categoryCircle:focus {
+        outline: none; /* ลบเส้นขอบของเบราว์เซอร์ */
+        box-shadow: 0px 0px 12px rgba(0, 123, 255, 0.8); /* แสงเมื่อโฟกัส */
     }
 
     .pulse-effect {animation: pulse 0.5s ease-out;background-color: #d9f7be !important;}
