@@ -331,8 +331,7 @@ const loadTableLastOrder = async (tableCode) => {
             return [];
         }
     };
-                                                                             
-
+                                                                            
     const fetchOrderItems = async (orderId) => {
         try {
             //////////////////// ประกาศตัวแปร URL CALL   
@@ -372,7 +371,6 @@ const loadTableLastOrder = async (tableCode) => {
         }
     };
     
-    
     useEffect(() => {
         const loadOrdersForTable = async () => {
             if (!tableCode) return;
@@ -401,7 +399,6 @@ const loadTableLastOrder = async (tableCode) => {
             }
         };
         
-    
         loadOrdersForTable();
     }, [tableCode]);
 
@@ -413,7 +410,7 @@ const loadTableLastOrder = async (tableCode) => {
         // อัปเดตจำนวนการแยกชำระเมื่อ `payments` เปลี่ยนแปลง
         setSplitPaymentCount(payments.length);
     }, [payments]);
-                                                                                   //******************** */
+
     const closeOrder = async (orderId) => {
         try {
             console.log("🔍 Debug: กำลังปิดออเดอร์...");
@@ -2345,7 +2342,7 @@ const fetchCategories = async () => {
                 <div style={styles.receiptContainer}>
                     <div style={styles.header}>
                         <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
-                        <h2 style={styles.shopName}>Easy PÖS</h2>
+                        <h2 style={styles.shopName}>Easy POS</h2>
                         <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
                     </div>
                     <div style={styles.info}>
@@ -2503,7 +2500,7 @@ const styles = {
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', },
     productCard: {width: '120px',height: '100px',border: '1px solid #ddd',borderRadius: '8px',   cursor: 'pointer',   backgroundColor: '#ffffff',  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column',alignItems: 'center',padding: '15px',transition: 'transform 0.3s ease, box-shadow 0.3s ease',overflow: 'hidden',':hover': {transform: 'scale(1.05)',boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',},},
     productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
-    noImage: { width: '100%', height: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: '5px', marginBottom: '8px' },
+    noImage: { width: '100px', height: '50px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: '5px', marginBottom: '8px' },
     noImageText: { fontSize: '14px', color: '#aaa' },
     productDetails: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center', padding: '0 5px',marginLeft:'4px' },
     productName: { fontSize: '11px', fontWeight: 'bold', textAlign: 'left', color: '#333', flex: 1 },
