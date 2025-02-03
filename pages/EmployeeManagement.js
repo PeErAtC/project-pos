@@ -21,6 +21,12 @@ export default function EmployeeManagement() {
   const router = useRouter();
 
   useEffect(() => {
+    const slug = localStorage.getItem('slug');
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      slug: slug || '',  // ตั้งค่า slug หรือจะเป็นค่าว่างถ้าไม่มี
+    }));
+
     const fetchEmployees = async () => {
       const authToken = localStorage.getItem('token');
       if (!authToken) {
@@ -38,15 +44,21 @@ export default function EmployeeManagement() {
       try {
         const api_url = localStorage.getItem('url_api');
         const slug = localStorage.getItem('slug');
+        console.log(formData.slug); // ตรวจสอบค่า slug
+
         const response = await fetch(`${api_url}/${slug}/users`, {
           headers: {
             Accept: 'application/json',
             Authorization: `Bearer ${authToken}`,
           },
         });
+
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Error response:", errorText);
           throw new Error(`Error: ${response.status} ${response.statusText}`);
         }
+
         const data = await response.json();
         setEmployees(data);
       } catch (error) {
@@ -65,6 +77,27 @@ export default function EmployeeManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ตรวจสอบการเพิ่มพนักงานใหม่เท่านั้น
+    if (editIndex === null) {
+      const existingEmployee = employees.find(emp => emp.email === formData.email);
+      if (existingEmployee) {
+        Swal.fire({
+          title: 'ข้อผิดพลาด',
+          text: 'อีเมลนี้มีอยู่ในระบบแล้ว!',
+          icon: 'error',
+          confirmButtonText: 'ตกลง'
+        });
+        return; // หยุดการส่งข้อมูล
+      }
+    }
+
+    // เช็คว่า slug มีค่าหรือไม่
+    if (!formData.slug) {
+      Swal.fire('ข้อผิดพลาด', 'กรุณากรอกค่า slug', 'error');
+      return; // ไม่ส่งข้อมูลหากไม่มี slug
+    }
+
     try {
       const authToken = localStorage.getItem('token');
       const api_url = localStorage.getItem('url_api');
@@ -72,8 +105,8 @@ export default function EmployeeManagement() {
 
       const url =
         editIndex !== null
-          ? `${api_url}/${slug}/users/${employees[editIndex].id}`
-          : `${api_url}/${slug}/users`;
+          ? `${api_url}/${slug}/users/${employees[editIndex].id}` // ใช้ PUT ในกรณีแก้ไข
+          : `${api_url}/${slug}/users`; // ใช้ POST ในกรณีเพิ่มพนักงาน
 
       const method = editIndex !== null ? 'PUT' : 'POST';
       const response = await fetch(url, {
@@ -82,7 +115,7 @@ export default function EmployeeManagement() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // ส่งข้อมูล formData
       });
 
       if (!response.ok) {
@@ -106,7 +139,7 @@ export default function EmployeeManagement() {
         name: '',
         email: '',
         password: '',
-        slug: '',
+        slug: '', // เคลียร์ slug หลังจากการส่งข้อมูล
         owner: 'N',
         status: 'active',
       });
@@ -116,6 +149,16 @@ export default function EmployeeManagement() {
   };
 
   const handleDelete = async (index) => {
+    if (employees[index].owner !== 'Y') {
+      Swal.fire({
+        title: 'ข้อผิดพลาด',
+        text: 'คุณไม่มีสิทธิ์ในการลบข้อมูลพนักงานนี้',
+        icon: 'error',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
     Swal.fire({
       title: 'คุณแน่ใจหรือไม่?',
       text: 'คุณต้องการลบพนักงานคนนี้จริง ๆ หรือไม่',
@@ -138,6 +181,7 @@ export default function EmployeeManagement() {
               Authorization: `Bearer ${authToken}`,
             },
           });
+
           if (!response.ok) {
             throw new Error(`Error: ${response.status} ${response.statusText}`);
           }
@@ -152,6 +196,16 @@ export default function EmployeeManagement() {
   };
 
   const handleEdit = (index) => {
+    // ตรวจสอบว่าเจ้าของ (Owner: 'Y') หรือไม่
+    if (employees[index].owner !== 'Y') {
+      Swal.fire({
+        title: 'ข้อผิดพลาด',
+        text: 'คุณไม่มีสิทธิ์ในการแก้ไขข้อมูลพนักงานนี้',
+        icon: 'error',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
     setEditIndex(index);
     setFormData(employees[index]);
   };
@@ -316,8 +370,10 @@ export default function EmployeeManagement() {
     </div>
   );
 }
+
+
 const styles = {
-  container: { display: 'flex', flexDirection: 'row', height: '100vh', fontFamily: 'Kanit, sans-serif', backgroundColor: '#f9f9f9' },
+  container: { display: 'flex', flexDirection: 'row', height: '92vh', fontFamily: 'Kanit, sans-serif', backgroundColor: '#f9f9f9' },
   mainContent: { width: 'calc(100% - 100px)', marginLeft: '110px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '10px', backgroundColor: '#ffffff' },
   tableSection: { width: '80%', backgroundColor: '#ffffff', padding: '15px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
   tableContainer: { maxHeight: '400px', overflowY: 'scroll', border: '1px solid #ddd', borderRadius: '5px' },
@@ -345,7 +401,7 @@ const styles = {
   inactiveButton: { backgroundColor: '#ddd', color: '#888', padding: '10px', width: '100%', border: 'none', borderRadius: '5px', cursor: 'pointer', textAlign: 'center' },
   statusButtonsRow: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '80%', margin: '0 auto', gap: '10px', marginBottom: '20px' },
   statusTitle: { marginBottom: '10px', fontWeight: 'bold', color: '#000', textAlign: 'center' },
-  editButton: { padding: '5px 10px', backgroundColor: '#FFC137', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold' },
-  deleteButton: { padding: '5px 15px', backgroundColor: '#ff6b6b', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+  editButton: { padding: '5px 10px', background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold' },
+  deleteButton: { padding: '5px 15px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
   summaryText: { fontSize: '16px', marginBottom: '10px', color: '#000', textAlign: 'left' },
 };
