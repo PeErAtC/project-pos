@@ -383,7 +383,7 @@ const handleSaveCategory = async () => {
   const handleDeleteCategory = async () => {
     const result = await Swal.fire({
       title: 'ยืนยันการลบหมวดหมู่',
-      text: "คุณต้องการลบหมวดหมู่นี้หรือไม่?",
+      text: "คุณต้องการลบหมวดหมู่นี้หรือไม่?", 
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'ลบ',
@@ -596,7 +596,7 @@ const handleSaveCategory = async () => {
 }
 
 const styles = {
-  container: { display: 'flex' },
+  container: { display: 'flex', backgroundColor: '#ffffff' },
   contentContainer: { display: 'flex', flex: 1, padding: '25px 0 20px 130px', fontFamily: 'Arial, sans-serif' },
   addCategoryButton: {backgroundColor: '#ccc',color: '#fff',border: 'none',borderRadius: '5px',cursor: 'pointer',width: '40px',  height:'42px',marginBottom: '1px',},
   dropdownContainer: {display: 'flex',justifyContent: 'space-between', alignItems: 'center',width: '100%',maxWidth: '400px', },
