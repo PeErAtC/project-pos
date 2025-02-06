@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef  } from 'react';
 import axios from 'axios';
 import Sidebar from './components/sidebar';
 import Image from 'next/image';
@@ -35,7 +35,12 @@ export default function SalesPage() {
     const [temporaryPayments, setTemporaryPayments] = useState([]); // เก็บข้อมูลการแยกชำระเงินชั่วคราว
     const [isSplitPaymentPopupOpen, setIsSplitPaymentPopupOpen] = useState(false);
     const [splitPaymentCount, setSplitPaymentCount] = useState(0); // เก็บจำนวนรายการแยกชำระ
-    
+    const categoryRowRef = useRef(null); // ใช้ reference เพื่อจัดการการเลื่อน
+    const [isMouseDown, setIsMouseDown] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+    const [partialPayments, setPartialPayments] = useState([]);
+
     const getApiConfig = () => {
         let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
         const slug = localStorage.getItem('slug') || 'default_slug';
@@ -403,6 +408,12 @@ const loadTableLastOrder = async (tableCode) => {
     }, [tableCode]);
 
     const toggleSplitPaymentPopup = () => {
+        // ดึงข้อมูลประวัติการแยกชำระก่อนเปิดหน้าต่าง
+        if (orderId) {  // ตรวจสอบว่า orderId มีค่าหรือไม่
+            fetchPartialPayments(orderId); // เรียกฟังก์ชันดึงข้อมูลการแยกชำระ
+        }
+        
+        // เปิดหรือปิดหน้าต่างการแยกชำระ
         setIsSplitPaymentPopupOpen((prev) => !prev);
     };
     
@@ -457,37 +468,31 @@ const loadTableLastOrder = async (tableCode) => {
 
     
 // ฟังก์ชัน fetchCategories
-const fetchCategories = async () => {
-    try {
-        //////////////////// ประกาศตัวแปร URL CALL   
-        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-        const slug = localStorage.getItem('slug') || 'default_slug';
-        const authToken = localStorage.getItem('token') || 'default_token';
+    const fetchCategories = async () => {
+        try {
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+            if (!api_url.endsWith('/api')) api_url += '/api';
 
-        // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-        if (!api_url.endsWith('/api')) {
-            api_url += '/api';
+            const url = `${api_url}/${slug}/category`;
+            const response = await axios.get(url, {
+                headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+            });
+            setCategories(response.data);  // เก็บข้อมูลหมวดหมู่ใน state
+            } catch (error) {
+            console.error('Error:', error.message);
+            showNotification('ไม่พบ API endpoint', 'error');
         }
-        //////////////////// ประกาศตัวแปร  END URL CALL 
+  };
 
-        const url = `${api_url}/${slug}/category`;
 
-        const response = await axios.get(url, {
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-            },
-        });
-        setCategories(response.data.categories || []);
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        setCategories([]);
-    }
-};
+
 
 
     
     const handleCategorySelect = (categoryId) => {
+        console.log("Selected category:", categoryId);  // ตรวจสอบว่า categoryId ที่เลือกมีค่า
         setSelectedCategoryId(categoryId);
     };
 
@@ -640,17 +645,67 @@ const fetchCategories = async () => {
         return price;
     };
     
+    // const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
+    //     try {
+    //         let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+    //         const slug = localStorage.getItem('slug') || 'default_slug';
+    //         const authToken = localStorage.getItem('token') || 'default_token';
+    
+    //         // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+    //         if (!api_url.endsWith('/api')) api_url += '/api';
+    
+    //         // ใช้ /payments/{order_id}/list เส้นทางการบันทึกข้อมูลการแยกชำระ
+    //         const url = `${api_url}/${slug}/payments/${orderId}/list`; 
+    
+    //         // ตรวจสอบข้อมูลที่จำเป็น
+    //         if (!orderId || !paymentMethod || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
+    //             console.error('❌ ข้อมูลไม่ถูกต้อง:', { orderId, paymentMethod, amount });
+    //             throw new Error('ข้อมูลชำระเงินไม่ถูกต้อง');
+    //         }
+    
+    //         const paymentData = {
+    //             order_id: orderId,
+    //             pay_channel_id: paymentMethod === 'cash' ? 1 : 2, 
+    //             payment_date: new Date().toISOString(),
+    //             amount: parseFloat(amount),  // จำนวนเงินที่ชำระ
+    //             status: 'PARTIAL',  // สถานะการชำระ
+    //         };
+    
+    //         console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
+    
+    //         // ส่งข้อมูลการแยกชำระไปยัง API
+    //         const response = await axios.post(url, paymentData, {
+    //             headers: {
+    //                 'Accept': 'application/json',
+    //                 'Authorization': `Bearer ${authToken}`,
+    //             },
+    //         });
+    
+    //         if (response.data && response.data.success) {
+    //             console.log('✅ บันทึกข้อมูลการแยกชำระสำเร็จ:', response.data);
+    //         } else {
+    //             throw new Error('API ไม่สามารถบันทึกข้อมูลการแยกชำระได้');
+    //         }
+    //     } catch (error) {
+    //         console.error('❌ Error saving partial payment:', error.response?.data || error.message);
+    //         Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระได้', 'error');
+    //     }
+    // };
+
     const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
         try {
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
     
+            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
             if (!api_url.endsWith('/api')) api_url += '/api';
     
-            const url = `${api_url}/api/${slug}/partial-payments`;
+            // ใช้เส้นทาง /payments แทน /payments/{order_id}/list
+            const url = `${api_url}/${slug}/payments`;  // เปลี่ยนเส้นทาง
     
-            if (!orderId || !paymentMethod || typeof amount !== "number" || amount <= 0) {
+            // ตรวจสอบข้อมูลที่จำเป็น
+            if (!orderId || !paymentMethod || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
                 console.error('❌ ข้อมูลไม่ถูกต้อง:', { orderId, paymentMethod, amount });
                 throw new Error('ข้อมูลชำระเงินไม่ถูกต้อง');
             }
@@ -659,12 +714,13 @@ const fetchCategories = async () => {
                 order_id: orderId,
                 pay_channel_id: paymentMethod === 'cash' ? 1 : 2, 
                 payment_date: new Date().toISOString(),
-                amount: parseFloat(amount).toFixed(2),
-                status: 'PARTIAL', 
+                amount: parseFloat(amount),  // จำนวนเงินที่ชำระ
+                status: 'PARTIAL',  // สถานะการชำระ
             };
     
             console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
     
+            // ส่งข้อมูลการแยกชำระไปยัง API
             const response = await axios.post(url, paymentData, {
                 headers: {
                     'Accept': 'application/json',
@@ -675,45 +731,119 @@ const fetchCategories = async () => {
             if (response.data && response.data.success) {
                 console.log('✅ บันทึกข้อมูลการแยกชำระสำเร็จ:', response.data);
             } else {
-                throw new Error('API ไม่สามารถบันทึกข้อมูลแยกชำระได้');
+                throw new Error('API ไม่สามารถบันทึกข้อมูลการแยกชำระได้');
             }
         } catch (error) {
             console.error('❌ Error saving partial payment:', error.response?.data || error.message);
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระได้', 'error');
         }
     };
+
+    const paymentDate = new Date('2025-02-06T03:33:15.615Z');  // ใช้เวลา UTC
+
+    // แสดงวันที่และเวลาในรูปแบบที่ต้องการ โดยกำหนดเขตเวลา
+    const formattedDate = paymentDate.toLocaleString('th-TH', {
+        timeZone: 'Asia/Bangkok',  // เปลี่ยนเขตเวลาเป็น Bangkok
+        weekday: 'long',           // วันในสัปดาห์ (long format)
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric'
+    });
     
+    console.log(formattedDate);  // เช่น "วันพฤหัสบดีที่ 6 กุมภาพันธ์ 2025 10:33:15"
+    
+   
     
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
+            // ตรวจสอบว่า orderId ถูกต้องหรือไม่
+            if (!orderId) {
+                console.error('❌ orderId ไม่ถูกต้อง');
+                return;
+            }
+    
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
     
             // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            const response = await axios.get(`${api_url}/api/${slug}/partial-payments`, {
-                params: { order_id: orderId },
+            if (!api_url.endsWith('/api')) api_url += '/api';
+    
+            const response = await axios.get(`${api_url}/${slug}/payments/${orderId}/list`, {
                 headers: {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
     
-            if (response.data && Array.isArray(response.data)) {
-                setPayments(response.data); // บันทึกใน state
+            console.log("📥 รับข้อมูลจาก API:", response.data);
+    
+            // ตรวจสอบว่า response.data เป็น Array หรือไม่
+            if (response.status === 200 && response.data && Array.isArray(response.data)) {
+                const formattedPayments = response.data.map(payment => {
+                    if (!payment || !payment.payment_date) {
+                        console.warn(`⚠️ ข้อมูล payment_date หายไปสำหรับ order_id: ${payment?.order_id}`);
+                        return { ...payment, formattedDate: "ไม่ระบุวันเวลา", amount: 0 };
+                    }
+    
+                    // แปลงวันที่เป็น Date object และปรับเวลาให้ตรงกับเขตเวลาท้องถิ่น
+                    const paymentDate = new Date(payment.payment_date);
+    
+                    const formattedDate = paymentDate.toLocaleString('th-TH', {
+                        timeZone: 'Asia/Bangkok',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                    });
+    
+                    return {
+                        ...payment,
+                        formattedDate: formattedDate,  // เพิ่มวันที่ที่ปรับรูปแบบแล้ว
+                        amount: parseFloat(payment.amount) || 0, // แปลงจำนวนเงินให้เป็นตัวเลข
+                    };
+                });
+    
+                console.log("✅ แปลงข้อมูลเรียบร้อย:", formattedPayments);
+                setPayments(formattedPayments);  // อัปเดตข้อมูลการแยกชำระใน state
             } else {
-                console.warn('รูปแบบข้อมูลไม่ถูกต้อง');
+                console.warn('⚠️ ไม่มีข้อมูลการแยกชำระ หรือข้อมูลไม่ถูกต้อง');
+                setPayments([]);  // ตั้งค่าสำหรับ UI กรณีไม่มีข้อมูล
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการดึงประวัติการแยกชำระ:', error.response?.data || error.message);
+            let errorMessage = '❌ ไม่สามารถติดต่อกับเซิร์ฟเวอร์ได้';
+    
+            // จัดการข้อผิดพลาดจากการตอบกลับของ API
+            if (error.response) {
+                errorMessage = error.response?.data || error.response?.statusText;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+    
+            console.error('🚨 เกิดข้อผิดพลาดในการดึงประวัติการแยกชำระ:', errorMessage);
+            setPayments([]);  // ตั้งค่าเป็นอาร์เรย์ว่างเพื่อป้องกันปัญหา
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลการแยกชำระได้ กรุณาลองใหม่', 'error');
         }
     };
+    
+    
+    useEffect(() => {
+        if (orderId) {
+            fetchPartialPayments(orderId);
+        }
+    }, [orderId]);
+    
+
+
+    useEffect(() => {
+        fetchPartialPayments(orderId);
+    }, [orderId]); // ดึงข้อมูลเมื่อ orderId เปลี่ยนแปลง
     
     const calculateTotalAfterItemDiscounts = () => {
         return cart.reduce((acc, item) => 
@@ -1437,11 +1567,24 @@ const fetchCategories = async () => {
         setShowReceipt(false);
         setIsBillPaused(true);
     };
-    const calculateRemainingDue = () => {
+    const calculateRemainingDue = (partialPayments = []) => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมทั้งหมดที่ต้องชำระ
         const totalPaid = calculateTotalPaid(); // ยอดรวมที่ชำระไปแล้ว
-        return Math.max(totalDue - totalPaid, 0); // ยอดคงเหลือ = ยอดรวม - ยอดที่ชำระไปแล้ว
+    
+        // รวมยอดที่ชำระจากประวัติการแยกชำระ
+        const totalPartialPayments = partialPayments.reduce((acc, payment) => {
+            return acc + (payment.amount || 0);  // หาผลรวมของยอดที่ชำระ
+        }, 0);
+    
+        console.log(`💰 ยอดรวมที่ต้องชำระ: ${totalDue}`);
+        console.log(`💵 ยอดที่ชำระไปแล้ว: ${totalPaid}`);
+        console.log(`📜 ยอดที่ชำระจากประวัติการแยกชำระ: ${totalPartialPayments}`);
+    
+        // คำนวณยอดคงเหลือ
+        return Math.max(totalDue - totalPaid - totalPartialPayments, 0); // หักยอดที่ชำระทั้งหมด
     };
+    
+    
     
     const handleItemDiscountChange = (id, discount, discountType) => {
         setCart((prevCart) => 
@@ -1657,8 +1800,35 @@ const fetchCategories = async () => {
             console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลการแยกชำระ:', error.message);
             Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระเงินได้', 'error');
         }
-    };   
+    };
     
+    
+    const handleWheel = (e) => {
+        if (categoryRowRef.current) {
+            const scrollAmount = e.deltaY; // ใช้ deltaY สำหรับการเลื่อนในแนวนอน
+            categoryRowRef.current.scrollLeft += scrollAmount; // เลื่อนเนื้อหาตามการเลื่อนเมาส์
+            e.preventDefault(); // ป้องกันไม่ให้เกิดการเลื่อนปกติ
+        }
+    };
+    
+    const handleMouseDown = (e) => {
+        if (categoryRowRef.current) {
+            setIsMouseDown(true);
+            setStartX(e.clientX - categoryRowRef.current.offsetLeft);
+            setScrollLeft(categoryRowRef.current.scrollLeft);
+        }
+    };
+    
+    const handleMouseMove = (e) => {
+        if (!isMouseDown || !categoryRowRef.current) return;
+        const x = e.clientX - categoryRowRef.current.offsetLeft;
+        const walk = (x - startX) * 2; // ความเร็วในการเลื่อน
+        categoryRowRef.current.scrollLeft = scrollLeft - walk;
+    };
+    
+    const handleMouseUp = () => {
+        setIsMouseDown(false);
+    };
     return (
         <div style={styles.pageContainer}>
             <div style={styles.sidebarContainer}>
@@ -1668,117 +1838,88 @@ const fetchCategories = async () => {
                 <div style={styles.productListContainer}>
                 <div style={styles.headerContainer}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}>
-                <div style={{ ...styles.categoryRow, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-start', 
+                    alignItems: 'center', 
+                    overflowX: 'auto',  // เพิ่มการเลื่อนในแนวนอน
+                    whiteSpace: 'nowrap',  // ห้ามให้หมวดหมู่ขึ้นบรรทัดใหม่
+                    flexWrap: 'nowrap',  // ห้ามให้หมวดหมู่ข้ามบรรทัด
+                    width: '950px',  // ปรับความยาวหมวดหมู่    <=========ตรงนี้
+                    marginBottom: '0px',  // ป้องกันไม่ให้หมวดหมู่ชนกับเนื้อหาอื่น
+                    scrollBehavior: 'smooth',  // การเลื่อนที่เนียน
+                    touchAction: 'none',  // เลื่อนบนจอสัมผัส
+                    '-webkit-overflow-scrolling': 'touch',  // สำหรับ iOS Safari
+                    scrollbarWidth: 'none', // สำหรับ Firefox
+                    paddingBottom: '5px', // ป้องกันไม่ให้เนื้อหาบีบ
+                    // ซ่อนสกอล์บาร์
+                    '::-webkit-scrollbar': {
+                        display: 'none'
+                    },
+                }}
+                onWheel={handleWheel}  // เพิ่ม event นี้เพื่อรองรับการเลื่อนด้วยสกอล์เมาส์
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}  // เมื่อเมาส์ออกจากพื้นที่ เลิกคลิกค้าง
+                >
+                    {/* เพิ่มตัวเลือก "ทั้งหมด" ที่สามารถเลือกได้ */}
                     <div
-                        onClick={() => handleCategorySelect(null)}
-                        className="categoryCircle"
+                        key="all"
+                        onClick={() => handleCategorySelect(null)}  // เมื่อเลือก "ทั้งหมด" จะไม่กรองหมวดหมู่
                         onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
                         onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         style={{
                             ...styles.categoryCircle,
-                            backgroundColor: '#fff',
-                            borderBottom: '5px solid #4c9eff', // สีฟ้า
+                            backgroundColor: '#ffffff',
+                            borderBottom: `5px solid #1000c2`, // สีฟ้า
                             animation: 'colorTransitionBlue 4s ease-in-out infinite',
+                            marginRight: '10px',  // ช่องว่างระหว่างหมวดหมู่
+                            minWidth: '120px'  // กำหนดขนาดขั้นต่ำของหมวดหมู่
                         }}
-                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(76, 158, 255, 0.8)'} // เอฟเฟกต์สีฟ้าตอนโฟกัส
-                        onBlur={(e) => e.target.style.boxShadow = 'none'} // ลบเอฟเฟกต์เมื่อเลิกโฟกัส
-                        tabIndex={0} 
-                    >
-                        <span style={styles.iconText}></span>
-                        <span style={styles.labelText}>ทั้งหมด</span>
-                    </div>
-
-                    <div
-                        onClick={() => handleCategorySelect(1)}
-                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{
-                            ...styles.categoryCircle,
-                            backgroundColor: '#fff',
-                            borderBottom: '5px solid #b97aff', // สีม่วง
-                            animation: 'colorTransitionPurple 4s ease-in-out infinite',
-                        }}
-                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(185, 122, 255, 0.8)'} // เอฟเฟกต์สีม่วงตอนโฟกัส
-                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
+                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(76, 158, 255, 0.8)'}
+                        onBlur={(e) => e.target.style.boxShadow = 'none'}
                         tabIndex={0}
                     >
                         <span style={styles.iconText}></span>
-                        <span style={styles.labelText}>เมนูผัด</span>
+                        <span style={styles.labelText}>ทั้งหมด</span>  {/* แสดง "ทั้งหมด" */}
                     </div>
 
-                    <div
-                        onClick={() => handleCategorySelect(2)}
-                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{
-                            ...styles.categoryCircle,
-                            backgroundColor: '#fff',
-                            borderBottom: '5px solid #ff7dbf', // สีชมพู
-                            animation: 'colorTransitionPink 4s ease-in-out infinite',
-                        }}
-                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(255, 125, 191, 0.8)'} // เอฟเฟกต์สีชมพูตอนโฟกัส
-                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
-                        tabIndex={0}
-                    >
-                        <span style={styles.iconText}></span>
-                        <span style={styles.labelText}>ข้าวผัด</span>
-                    </div>
+                    {/* แสดงหมวดหมู่ที่ดึงมาจาก API */}
+                    {categories.length > 0 ? categories.map((category, index) => {
+                        // กำหนดสีที่แตกต่างกันให้กับเส้นขีด
+                        const colors = ['#4c9eff', '#78d259', '#ff7dbf', '#ff9f0f', '#ffeb4b', '#ff9f0f', '#b97aff'];
+                        const borderColor = colors[index % colors.length]; // เลือกสีที่ไม่ซ้ำกัน
 
-                    <div
-                        onClick={() => handleCategorySelect(3)}
-                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{
-                            ...styles.categoryCircle,
-                            backgroundColor: '#fff',
-                            borderBottom: '5px solid #78d259', // สีเขียว
-                            animation: 'colorTransitionGreen 4s ease-in-out infinite',
-                        }}
-                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(120, 210, 89, 0.8)'} // เอฟเฟกต์สีเขียวตอนโฟกัส
-                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
-                        tabIndex={0}
-                    >
-                        <span style={styles.iconText}></span>
-                        <span style={styles.labelText}>เมนูยำ</span>
-                    </div>
-
-                    <div
-                        onClick={() => handleCategorySelect(4)}
-                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{
-                            ...styles.categoryCircle,
-                            backgroundColor: '#fff',
-                            borderBottom: '5px solid #ffeb4b', // สีเหลือง
-                            animation: 'colorTransitionYellow 4s ease-in-out infinite',
-                        }}
-                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(255, 235, 75, 0.8)'} // เอฟเฟกต์สีเหลืองตอนโฟกัส
-                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
-                        tabIndex={0}
-                    >
-                        <span style={styles.iconText}></span>
-                        <span style={styles.labelText}>ข้าวต้ม</span>
-                    </div>
-
-                    <div
-                        onClick={() => handleCategorySelect(5)}
-                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        style={{
-                            ...styles.categoryCircle,
-                            backgroundColor: '#fff',
-                            borderBottom: '5px solid #ff9f0f', // สีส้ม
-                            animation: 'colorTransitionOrange 4s ease-in-out infinite',
-                        }}
-                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(255, 159, 15, 0.8)'} // เอฟเฟกต์สีส้มตอนโฟกัส
-                        onBlur={(e) => e.target.style.boxShadow = 'none'} 
-                        tabIndex={0}
-                    >
-                        <span style={styles.iconText}></span>
-                        <span style={styles.labelText}>เครื่องดื่ม</span>
-                    </div>
+                        return (
+                            <div
+                                key={category.id}  // สมมุติว่าแต่ละ category มี property id
+                                onClick={() => handleCategorySelect(category.id)}  // เมื่อเลือกหมวดหมู่จะกรองรายการตามหมวดหมู่
+                                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                style={{
+                                    ...styles.categoryCircle,
+                                    backgroundColor: '#fff',
+                                    borderBottom: `5px solid ${borderColor}`,  // ใช้สีที่เลือกให้กับเส้นขีด
+                                    animation: `colorTransition${category.c_name || 'Default'} 4s ease-in-out infinite`,
+                                    marginRight: '10px',  // ช่องว่างระหว่างหมวดหมู่
+                                    flexShrink: 0, // ป้องกันไม่ให้หมวดหมู่หดตัว
+                                    minWidth: '120px'  // กำหนดขนาดขั้นต่ำของหมวดหมู่
+                                }}
+                                onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(76, 158, 255, 0.8)'}
+                                onBlur={(e) => e.target.style.boxShadow = 'none'}
+                                tabIndex={0}
+                            >
+                                <span style={styles.iconText}></span>
+                                <span style={styles.labelText}>{category.c_name || 'หมวดหมู่'}</span>  {/* ใช้ c_name สำหรับชื่อหมวดหมู่ */}
+                            </div>
+                        );
+                    }) : (
+                        <div>
+                            {categories.length === 0 ? "กำลังโหลดหมวดหมู่..." : "หมวดหมู่ทั้งหมดจะมาแสดงที่นี่"}
+                        </div>
+                    )}
                 </div>
-
 
 
                 </div>
@@ -1796,7 +1937,6 @@ const fetchCategories = async () => {
                             </div>
                         </div>
                     </div>
-
                     <div style={styles.products}>
                         {filteredProducts.map((product) => (
                             <div
@@ -1954,18 +2094,18 @@ const fetchCategories = async () => {
 
                 {/* บล็อกรวมยอดรวม */}
                 <div
-    style={{
-        ...styles.totalContainer,
-        boxShadow: '0 8px 15px rgba(0, 0, 0, 0.15)', // เงาชัดเจนขึ้น
-        position: 'sticky', // ใช้ sticky เพื่อให้บล็อคติดอยู่
-        bottom: '0', // ให้อยู่ด้านล่างสุดของพื้นที่แสดงรายการสินค้า
-        width: '100%',
-        maxWidth: '380px', // ไม่ให้มันยาวเกิน
-        margin: '0 auto', // จัดให้อยู่กลาง
-        backgroundColor: '#fff', // สีพื้นหลัง
-        zIndex: 10, // ทำให้บล็อคอยู่ด้านบนเมื่อเลื่อน
-    }}
->
+        style={{
+            ...styles.totalContainer,
+            boxShadow: '0 8px 15px rgba(0, 0, 0, 0.15)', // เงาชัดเจนขึ้น
+            position: 'sticky', // ใช้ sticky เพื่อให้บล็อคติดอยู่
+            bottom: '0', // ให้อยู่ด้านล่างสุดของพื้นที่แสดงรายการสินค้า
+            width: '100%',
+            maxWidth: '380px', // ไม่ให้มันยาวเกิน
+            margin: '0 auto', // จัดให้อยู่กลาง
+            backgroundColor: '#fff', // สีพื้นหลัง
+            zIndex: 10, // ทำให้บล็อคอยู่ด้านบนเมื่อเลื่อน
+        }}
+    >
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
         <h3
             style={{
@@ -2158,7 +2298,7 @@ const fetchCategories = async () => {
             </div>
 
             <div style={styles.changeDi}>
-                ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท
+                    <p>ยอดคงเหลือ: {calculateRemainingDue(partialPayments).toFixed(2)} บาท</p>
             </div>
 
             <div
@@ -2216,6 +2356,7 @@ const fetchCategories = async () => {
                     >
                         ดูประวัติการแยกชำระ
                     </button>
+
                 </div>
             </div>
         </>
@@ -2312,8 +2453,8 @@ const fetchCategories = async () => {
                                     padding: '10px',
                                     borderBottom: '1px solid #ddd',
                                 }}
-                            >
-                                <p>วันที่: {new Date(payment.payment_date).toLocaleString()}</p>
+                                                >
+                                <p>{payment.formattedDate}</p>  {/* แสดงวันที่ที่ปรับแล้ว */}
                                 <p>จำนวนเงิน: {payment.amount.toFixed(2)} บาท</p>
                                 <p>ช่องทาง: {payment.pay_channel_id === 1 ? 'เงินสด' : 'QR Code'}</p>
                             </div>
