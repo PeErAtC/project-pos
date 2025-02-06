@@ -106,7 +106,7 @@ export default function Sidebar() {
   }), [isExpanded]);
 
   return (
-    <div style={{ ...styles.sidebar, width: isExpanded ? '210px' : '90px' }}>
+    <div style={{ ...styles.sidebar, width: isExpanded ? '215px' : '90px' }}>
       <div style={styles.toggleButton} onClick={toggleSidebar}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -124,31 +124,18 @@ export default function Sidebar() {
 
 
       <div style={iconContainerStyle}>
-        <div style={styles.iconWrapper}>
-
-        <div style={styles.storeContainer}>
-        <div style={styles.storeInfo}>
-      <Image src="/images/store.png" alt="Store" width={40} height={40} />
-      {isExpanded && (
-        <div style={styles.marqueeContainer}>
-          <div style={styles.marqueeContent}>
-            <span>{storeName}&nbsp;&nbsp;&nbsp;&nbsp;</span>
-          </div>
-        </div>
-      )}
-    </div>
-
-
-      {isExpanded && (
-          <div style={styles.userContainer}>
-            <span style={styles.userName}>ผู้ใช้: <strong>{username}</strong></span>
-          </div>
-        )}
+      <div style={styles.iconWrapper}>
+  <div style={styles.storeInfo}>
+    <Image src="/images/store.png" alt="Store" width={40} height={40} />
+    {isExpanded && (
+      <div style={styles.storeNameContainer}>
+        <span>{storeName}&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        <span style={styles.userName}>ผู้ใช้: <strong>{username}</strong></span>
       </div>
-      </div>
-
-        <div
-          style={{
+    )}
+  </div>
+</div>
+        <div style={{
             ...styles.icon,
             ...(activeMenu === '/products' ? styles.activeIcon : {}),
             pointerEvents: 'none',
@@ -247,9 +234,9 @@ const styles = {
   },
   storeInfo: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
+    flexDirection: 'row', // จัดเรียงให้อยู่ในแนวเดียวกัน
+    alignItems: 'center', // จัดกึ่งกลางในแนวตั้ง
+    gap: '10px', // เพิ่มระยะห่างระหว่างไอคอนกับข้อความ
   },
   marqueeContainer: {
     display: 'flex',
@@ -266,13 +253,18 @@ const styles = {
     fontSize: '16px',
     fontWeight: 'bold',
   },
+  storeNameContainer: {
+    display: 'flex',
+    flexDirection: 'column', // จัดให้ชื่อร้านและชื่อผู้ใช้อยู่แนวตั้ง
+    color:'#499cae',
+    fontWeight: 'bold',
+    fontSize: '16px',
+  },
   storeName: {
     fontSize: '18px',
     fontWeight: 'bold',
     color: '#499cae',
     padding:'5px',
-    display: 'flex',
-    flexDirection: 'column',
   },
   userContainer: {
     textAlign: 'center', 
@@ -313,17 +305,3 @@ const styles = {
     color: '#ffffff',
   },
 };
-
-const globalStyle = `
-  @keyframes marquee {
-    0% { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
-  }
-`;
-
-if (typeof window !== "undefined") {
-  const styleSheet = document.createElement("style");
-  styleSheet.type = "text/css";
-  styleSheet.innerText = globalStyle;
-  document.head.appendChild(styleSheet);
-}
