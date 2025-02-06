@@ -1,19 +1,27 @@
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [username, setUsername] = useState('');
-  const [focused, setFocused] = useState(null);
+  const [storeName, setStoreName] = useState('Easy POS'); // ค่าเริ่มต้น
   const router = useRouter();
 
   useEffect(() => {
     const loggedInUsername = localStorage.getItem('username');
     if (loggedInUsername) {
       setUsername(loggedInUsername);
+    }
+
+    const storedStoreName = localStorage.getItem('store');
+    if (storedStoreName) {
+      setStoreName(storedStoreName);
+    } else {
+      fetchStore(); // ถ้าไม่มีใน localStorage ให้ดึงจาก API
     }
   }, []);
 
@@ -25,13 +33,29 @@ export default function Sidebar() {
     }
   }, [router.pathname]);
 
-  const toggleSidebar = () => {
-    setIsExpanded(!isExpanded);
+  const fetchStore = async () => {
+    try {
+      let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+      const slug = localStorage.getItem('slug') || 'default_slug';
+      const authToken = localStorage.getItem('token') || 'default_token';
+
+      if (!api_url.endsWith('/api')) api_url += '/api';
+
+      const response = await axios.get(`${api_url}/${slug}/store`, {
+        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+      });
+
+      if (response.data.store) {
+        setStoreName(response.data.store); // อัปเดตชื่อร้าน
+        localStorage.setItem('store', response.data.store); // บันทึกลง localStorage
+      }
+    } catch (error) {
+      console.error('Error fetching store:', error);
+    }
   };
 
-  const handleMenuClick = (menu) => {
-    setActiveMenu(menu);
-    router.push(menu);
+  const toggleSidebar = () => {
+    setIsExpanded(!isExpanded);
   };
 
   const handleBack = () => {
@@ -57,7 +81,8 @@ export default function Sidebar() {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('token');
         localStorage.removeItem('username');
-        
+        localStorage.removeItem('store');
+
         Swal.fire({
           title: 'ออกจากระบบสำเร็จ',
           text: 'คุณได้ออกจากระบบเรียบร้อยแล้ว',
@@ -71,8 +96,17 @@ export default function Sidebar() {
     });
   };
 
+  const iconContainerStyle = useMemo(() => ({
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: isExpanded ? 'flex-start' : 'center',
+    gap: '20px',
+    width: '100%',
+    paddingLeft: isExpanded ? '20px' : '0',
+  }), [isExpanded]);
+
   return (
-    <div style={{ ...styles.sidebar, width: isExpanded ? '200px' : '90px' }}>
+    <div style={{ ...styles.sidebar, width: isExpanded ? '210px' : '90px' }}>
       <div style={styles.toggleButton} onClick={toggleSidebar}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -88,30 +122,42 @@ export default function Sidebar() {
         </svg>
       </div>
 
-      <div style={styles.iconContainer(isExpanded)}>
+
+      <div style={iconContainerStyle}>
         <div style={styles.iconWrapper}>
-          <div style={styles.storeInfo}>
-            <Image src="/images/store.png" alt="Store" width={40} height={40} />
-            {isExpanded && (
-              <span style={styles.storeName}>
-                Easy POS
-                {username && <span style={styles.userName}>ผู้ใช้: {username}</span>}
-              </span>
-            )}
+
+        <div style={styles.storeContainer}>
+        <div style={styles.storeInfo}>
+      <Image src="/images/store.png" alt="Store" width={40} height={40} />
+      {isExpanded && (
+        <div style={styles.marqueeContainer}>
+          <div style={styles.marqueeContent}>
+            <span>{storeName}&nbsp;&nbsp;&nbsp;&nbsp;</span>
           </div>
         </div>
+      )}
+    </div>
+
+
+      {isExpanded && (
+          <div style={styles.userContainer}>
+            <span style={styles.userName}>ผู้ใช้: <strong>{username}</strong></span>
+          </div>
+        )}
+      </div>
+      </div>
+
         <div
           style={{
             ...styles.icon,
             ...(activeMenu === '/products' ? styles.activeIcon : {}),
-            pointerEvents: 'none', // ปิดการคลิก
-            cursor: 'default', // เปลี่ยน cursor เป็น default
+            pointerEvents: 'none',
+            cursor: 'default',
           }}
         >
           <Image src="/images/menu.png" alt="Products" width={35} height={35} />
           {isExpanded && <span style={styles.iconLabel}>สินค้า</span>}
         </div>
-
 
         <div
           style={{
@@ -128,10 +174,10 @@ export default function Sidebar() {
           style={{
             ...styles.icon,
             ...(activeMenu === '/logout' ? styles.activeIcon : {}),
-            animation: activeMenu === '/logout' ? 'pulsing 1s infinite' : 'none', // ปรับ animation ให้กับปุ่มออกจากระบบ
+            animation: activeMenu === '/logout' ? 'pulsing 1s infinite' : 'none',
           }}
           onClick={() => {
-            setActiveMenu('/logout'); // เปลี่ยน activeMenu เมื่อกดออกจากระบบ
+            setActiveMenu('/logout');
             handleLogout();
           }}
         >
@@ -142,7 +188,6 @@ export default function Sidebar() {
     </div>
   );
 }
-
 const styles = {
   sidebar: {
     height: '87vh',
@@ -206,6 +251,21 @@ const styles = {
     justifyContent: 'center',
     gap: '10px',
   },
+  marqueeContainer: {
+    display: 'flex',
+    overflow: 'hidden',
+    width: '120px',  // ปรับตามขนาดที่ต้องการ
+    whiteSpace: 'nowrap',
+    position: 'relative',
+  },
+  marqueeContent: {
+    display: 'inline-block',
+    whiteSpace: 'nowrap',
+    animation: 'marquee 5s linear infinite',
+    color: '#499cae', // กำหนดสีให้ชื่อร้าน
+    fontSize: '16px',
+    fontWeight: 'bold',
+  },
   storeName: {
     fontSize: '18px',
     fontWeight: 'bold',
@@ -214,10 +274,14 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
   },
+  userContainer: {
+    textAlign: 'center', 
+    marginLeft:'20px',
+  },
   userName: {
     fontSize: '14px',
     fontWeight: 'normal',
-    color: '#777',
+    color: '#444',
   },
   icon: {
     display: 'flex',
@@ -250,3 +314,16 @@ const styles = {
   },
 };
 
+const globalStyle = `
+  @keyframes marquee {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+`;
+
+if (typeof window !== "undefined") {
+  const styleSheet = document.createElement("style");
+  styleSheet.type = "text/css";
+  styleSheet.innerText = globalStyle;
+  document.head.appendChild(styleSheet);
+}
