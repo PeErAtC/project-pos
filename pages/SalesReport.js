@@ -37,7 +37,6 @@
         // ฟังก์ชันสำหรับดึงข้อมูลการชำระเงินตาม Order ID
             const fetchPaymentHistory = async (orderId) => {
                 try {
-
                     //////////////////// ประกาศตัวแปร URL CALL   
                     const api_url =  localStorage.getItem('url_api'); 
                     const slug = localStorage.getItem('slug');
@@ -191,173 +190,230 @@
                 new Date(order.order_date).toLocaleDateString('en-CA') === dateFilter
             );
         };
-
-        // ฟังก์ชันแสดงรายละเอียด Order พร้อม Popup
-        const fetchOrderDetails = async (orderId) => {
+        const fetchPaymentHistoryByOrderId = async (orderId) => {
             try {
-                //////////////////// ประกาศตัวแปร URL CALL   
-            const api_url =  localStorage.getItem('url_api'); 
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-                const response = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
+                const api_url = localStorage.getItem('url_api'); 
+                const slug = localStorage.getItem('slug');
+                const authToken = localStorage.getItem('token');
+            
+                if (!authToken) {
+                    Swal.fire({
+                        title: 'ไม่ได้เข้าสู่ระบบ',
+                        text: 'กรุณาเข้าสู่ระบบก่อนใช้งาน',
+                        icon: 'warning',
+                        confirmButtonText: 'ตกลง',
+                    }).then(() => {
+                        window.location.href = '/login';
+                    });
+                    return;
+                }
+        
+                const response = await axios.get(`${api_url}/${slug}/payments/${orderId}/list`, {
                     headers: {
                         Accept: 'application/json',
                         Authorization: `Bearer ${authToken}`,
                     },
                 });
-        
-                console.log('Order Details:', response.data); // เพิ่ม log เพื่อตรวจสอบโครงสร้างข้อมูล
-        
-                if (response.data && response.data.items) {
-                    return response.data; // ส่งข้อมูลทั้งหมดกลับ
-                } else {
-                    throw new Error('ไม่พบข้อมูลรายการสินค้าของออเดอร์นี้');
-                }
+                
+                console.log("Payment Data:", response.data); // ตรวจสอบข้อมูลการชำระเงินที่ได้จาก API
+                return response.data || [];
             } catch (error) {
-                console.error('Error fetching order details:', error);
+                console.error('Error fetching payment history:', error);
                 Swal.fire({
                     title: 'เกิดข้อผิดพลาด',
-                    text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
+                    text: 'ไม่สามารถดึงข้อมูลการชำระเงินได้',
                     icon: 'error',
                     confirmButtonText: 'ปิด',
                 });
-                return null;
+                return [];
             }
         };        
+        // ฟังก์ชันแสดงรายละเอียด Order พร้อม Popup
+        // ฟังก์ชันแสดงรายละเอียด Order พร้อม Popup
+const fetchOrderDetails = async (orderId) => {
+    try {
+        const api_url = localStorage.getItem('url_api');
+        const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+
+        // ดึงข้อมูลคำสั่งซื้อ
+        const orderResponse = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${authToken}`,
+            },
+        });
+
+        // ดึงข้อมูลการชำระเงินโดยใช้ API ใหม่ /payments/{order_id}/list
+        const paymentResponse = await axios.get(`${api_url}/${slug}/payments/${orderId}/list`, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${authToken}`,
+            },
+        });
+
+        console.log('Order Details:', orderResponse.data);
+        console.log('Payment Details:', paymentResponse.data);
+
+        if (orderResponse.data && orderResponse.data.items) {
+            return { order: orderResponse.data, payments: paymentResponse.data }; // ส่งข้อมูลคำสั่งซื้อและการชำระเงินกลับ
+        } else {
+            throw new Error('ไม่พบข้อมูลรายการสินค้าของออเดอร์นี้');
+        }
+    } catch (error) {
+        console.error('Error fetching order details:', error);
+        Swal.fire({
+            title: 'เกิดข้อผิดพลาด',
+            text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
+            icon: 'error',
+            confirmButtonText: 'ปิด',
+        });
+        return null;
+    }
+};
+
+// ฟังก์ชันแสดงรายละเอียดคำสั่งซื้อ
+const showOrderDetails = async (orderId) => {
+    if (!orderId) {
+        Swal.fire({
+            title: 'เกิดข้อผิดพลาด',
+            text: 'ไม่มี Order ID',
+            icon: 'error',
+            confirmButtonText: 'ปิด',
+        });
+        return;
+    }
+
+    try {
+        const orderDetails = await fetchOrderDetails(orderId);
+
+        if (!orderDetails || !orderDetails.order || !orderDetails.order.items || orderDetails.order.items.length === 0) {
+            Swal.fire({
+                title: 'ไม่มีข้อมูล',
+                text: 'ไม่พบข้อมูลสำหรับบิลนี้ หรือบิลนี้ไม่มีรายการสินค้า',
+                icon: 'info',
+                confirmButtonText: 'ปิด',
+            });
+            return;
+        }
+
+        // คำนวณราคารวมสินค้า
+        const totalPrice = orderDetails.order.items.reduce((sum, item) => {
+            const price = parseFloat(item.price) || 0;
+            const discount = parseFloat(item.discount) || 0;
+            const itemTotal = (price - discount) * item.quantity;
+            return sum + itemTotal;
+        }, 0);
+
+        // สร้างตารางสินค้า
+        const itemsTableHTML = `
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
+                    <tr>
+                        <th style="padding: 5px; border: 1px solid #ddd;">ลำดับ</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">เลขบิล</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">ชื่อสินค้า</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">จำนวน</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">ราคา</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">ราคารวม</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${orderDetails.order.items.map((item, index) => {
+                        const price = parseFloat(item.price) || 0;
+                        const quantity = parseInt(item.quantity) || 0;
+                        const totalPrice = price * quantity;
+
+                        return `
+                            <tr>
+                                <td style="padding: 5px; border: 1px solid #ddd;">${index + 1}</td>
+                                <td style="padding: 5px; border: 1px solid #ddd;">${item.order_id}</td>
+                                <td style="padding: 5px; border: 1px solid #ddd;">${item.p_name}</td>
+                                <td style="padding: 5px; border: 1px solid #ddd;">${quantity}</td>
+                                <td style="padding: 5px; border: 1px solid #ddd;">${price.toFixed(2)} ฿</td>
+                                <td style="padding: 5px; border: 1px solid #ddd;">${totalPrice.toFixed(2)} ฿</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
         
-        const showOrderDetails = async (orderId) => {
-            if (!orderId) {
-                Swal.fire({
-                    title: 'เกิดข้อผิดพลาด',
-                    text: 'ไม่มี Order ID',
-                    icon: 'error',
-                    confirmButtonText: 'ปิด',
-                });
-                return;
+        
+// สร้างตารางประวัติการชำระเงิน
+const payments = orderDetails?.payments || [];
+const paymentHistoryTableHTML = `
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
+            <tr>
+                <th style="padding: 5px; border: 1px solid #ddd;">ลำดับ</th>
+                <th style="padding: 5px; border: 1px solid #ddd;">แยกชำระ</th>
+                <th style="padding: 5px; border: 1px solid #ddd;">วิธีการชำระ</th>
+                <th style="padding: 5px; border: 1px solid #ddd;">วันที่ชำระ</th>
+                <th style="padding: 5px; border: 1px solid #ddd;">คงเหลือ</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${
+                payments.length > 0
+                    ? payments.map((payment, index) => `
+                        <tr>
+                            <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">${index + 1}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? payment.amount + " ฿" : 'N/A'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.pay_channel_id === 1 ? 'เงินสด' : payment.pay_channel_id === 2 ? 'QR Code พร้อมเพย์' : 'อื่นๆ'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'N/A'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.change_amount ? payment.change_amount + " ฿" : 'N/A'}</td>
+                        </tr>
+                    `).join('')
+                    : `
+                        <tr>
+                            <td colspan="5" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
+                                ไม่มีข้อมูลการชำระเงิน
+                            </td>
+                        </tr>
+                    `
             }
-        
-            try {
-                const order = await fetchOrderDetails(orderId);
-        
-                if (!order || !order.items || order.items.length === 0) {
-                    Swal.fire({
-                        title: 'ไม่มีข้อมูล',
-                        text: 'ไม่พบข้อมูลสำหรับบิลนี้ หรือบิลนี้ไม่มีรายการสินค้า',
-                        icon: 'info',
-                        confirmButtonText: 'ปิด',
-                    });
-                    return;
-                }
-        
-                // คำนวณราคารวมสินค้า
-                const totalPrice = order.items.reduce((sum, item) => {
-                    const price = parseFloat(item.price) || 0;
-                    const discount = parseFloat(item.discount) || 0;
-                    const itemTotal = (price - discount) * item.quantity;
-                    return sum + itemTotal;
-                }, 0);
-        
-                // สร้างตารางสินค้า
-                const itemsTableHTML = `
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
-                            <tr>
-                                <th style="padding: 5px; border: 1px solid #ddd;">ลำดับ</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">เลขบิล</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">ชื่อสินค้า</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">จำนวน</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">ราคา</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">ราคารวม</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${order.items.map((item, index) => {
-                                const price = parseFloat(item.price) || 0;
-                                const quantity = parseInt(item.quantity) || 0;
-                                const totalPrice = price * quantity;
-        
-                                return `
-                                    <tr>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${index + 1}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${item.order_id}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${item.p_name}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${quantity}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${price.toFixed(2)} ฿</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${totalPrice.toFixed(2)} ฿</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                `;
-        
-                // สร้างตารางประวัติการชำระเงิน (พร้อมแสดงโครงสร้างตารางเสมอ)
-                const payments = order.payments || [];
-                const paymentHistoryTableHTML = `
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
-                            <tr>
-                                <th style="padding: 5px; border: 1px solid #ddd;">แยกชำระ</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">วิธีการชำระ</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">วันที่ชำระ</th>
-                                <th style="padding: 5px; border: 1px solid #ddd;">หมายเหตุ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${payments.length > 0
-                                ? payments.map((payment) => `
-                                    <tr>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'N/A'}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.split_payment ? 'แยกชำระ' : 'N/A'}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.method === 'qr_code' ? 'QR Code พร้อมเพย์' : payment.method === 'cash' ? 'เงินสด' : 'N/A'}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? parseFloat(payment.amount).toFixed(2) : 'N/A'} ฿</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.notes || 'N/A'}</td>
-                                    </tr>
-                                `).join('')
-                                : `
-                                    <tr>
-                                        <td colspan="5" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
-                                            ไม่มีข้อมูลการชำระเงิน
-                                        </td>
-                                    </tr>
-                                `}
-                        </tbody>
-                    </table>
-                `;
-                // แสดงผลใน SweetAlert
-                Swal.fire({
-                    html: `
-                        <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
-                            <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
-                            <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
-                                ${itemsTableHTML}
-                            </div>
-                            <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
-                                <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
-                            </div>
-                            <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
-                            <div style="max-height: 150px; overflow-y: auto;">
-                                ${paymentHistoryTableHTML}
-                            </div>
-                        </div>
-                    `,
-                    confirmButtonText: 'ปิด',
-                    width: '900px',
-                    padding: '20px',
-                    background: '#fff',
-                });
-            } catch (error) {
-                console.error('Error showing order details:', error);
-                Swal.fire({
-                    title: 'เกิดข้อผิดพลาด',
-                    text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
-                    icon: 'error',
-                    confirmButtonText: 'ปิด',
-                });
-                }
-            };
-        
+        </tbody>
+    </table>
+    <div style="margin-top: 10px; font-weight: bold; font-size: 16px; text-align: right;">
+        <p>เงินทอนทั้งหมด: ${payments.length > 0 ? payments.reduce((total, payment) => total + (parseFloat(payment.change_amount) || 0), 0).toFixed(2) : 'N/A'} ฿</p>
+    </div>
+`;
+
+// แสดงผลใน SweetAlert
+Swal.fire({
+    html: `
+        <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
+            <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
+            <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
+                ${itemsTableHTML}
+            </div>
+            <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
+                <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
+            </div>
+            <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
+            <div style="max-height: 150px; overflow-y: auto;">
+                ${paymentHistoryTableHTML}
+            </div>
+        </div>
+    `,
+    confirmButtonText: 'ปิด',
+    width: '900px',
+    padding: '20px',
+    background: '#fff',
+});
+
+
+    } catch (error) {
+        console.error('Error showing order details:', error);
+        Swal.fire({
+            title: 'เกิดข้อผิดพลาด',
+            text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
+            icon: 'error',
+            confirmButtonText: 'ปิด',
+        });
+    }
+};
         const calculateTotals = (orders) => {
             const totalAmount = orders.reduce((total, order) => total + parseFloat(order.total_amount || 0), 0).toFixed(2);
             const totalDiscount = orders.reduce((total, order) => total + parseFloat(order.discount || 0), 0).toFixed(2);
