@@ -7,6 +7,7 @@ export default function BackendSidebar() {
   const [isExpanded, setIsExpanded] = useState(false); // สถานะสำหรับพับ/กาง Sidebar
   const [activeMenu, setActiveMenu] = useState(null); // สำหรับตรวจสอบเมนูที่ถูกเลือก
   const [username, setUsername] = useState(''); // สถานะสำหรับเก็บชื่อผู้ใช้
+  const [storeName, setStoreName] = useState('Easy POS'); // ค่าเริ่มต้น
   const router = useRouter();
 
   useEffect(() => {
@@ -14,9 +15,17 @@ export default function BackendSidebar() {
     if (loggedInUsername) {
       setUsername(loggedInUsername);
     }
+    const storedStoreName = localStorage.getItem('store');
+    if (storedStoreName) {
+      setStoreName(storedStoreName);
+    } else {
+      fetchStore(); // ถ้าไม่มีใน localStorage ให้ดึงจาก API
+    }
     const currentPath = router.pathname;
     setActiveMenu(currentPath);
   }, [router.pathname]);
+
+  
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded); // เปลี่ยนสถานะพับ/กาง
@@ -75,16 +84,17 @@ export default function BackendSidebar() {
       </div>
 
       {/* Store and Username */}
-      <div
-        style={{
-          ...styles.iconWrapper,
-          width: isExpanded ? '160px' : '40px', // ปรับขนาดของกรอบสีขาวตามสถานะ
-        }}
-      >
+      <div style={{ ...styles.iconWrapper, width: isExpanded ? '160px' : '40px' }}>
         <Image src="/images/folder.png" alt="Store" width={40} height={40} />
         {isExpanded && (
+
+
           <div style={styles.storeInfo}>
-            <span style={styles.storeName}>Easy POS</span>
+        <div style={styles.marqueeContainer}>
+          <div style={styles.marqueeContent}>
+            <span>{storeName}&nbsp;&nbsp;&nbsp;&nbsp;</span>
+              </div>
+            </div>
             {username && <span style={styles.userName}>ผู้ใช้: {username}</span>}
           </div>
         )}
@@ -93,10 +103,7 @@ export default function BackendSidebar() {
       {/* Icons Section */}
       <div style={styles.iconContainer(isExpanded)}>
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/backendpage' ? styles.activeIcon : {}),
-          }}
+          style={{ ...styles.icon, ...(activeMenu === '/backendpage' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/backendpage')}
         >
           <Image src="/images/menu.png" alt="Food" width={35} height={35} />
@@ -104,10 +111,7 @@ export default function BackendSidebar() {
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/SalesReport' ? styles.activeIcon : {}),
-          }}
+          style={{ ...styles.icon, ...(activeMenu === '/SalesReport' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/SalesReport')}
         >
           <Image src="/images/file.png" alt="Report" width={36} height={36} />
@@ -115,10 +119,7 @@ export default function BackendSidebar() {
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/PaymentSummary' ? styles.activeIcon : {}),
-          }}
+          style={{ ...styles.icon, ...(activeMenu === '/PaymentSummary' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/PaymentSummary')}
         >
           <Image src="/images/growth.png" alt="Report" width={40} height={40} />
@@ -126,10 +127,7 @@ export default function BackendSidebar() {
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/TableManagement' ? styles.activeIcon : {}),
-          }}
+          style={{ ...styles.icon, ...(activeMenu === '/TableManagement' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/TableManagement')}
         >
           <Image src="/images/dinner-table.png" alt="Table" width={35} height={35} />
@@ -137,10 +135,7 @@ export default function BackendSidebar() {
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/EmployeeManagement' ? styles.activeIcon : {}),
-          }}
+          style={{ ...styles.icon, ...(activeMenu === '/EmployeeManagement' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/EmployeeManagement')}
         >
           <Image src="/images/add-user.png" alt="Employee" width={35} height={35} />
@@ -148,10 +143,7 @@ export default function BackendSidebar() {
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/' ? styles.activeIcon : {}),
-          }}
+          style={{ ...styles.icon, ...(activeMenu === '/' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/')}
         >
           <Image src="/images/left-arrow.png" alt="Back" width={30} height={30} />
@@ -159,10 +151,7 @@ export default function BackendSidebar() {
         </div>
 
         <div
-          style={{
-            ...styles.icon,
-            ...(activeMenu === '/logout' ? styles.activeIcon : {}),
-          }}
+          style={{ ...styles.icon, ...(activeMenu === '/logout' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/logout')}
         >
           <Image src="/images/logout.png" alt="Logout" width={30} height={30} />
@@ -231,20 +220,33 @@ const styles = {
     alignItems: 'flex-start', // จัดข้อความให้อยู่ชิดซ้าย
     justifyContent: 'center',
   },
+  marqueeContainer: {
+    display: 'flex',
+    overflow: 'hidden',
+    width: '120px',  // ปรับตามขนาดที่ต้องการ
+    whiteSpace: 'nowrap',
+    position: 'relative',
+  },
+  marqueeContent: {
+    display: 'inline-block',
+    whiteSpace: 'nowrap',
+    animation: 'marquee 5s linear infinite',
+    color: '#499cae', 
+    fontSize: '16px',
+    fontWeight: 'bold',
+  },
   storeName: {
     fontSize: '18px',
     fontWeight: 'bold',
     color: '#499cae',
-    marginBottom: '0px',
-    padding: '0px',
-    marginLeft: '5px',
+    padding:'5px',
+    display: 'flex',
     flexDirection: 'column',
   },
   userName: {
     fontSize: '14px',
-    marginLeft: '5px',
-    fontWeight: 'normal',
-    color: '#777',
+    fontWeight: 'bold',
+    color: '#444',
   },
   iconContainer: (isExpanded) => ({
     display: 'flex',
