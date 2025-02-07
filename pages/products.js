@@ -40,6 +40,8 @@ export default function SalesPage() {
     const [startX, setStartX] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
     const [partialPayments, setPartialPayments] = useState([]);
+    const [remainingDue, setRemainingDue] = useState(0); // สร้าง state สำหรับยอดคงเหลือ
+    const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
 
     const getApiConfig = () => {
         let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
@@ -416,6 +418,11 @@ const loadTableLastOrder = async (tableCode) => {
         // เปิดหรือปิดหน้าต่างการแยกชำระ
         setIsSplitPaymentPopupOpen((prev) => !prev);
     };
+    useEffect(() => {
+        if (orderId) {
+            fetchPartialPayments(orderId); // ดึงข้อมูลการแยกชำระใหม่หลังจากการชำระ
+        }
+    }, [temporaryPayments]);  // ใช้ temporaryPayments เพื่ออัปเดตเมื่อข้อมูลการชำระใหม่ถูกเพิ่มเข้ามา
     
     useEffect(() => {
         // อัปเดตจำนวนการแยกชำระเมื่อ `payments` เปลี่ยนแปลง
@@ -633,8 +640,10 @@ const loadTableLastOrder = async (tableCode) => {
         });
     };
     const calculateTotalPaid = () => {
-        return temporaryPayments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดชำระจากทุกการแยกจ่าย
+        const totalPaid = payments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดการชำระทั้งหมดจากประวัติการชำระ
+        return totalPaid;
     };
+    
     
     const calculateDiscountedPrice = (price, discount, discountType) => {
         if (discountType === 'THB') {
@@ -760,7 +769,6 @@ const loadTableLastOrder = async (tableCode) => {
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
         try {
-            // ตรวจสอบว่า orderId ถูกต้องหรือไม่
             if (!orderId) {
                 console.error('❌ orderId ไม่ถูกต้อง');
                 return;
@@ -770,7 +778,6 @@ const loadTableLastOrder = async (tableCode) => {
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
     
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
             if (!api_url.endsWith('/api')) api_url += '/api';
     
             const response = await axios.get(`${api_url}/${slug}/payments/${orderId}/list`, {
@@ -782,17 +789,9 @@ const loadTableLastOrder = async (tableCode) => {
     
             console.log("📥 รับข้อมูลจาก API:", response.data);
     
-            // ตรวจสอบว่า response.data เป็น Array หรือไม่
             if (response.status === 200 && response.data && Array.isArray(response.data)) {
                 const formattedPayments = response.data.map(payment => {
-                    if (!payment || !payment.payment_date) {
-                        console.warn(`⚠️ ข้อมูล payment_date หายไปสำหรับ order_id: ${payment?.order_id}`);
-                        return { ...payment, formattedDate: "ไม่ระบุวันเวลา", amount: 0 };
-                    }
-    
-                    // แปลงวันที่เป็น Date object และปรับเวลาให้ตรงกับเขตเวลาท้องถิ่น
                     const paymentDate = new Date(payment.payment_date);
-    
                     const formattedDate = paymentDate.toLocaleString('th-TH', {
                         timeZone: 'Asia/Bangkok',
                         year: 'numeric',
@@ -805,33 +804,33 @@ const loadTableLastOrder = async (tableCode) => {
     
                     return {
                         ...payment,
-                        formattedDate: formattedDate,  // เพิ่มวันที่ที่ปรับรูปแบบแล้ว
-                        amount: parseFloat(payment.amount) || 0, // แปลงจำนวนเงินให้เป็นตัวเลข
+                        formattedDate: formattedDate,
+                        amount: parseFloat(payment.amount) || 0,
                     };
                 });
     
                 console.log("✅ แปลงข้อมูลเรียบร้อย:", formattedPayments);
-                setPayments(formattedPayments);  // อัปเดตข้อมูลการแยกชำระใน state
+    
+                // อัปเดตข้อมูลการแยกชำระ
+                setPayments(formattedPayments);
+                recalculateRemainingDue(formattedPayments);  // อัปเดตยอดคงเหลือ
             } else {
                 console.warn('⚠️ ไม่มีข้อมูลการแยกชำระ หรือข้อมูลไม่ถูกต้อง');
                 setPayments([]);  // ตั้งค่าสำหรับ UI กรณีไม่มีข้อมูล
             }
         } catch (error) {
-            let errorMessage = '❌ ไม่สามารถติดต่อกับเซิร์ฟเวอร์ได้';
-    
-            // จัดการข้อผิดพลาดจากการตอบกลับของ API
-            if (error.response) {
-                errorMessage = error.response?.data || error.response?.statusText;
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-    
-            console.error('🚨 เกิดข้อผิดพลาดในการดึงประวัติการแยกชำระ:', errorMessage);
+            console.error('🚨 เกิดข้อผิดพลาดในการดึงประวัติการแยกชำระ:', error);
             setPayments([]);  // ตั้งค่าเป็นอาร์เรย์ว่างเพื่อป้องกันปัญหา
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลการแยกชำระได้ กรุณาลองใหม่', 'error');
         }
     };
     
+    // ฟังก์ชันคำนวณยอดคงเหลือใหม่
+    const recalculateRemainingDue = () => {
+        const totalPaid = temporaryPayments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดที่ชำระทั้งหมด
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระทั้งหมด
+        const remainingDue = totalDue - totalPaid; // คำนวณยอดคงเหลือ
+        setRemainingDue(Math.max(remainingDue, 0)); // ห้ามให้ค่าติดลบ
+    };
     
     useEffect(() => {
         if (orderId) {
@@ -866,6 +865,17 @@ const loadTableLastOrder = async (tableCode) => {
     
         return Number((discountedTotal + vatAmount).toFixed(2)); // รวม VAT (กรณีไม่รวม VAT)
     };
+    useEffect(() => {
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // คำนวณยอดรวมที่ต้องชำระ
+        const totalPaid = calculateTotalPaid() + receivedAmount; // คำนวณยอดที่ชำระไปแล้ว
+        const change = Math.max(totalPaid - totalDue, 0); // คำนวณเงินทอน
+    
+        // แสดงยอดคงเหลือใน console
+        console.log("ยอดคงเหลือ:", totalDue - totalPaid);
+        
+        setRemainingDue(totalDue - totalPaid); // เก็บยอดคงเหลือใน state
+    }, [receivedAmount, cart, billDiscount, billDiscountType, vatType]);
+    
     
     const calculateVAT = () => {
         const baseTotal = Number(calculateTotalAfterItemDiscounts()) || 0; // ตรวจสอบว่า baseTotal เป็นตัวเลข
@@ -959,8 +969,9 @@ const loadTableLastOrder = async (tableCode) => {
         setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
     };
     const calculateChange = () => {
-        const remainingDue = calculateRemainingDue(); // ยอดคงเหลือที่ต้องชำระ
-        return Math.max(receivedAmount - remainingDue, 0).toFixed(2); // เงินทอน = รับเงิน - ยอดคงเหลือ
+        const remainingDue = calculateRemainingDue(partialPayments);
+        console.log("ยอดคงเหลือที่ต้องชำระ:", remainingDue);
+                return Math.max(receivedAmount - remainingDue, 0).toFixed(2); // เงินทอน = รับเงิน - ยอดคงเหลือ
     };
     
     const handlePayment = () => {
@@ -989,20 +1000,20 @@ const loadTableLastOrder = async (tableCode) => {
     
             const change = Math.max(totalPaid - totalDue, 0); // คำนวณเงินทอน
     
+            // ส่งข้อมูลที่ชำระและเงินทอนให้กับ UI ใบเสร็จ
+            setShowReceipt(true); // แสดงใบเสร็จ
+            setReceivedAmount(receivedAmount); // อัปเดตยอดรับเงิน
+            setChange(change); // อัปเดตเงินทอน
+    
+            // เปิดการแจ้งเตือนสำเร็จ
             Swal.fire({
                 icon: "success",
                 title: "ชำระเงินสำเร็จ!",
                 text: `ยอดชำระ: ${receivedAmount.toFixed(2)} บาท\nเงินทอน: ${change.toFixed(2)} บาท`,
-                timer: 2000, // ปิดการแจ้งเตือนอัตโนมัติหลัง 2 วินาที
+                timer: 2000,
                 showConfirmButton: false,
             }).then(() => {
-                if (!temporaryPayments || !Array.isArray(temporaryPayments)) {
-                    console.error("❌ Error: temporaryPayments ไม่ใช่อาร์เรย์", { temporaryPayments });
-                    return;
-                }
-    
-                // อัปเดตเงินทอนและยอดชำระไปยังใบเสร็จ
-                setTemporaryPayments([
+                setTemporaryPayments([ // เพิ่มข้อมูลการชำระไปยังการชำระเงินชั่วคราว
                     ...temporaryPayments,
                     {
                         amount: receivedAmount,
@@ -1010,10 +1021,6 @@ const loadTableLastOrder = async (tableCode) => {
                         timestamp: new Date(),
                     },
                 ]);
-    
-                // บันทึกการชำระและเปิดหน้าต่างใบเสร็จ
-                setShowReceipt(true);
-                setReceivedAmount(0); // รีเซ็ตยอดเงินที่รับหลังชำระ
             });
         } catch (error) {
             console.error("❌ Error ใน handlePayment:", error);
@@ -1024,6 +1031,7 @@ const loadTableLastOrder = async (tableCode) => {
             });
         }
     };
+    
     
     
     const calculateTotalWithBillDiscount = () => {
@@ -1295,6 +1303,7 @@ const loadTableLastOrder = async (tableCode) => {
             calculateVAT
         );
         resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
+        closeSplitPaymentHistory();
     };
     
     const addOrderItems = async () => {
@@ -1365,56 +1374,56 @@ const loadTableLastOrder = async (tableCode) => {
     
     const fetchPaymentMethods = async () => {
         const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
-        try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
+            try {
+                //////////////////// ประกาศตัวแปร URL CALL   
+                let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+                const slug = localStorage.getItem('slug') || 'default_slug';
+                const authToken = localStorage.getItem('token') || 'default_token';
+        
+                // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
+                if (!api_url.endsWith('/api')) {
+                    api_url += '/api';
+                }
+                //////////////////// ประกาศตัวแปร  END URL CALL 
+                const response = await axios.get(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${authToken}`, // ใช้ Token เพื่อยืนยันสิทธิ์
+                    },
+                });
+        
+                // ตรวจสอบว่า Response มีข้อมูลที่ต้องการหรือไม่
+                if (response.status === 200 && Array.isArray(response.data)) {
+                    console.log('Payment Methods:', response.data);
+                    setPaymentMethods(response.data); // บันทึกข้อมูลช่องทางการชำระเงินใน State
+                } else {
+                    console.error('Unexpected response format:', response.data);
+                    Swal.fire('ผิดพลาด', 'รูปแบบข้อมูลช่องทางการชำระเงินไม่ถูกต้อง', 'error');
+                }
+            } catch (error) {
+                console.error('Error fetching payment channels:', error.response?.data || error.message)
             }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            const response = await axios.get(url, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`, // ใช้ Token เพื่อยืนยันสิทธิ์
-                },
+        };
+
+        // ฟังก์ชันอัปเดตจำนวนเงินด้วยปุ่ม
+        const handleAmountButton = (amount) => {
+            setReceivedAmount((prevAmount) => {
+                const updatedAmount = prevAmount + amount; // เพิ่มจำนวนเงินที่กดปุ่ม
+                return updatedAmount; // อนุญาตให้ยอดรับเงินเกินยอดรวมได้
             });
-    
-            // ตรวจสอบว่า Response มีข้อมูลที่ต้องการหรือไม่
-            if (response.status === 200 && Array.isArray(response.data)) {
-                console.log('Payment Methods:', response.data);
-                setPaymentMethods(response.data); // บันทึกข้อมูลช่องทางการชำระเงินใน State
-            } else {
-                console.error('Unexpected response format:', response.data);
-                Swal.fire('ผิดพลาด', 'รูปแบบข้อมูลช่องทางการชำระเงินไม่ถูกต้อง', 'error');
-            }
-        } catch (error) {
-            console.error('Error fetching payment channels:', error.response?.data || error.message)
-        }
-    };
+        };
 
-    // ฟังก์ชันอัปเดตจำนวนเงินด้วยปุ่ม
-    const handleAmountButton = (amount) => {
-        setReceivedAmount((prevAmount) => {
-            const updatedAmount = prevAmount + amount; // เพิ่มจำนวนเงินที่กดปุ่ม
-            return updatedAmount; // อนุญาตให้ยอดรับเงินเกินยอดรวมได้
-        });
-    };
+        const resetAmount = () => {
+            setReceivedAmount(0);
+        };
 
-    const resetAmount = () => {
-        setReceivedAmount(0);
-    };
-
-    // ฟังก์ชันอัปเดตจำนวนเงินเต็ม
+        // ฟังก์ชันอัปเดตจำนวนเงินเต็ม
     const handleFullAmount = () => {
         const remainingDue = calculateRemainingDue(); // คำนวณยอดคงเหลือ
         setReceivedAmount(remainingDue); // ตั้งยอดรับเงินให้เท่ากับยอดคงเหลือ
     };
-    
 
+    
     const closeReceipt = async () => {
         try {
             const totalDue = calculateTotalWithBillDiscountAndVAT(); 
@@ -1567,22 +1576,27 @@ const loadTableLastOrder = async (tableCode) => {
         setShowReceipt(false);
         setIsBillPaused(true);
     };
-    const calculateRemainingDue = (partialPayments = []) => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมทั้งหมดที่ต้องชำระ
-        const totalPaid = calculateTotalPaid(); // ยอดรวมที่ชำระไปแล้ว
-    
-        // รวมยอดที่ชำระจากประวัติการแยกชำระ
-        const totalPartialPayments = partialPayments.reduce((acc, payment) => {
-            return acc + (payment.amount || 0);  // หาผลรวมของยอดที่ชำระ
-        }, 0);
-    
-        console.log(`💰 ยอดรวมที่ต้องชำระ: ${totalDue}`);
-        console.log(`💵 ยอดที่ชำระไปแล้ว: ${totalPaid}`);
-        console.log(`📜 ยอดที่ชำระจากประวัติการแยกชำระ: ${totalPartialPayments}`);
-    
-        // คำนวณยอดคงเหลือ
-        return Math.max(totalDue - totalPaid - totalPartialPayments, 0); // หักยอดที่ชำระทั้งหมด
-    };
+    let previousRemainingDue = null; // ประกาศตัวแปรเพื่อเก็บยอดคงเหลือก่อนหน้า
+
+const calculateRemainingDue = (partialPayments = []) => {
+    const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมทั้งหมดที่ต้องชำระ
+    const totalPaid = calculateTotalPaid(); // ยอดที่ชำระไปแล้ว
+
+    // รวมยอดที่ชำระจากประวัติการแยกชำระ
+    const totalPartialPayments = partialPayments.reduce((acc, payment) => acc + payment.amount, 0);
+
+    // ยอดคงเหลือ = ยอดรวมทั้งหมด - ยอดที่ชำระไปแล้วทั้งหมด (รวมจากการแยกชำระ)
+    const remainingDue = Math.max(totalDue - totalPaid - totalPartialPayments, 0); // หากยอดคงเหลือเป็นลบ ให้กลับเป็น 0
+
+    // ส่งข้อมูลไปที่ console เฉพาะเมื่อยอดคงเหลือเปลี่ยนแปลง
+    if (remainingDue !== previousRemainingDue) {
+        console.log("ยอดคงเหลือที่คำนวณได้:", remainingDue); // ตรวจสอบยอดคงเหลือ
+        previousRemainingDue = remainingDue; // อัปเดตยอดคงเหลือที่เคยมี
+    }
+
+    return remainingDue;
+};
+
     
     
     
@@ -1756,8 +1770,8 @@ const loadTableLastOrder = async (tableCode) => {
     
     const handlePartialPayment = async () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระทั้งหมด
-        const totalPaid = calculateTotalPaid(); // ยอดที่ชำระแล้วในหลายครั้ง
-        const remainingDue = totalDue - totalPaid; // ยอดที่เหลืออยู่
+        const totalPaid = calculateTotalPaid(); // ยอดที่ชำระไปแล้ว
+        const remainingDue = totalDue - totalPaid; // ยอดคงเหลือ
         const change = Math.max(receivedAmount - remainingDue, 0); // คำนวณเงินทอน
     
         if (receivedAmount <= 0) {
@@ -1770,10 +1784,10 @@ const loadTableLastOrder = async (tableCode) => {
         }
     
         try {
-            // **บันทึกข้อมูลการแยกชำระเงินลงในฐานข้อมูล**
+            // บันทึกข้อมูลการแยกชำระ
             await savePartialPaymentToDatabase(orderId, paymentMethod, receivedAmount);
     
-            // เพิ่มข้อมูลการแยกชำระใน state ชั่วคราว
+            // เพิ่มข้อมูลการแยกชำระใน state
             const newPayment = {
                 amount: receivedAmount,
                 paymentMethod,
@@ -1782,25 +1796,27 @@ const loadTableLastOrder = async (tableCode) => {
     
             setTemporaryPayments((prevPayments) => [...prevPayments, newPayment]);
     
-            // อัปเดตยอดคงเหลือหลังจากกดแยกชำระ
-            const updatedRemainingDue = Math.max(remainingDue - receivedAmount, 0);
+            // อัปเดตยอดคงเหลือทันทีหลังจากชำระ
+            recalculateRemainingDue();
     
             Swal.fire({
                 icon: 'success',
                 title: 'แยกชำระเรียบร้อย',
                 html: `
                     ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท<br>
-                    ยอดคงเหลือ: ${updatedRemainingDue.toFixed(2)} บาท<br>
+                    ยอดคงเหลือ: ${Math.max(remainingDue - receivedAmount, 0).toFixed(2)} บาท<br>
                     ${change > 0 ? `เงินทอน: ${change.toFixed(2)} บาท` : ''}
                 `,
             });
     
             setReceivedAmount(0); // รีเซ็ตยอดรับเงิน
+    
         } catch (error) {
             console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลการแยกชำระ:', error.message);
             Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระเงินได้', 'error');
         }
     };
+    
     
     
     const handleWheel = (e) => {
@@ -2298,7 +2314,7 @@ const loadTableLastOrder = async (tableCode) => {
             </div>
 
             <div style={styles.changeDi}>
-                    <p>ยอดคงเหลือ: {calculateRemainingDue(partialPayments).toFixed(2)} บาท</p>
+                <p>ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท</p>
             </div>
 
             <div
@@ -2362,67 +2378,69 @@ const loadTableLastOrder = async (tableCode) => {
         </>
     )}
 
-    {/* ปุ่มการทำงาน */}
-    <div style={styles.paymentRow}>
-        {orderReceived ? (
+        {/* ปุ่มการทำงาน */}
+        <div style={styles.paymentRow}>
+            {orderReceived ? (
+                <button
+                    style={{
+                        ...styles.receiveOrderButton,
+                        ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                    }}
+                    onClick={addOrderItems}
+                    disabled={cart.length === 0}
+                >
+                    อัพเดทอาหาร
+                </button>
+            ) : (
+                <button
+                    style={{
+                        ...styles.receiveOrderButton,
+                        ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                    }}
+                    onClick={receiveOrder}
+                    disabled={cart.length === 0}
+                >
+                    รับออเดอร์
+                </button>
+            )}
+
+            {/* ปุ่มแยกชำระเงิน */}
             <button
                 style={{
-                    ...styles.receiveOrderButton,
-                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                    ...styles.paymentButton,
+                    backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#f39c12',
+                    ...(orderReceived && paymentMethod && (receivedAmount > 0 || calculateRemainingDue() === 0)
+                        ? {}
+                        : styles.paymentButtonDisabled),
                 }}
-                onClick={addOrderItems}
-                disabled={cart.length === 0}
+                onClick={() => {
+                    if (orderReceived && calculateRemainingDue() === 0) {
+                        // ถ้ายอดคงเหลือเป็น 0 และออเดอร์ได้รับแล้ว ให้แสดงบิล
+                        setShowReceipt(true); // เปิดหน้าต่างแสดงบิล
+                    } else if (orderReceived) {
+                        // ถ้ายังมียอดคงเหลือ หรือยังไม่ได้รับการชำระทั้งหมด ให้ดำเนินการแยกชำระ
+                        handlePartialPayment(); // ดำเนินการแยกชำระเงิน
+                    }
+                }}
+                disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)}
             >
-                อัพเดทอาหาร
+                {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'แยกชำระเงิน'}
             </button>
-        ) : (
+
             <button
                 style={{
-                    ...styles.receiveOrderButton,
-                    ...(cart.length === 0 ? styles.buttonDisabled : {}),
+                    ...styles.paymentButton,
+                    ...(orderReceived && cart.length > 0 && paymentMethod && receivedAmount >= calculateTotalWithBillDiscountAndVAT()
+                        ? {}
+                        : styles.paymentButtonDisabled),
                 }}
-                onClick={receiveOrder}
-                disabled={cart.length === 0}
+                onClick={handlePayment}
+                disabled={!orderReceived || !paymentMethod || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
             >
-                รับออเดอร์
+                ชำระเงิน
             </button>
-        )}
-
-        {/* ปุ่มแยกชำระเงิน */}
-        <button
-            style={{
-                ...styles.paymentButton,
-                backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#f39c12',
-                ...(orderReceived && paymentMethod && (receivedAmount > 0 || calculateRemainingDue() === 0)
-                    ? {}
-                    : styles.paymentButtonDisabled),
-            }}
-            onClick={() => {
-                if (orderReceived && calculateRemainingDue() === 0) {
-                    setShowReceipt(true); // เปิดหน้าต่างแสดงบิล
-                } else if (orderReceived) {
-                    handlePartialPayment(); // ดำเนินการแยกชำระเงิน
-                }
-            }}
-            disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)}
-        >
-            {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'แยกชำระเงิน'}
-        </button>
-
-        <button
-            style={{
-                ...styles.paymentButton,
-                ...(orderReceived && cart.length > 0 && paymentMethod && receivedAmount >= calculateTotalWithBillDiscountAndVAT()
-                    ? {}
-                    : styles.paymentButtonDisabled),
-            }}
-            onClick={handlePayment}
-            disabled={!orderReceived || !paymentMethod || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
-        >
-            ชำระเงิน
-        </button>
+        </div>
     </div>
-</div>
             </div>
             {isSplitPaymentPopupOpen && (
                 <div
@@ -2433,51 +2451,119 @@ const loadTableLastOrder = async (tableCode) => {
                         transform: 'translate(-50%, -50%)',
                         backgroundColor: 'white',
                         padding: '20px',
-                        borderRadius: '10px',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                        borderRadius: '12px',
+                        boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
                         zIndex: 1000,
-                        width: '300px',
-                        maxHeight: '400px',
-                        overflowY: 'auto',
+                        width: '450px',
+                        maxHeight: '950px',
+                        overflow: 'hidden',
                     }}
                 >
-                    <h3 style={{ marginBottom: '10px', color: '#333', textAlign: 'center' }}>
-                        ประวัติการแยกชำระ
-                    </h3>
-                    {payments && payments.length > 0 ? (
-                        payments.map((payment, index) => (
-                            <div
-                                key={index}
-                                style={{
-                                    marginBottom: '10px',
-                                    padding: '10px',
-                                    borderBottom: '1px solid #ddd',
-                                }}
-                                                >
-                                <p>{payment.formattedDate}</p>  {/* แสดงวันที่ที่ปรับแล้ว */}
-                                <p>จำนวนเงิน: {payment.amount.toFixed(2)} บาท</p>
-                                <p>ช่องทาง: {payment.pay_channel_id === 1 ? 'เงินสด' : 'QR Code'}</p>
-                            </div>
-                        ))
-                    ) : (
-                        <p style={{ color: '#888', textAlign: 'center' }}>ไม่มีประวัติการแยกชำระ</p>
-                    )}
-                    <button
-                        onClick={toggleSplitPaymentPopup}
-                        style={{
-                            marginTop: '10px',
-                            padding: '10px',
-                            backgroundColor: '#e74c3c',
-                            color: 'white',
-                            borderRadius: '5px',
+                    <div style={{ 
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        position: 'relative',
+                        marginBottom: '15px',
+                    }}>
+                        <h3 style={{
+                            margin: 0,
+                            color: '#34495e',
+                            fontSize: '22px',
+                            fontWeight: '600',
+                            letterSpacing: '1px',
+                            textAlign: 'center',
                             width: '100%',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        ปิด
-                    </button>
+                        }}>
+                            ประวัติการแยกชำระ
+                        </h3>
+                        {/* ปุ่มปิดที่มุมขวาบน */}
+                        <button
+                            onClick={toggleSplitPaymentPopup}
+                            style={{
+                                position: 'absolute',
+                                top: '10px',
+                                right: '0px',
+                                padding: '6px 12px',
+                                backgroundColor: '#e74c3c',
+                                color: 'white',
+                                borderRadius: '10%',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
+                                transition: 'background-color 0.3s ease',
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e74c3c'}
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    <div style={{
+                        maxHeight: '300px',
+                        overflowY: 'auto', // ทำให้สามารถเลื่อนดูประวัติได้
+                        paddingRight: '10px',
+                        marginBottom: '10px',
+                    }}>
+                        {payments && payments.length > 0 ? (
+                            payments.map((payment, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        marginBottom: '20px',
+                                        padding: '20px',
+                                        backgroundColor: '#ecf0f1',
+                                        borderRadius: '12px',
+                                        boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.3s ease-in-out',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                    <div style={{
+                                        fontSize: '16px',
+                                        color: '#2c3e50',
+                                        fontWeight: '500',
+                                        marginBottom: '10px',
+                                    }}>
+                                        {payment.formattedDate}
+                                    </div>
+                                    <div style={{
+                                        fontSize: '18px',
+                                        color: '#16a085',
+                                        fontWeight: '600',
+                                        marginBottom: '5px',
+                                    }}>
+                                        จำนวนเงิน: {payment.amount.toFixed(2)} บาท
+                                    </div>
+                                    <div style={{
+                                        fontSize: '16px',
+                                        color: '#2980b9',
+                                        fontWeight: '500',
+                                    }}>
+                                        ช่องทาง: {payment.pay_channel_id === 1 ? 'เงินสด' : 'QR Code'}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{
+                                color: '#7f8c8d',
+                                textAlign: 'center',
+                                fontSize: '16px',
+                                fontWeight: '400',
+                            }}>
+                                ไม่มีประวัติการแยกชำระ
+                            </p>
+                        )}
+                    </div>
+
+                    
                 </div>
             )}
+
         {showReceipt && (
             <div style={styles.receiptOverlay}>
                 <div style={styles.receiptContainer}>
