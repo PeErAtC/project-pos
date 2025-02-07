@@ -1322,54 +1322,76 @@ const loadTableLastOrder = async (tableCode) => {
             total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
         }));
     
-        // เรียกใช้ฟังก์ชัน addToOrder เพื่อเพิ่มรายการสินค้าลงในออเดอร์ที่มีอยู่
-        await addToOrder(orderId, newItems);
-    };
-    
-    const addToOrder = async (product) => {
-        if (product.status !== 'Y') return;
-    
-        const element = document.querySelector(`#product-${product.id}`);
-        if (element) {
-            element.style.animation = "none"; // รีเซ็ตการแอนิเมชั่นก่อนหน้า
-            requestAnimationFrame(() => {
-                element.style.animation = "shake 0.5s ease, highlight 1s ease";
-            });
-        }
-    
-        // ตรวจสอบว่า product มีข้อมูลครบถ้วน
-        if (!product || !product.id || !product.price) {
-            console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
-            throw new Error('ข้อมูลสินค้าไม่ครบถ้วน');
-        }
-    
-        // เพิ่มสินค้าในตะกร้า (local state)
-        setCart((prevCart) => {
-            const existingItem = prevCart.find((item) => item.id === product.id);
-            if (existingItem) {
-                return prevCart.map((item) =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-                );
-            } else {
-                return [
-                    ...prevCart,
-                    {
-                        ...product,
-                        quantity: 1,
-                        discount: product.discount || 0, // กำหนดส่วนลดเริ่มต้น (ถ้ามี)
-                        discountType: product.discountType || "THB", // กำหนดประเภทส่วนลดเริ่มต้น
-                    },
-                ];
-            }
-        });
-    
-        // ส่งข้อมูลสินค้าไปที่ฐานข้อมูล
         try {
-            await addItemToDatabase(product);
+            // เรียกใช้ฟังก์ชันเพื่อเพิ่มสินค้าในฐานข้อมูล (orders และ order_items)
+            await addItemsToDatabase(orderId, newItems);
+    
+            // หลังจากเพิ่มข้อมูลแล้วให้ส่งข้อมูลกลับไปยัง localStorage
+            setCart(newItems);
+            // อัปเดตฐานข้อมูลคำสั่งซื้อ (order) หากต้องการ
+            await updateOrderInDatabase(orderId, newItems);
         } catch (error) {
             console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
         }
     };
+    
+    const addItemsToDatabase = async (orderId, items) => {
+        const api_url = localStorage.getItem('url_api');
+        const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+    
+
+        const requestUrl = `${api_url}/api/${slug}/order-items`;
+        console.log('Request URL:', requestUrl);  // ตรวจสอบ URL ที่ส่ง
+
+        // ส่งข้อมูลไปยัง API สำหรับการเพิ่มสินค้าใน order_items
+        try {
+            const response = await axios.post(`${api_url}/api/${slug}/order-items`, {
+                order_id: orderId,
+                items: items
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+    
+            if (response.data.success) {
+                console.log("เพิ่มรายการสินค้าในฐานข้อมูลสำเร็จ");
+            } else {
+                throw new Error("ไม่สามารถเพิ่มข้อมูลสินค้าได้");
+            }
+        } catch (error) {
+            console.error("เกิดข้อผิดพลาดในการบันทึก order_items:", error);
+            throw error;
+        }
+    };
+    
+    const updateOrderInDatabase = async (orderId, items) => {
+        const api_url = localStorage.getItem('url_api');
+        const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+    
+        // อัปเดตข้อมูลคำสั่งซื้อ (order)
+        try {
+            const response = await axios.put(`${api_url}/api/${slug}/orders/${orderId}`, {
+                items: items,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+    
+            if (response.data.success) {
+                console.log("อัปเดตข้อมูลคำสั่งซื้อในฐานข้อมูลสำเร็จ");
+            } else {
+                throw new Error("ไม่สามารถอัปเดตข้อมูลคำสั่งซื้อได้");
+            }
+        } catch (error) {
+            console.error("เกิดข้อผิดพลาดในการอัปเดตคำสั่งซื้อ:", error);
+            throw error;
+        }
+    };
+    
     
     
     const fetchPaymentMethods = async () => {
@@ -1524,31 +1546,6 @@ const loadTableLastOrder = async (tableCode) => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
-    
-    
-    
-    
-    
-    
-    // ฟังก์ชันช่วยสำหรับอัปเดตสถานะโต๊ะ
-    const updateTableStatus = async (tableCode, status) => {
-        const url = `${api_url}/api/${slug}/table_codes/${tableCode}`;
-        const tableUpdateData = { status };
-    
-        const response = await axios.patch(url, tableUpdateData, {
-            headers: {
-                Accept: 'application/json',
-                Authorization: `Bearer ${authToken}`,
-            },
-        });
-    
-        if (response.status === 200 || response.status === 204) {
-            console.log(`สถานะโต๊ะ ${tableCode} ถูกอัปเดตเป็น "${status}" สำเร็จ`);
-        } else {
-            throw new Error(`Unexpected response status: ${response.status}`);
-        }
-    };
-    
     
     
     const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
@@ -1801,7 +1798,7 @@ const calculateRemainingDue = (partialPayments = []) => {
     
             Swal.fire({
                 icon: 'success',
-                title: 'แยกชำระเรียบร้อย',
+                title: 'ชำระเรียบร้อย',
                 html: `
                     ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท<br>
                     ยอดคงเหลือ: ${Math.max(remainingDue - receivedAmount, 0).toFixed(2)} บาท<br>
@@ -2370,7 +2367,7 @@ const calculateRemainingDue = (partialPayments = []) => {
                         }}
                         onClick={toggleSplitPaymentPopup}
                     >
-                        ดูประวัติการแยกชำระ
+                        ดูประวัติการชำระ
                     </button>
 
                 </div>
@@ -2408,7 +2405,7 @@ const calculateRemainingDue = (partialPayments = []) => {
             <button
                 style={{
                     ...styles.paymentButton,
-                    backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#f39c12',
+                    backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#d2c809',
                     ...(orderReceived && paymentMethod && (receivedAmount > 0 || calculateRemainingDue() === 0)
                         ? {}
                         : styles.paymentButtonDisabled),
@@ -2424,10 +2421,10 @@ const calculateRemainingDue = (partialPayments = []) => {
                 }}
                 disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)}
             >
-                {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'แยกชำระเงิน'}
+                {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'ชำระเงิน'}
             </button>
 
-            <button
+            {/* <button
                 style={{
                     ...styles.paymentButton,
                     ...(orderReceived && cart.length > 0 && paymentMethod && receivedAmount >= calculateTotalWithBillDiscountAndVAT()
@@ -2438,7 +2435,7 @@ const calculateRemainingDue = (partialPayments = []) => {
                 disabled={!orderReceived || !paymentMethod || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
             >
                 ชำระเงิน
-            </button>
+            </button> */}
         </div>
     </div>
             </div>
@@ -2475,7 +2472,7 @@ const calculateRemainingDue = (partialPayments = []) => {
                             textAlign: 'center',
                             width: '100%',
                         }}>
-                            ประวัติการแยกชำระ
+                            ประวัติการชำระ
                         </h3>
                         {/* ปุ่มปิดที่มุมขวาบน */}
                         <button
@@ -2555,7 +2552,7 @@ const calculateRemainingDue = (partialPayments = []) => {
                                 fontSize: '16px',
                                 fontWeight: '400',
                             }}>
-                                ไม่มีประวัติการแยกชำระ
+                                ไม่มีประวัติการชำระ
                             </p>
                         )}
                     </div>
@@ -2943,6 +2940,7 @@ const styles = {
         outline: none; /* ลบเส้นขอบของเบราว์เซอร์ */
         box-shadow: 0px 0px 12px rgba(0, 123, 255, 0.8); /* แสงเมื่อโฟกัส */
     }
+
 
     .pulse-effect {animation: pulse 0.5s ease-out;background-color: #d9f7be !important;}
     `;
