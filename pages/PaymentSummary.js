@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import { Line } from 'react-chartjs-2';  // เปลี่ยนจาก Bar เป็น Line
 import Chart from 'chart.js/auto';
 import { FiTrendingUp, FiBarChart, FiShoppingCart, FiPackage, FiDownload  } from 'react-icons/fi';
@@ -742,7 +742,7 @@ export default function PaymentSummary() {
                         {/* ปุ่มเลือกประเภทกราฟ (แสดงเฉพาะเมื่อเลือกโหมดกราฟ) */}
                         {displayMode === "chart" && (
                             <div style={styles.chartTypeSelector}>
-                                <FaChartBar
+                                <FaChartBar 
                                     size={22}
                                     style={chartType === "bar" ? styles.selectedIcon : styles.icon}
                                     onClick={() => setChartType("bar")}
@@ -756,7 +756,6 @@ export default function PaymentSummary() {
                                 />
                             </div>
                         )}
-
                         {/* แสดงผล */}
                         <div style={styles.chartContainer}>
                             {displayMode === "chart" ? (
@@ -886,495 +885,71 @@ export default function PaymentSummary() {
     ;
 }
 
-const styles = {
-    pageContainer: { display: 'flex', minHeight: '90vh', overflowY: 'auto', overflowX: 'hidden', marginRight: '70px' },
-    content: { 
-        flex: 1, 
-        padding: '40px', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'flex-start', 
-        resize: 'both', 
-        overflow: 'auto', 
-        width: '85%', // ✅ ใช้ width แทน maxWidth เพื่อให้ยืดหยุ่น
-        minHeight: '600px', // ✅ ป้องกันการย่อจนเล็กเกินไป
-        maxHeight: '80vh', // ✅ เพิ่ม maxHeight ให้สูงขึ้นเล็กน้อย
-        border: '1px solid #ffffff', 
-        borderRadius: '10px',
-        marginLeft: '120px', 
-        marginRight: '5px', 
-        marginTop:'15px',
-        backgroundColor: '#f3f9ffbd'
-    },
-    
-    
-    titleWithHighlight: { 
-        fontSize: '28px', 
-        fontWeight: 'bold', 
-        color: '#18373f', 
-        marginBottom: '20px',
-        textAlign: 'left',  
-    },
-    filterContainer: { 
-        display: 'flex', 
-        alignItems: 'center', 
-        marginBottom: '20px', 
-        gap: '20px', 
-        justifyContent: 'flex-start'  
-    },
-    label: { fontSize: '20px', color: '#18373f' },
-    select: { padding: '12px', border: '1px solid #eefeff', borderRadius: '8px' },
-    circleButtonContainer: { display: 'flex', gap: '10px' },
-    circleButton: {
-        padding: '8px 16px',
-        fontSize: '14px',
-        borderRadius: '30px',
-        border: 'none',
-        color: '#fff',
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',   
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-        transform: 'scale(1)',  
-    },
-    topSellingBox: {
-        flex: 1,
-        backgroundColor: "#fff",
-        borderRadius: "15px",
-        padding: "15px",
-        paddingTop: "25px", // ✅ เพิ่ม padding ด้านบนเพื่อป้องกันหัวข้อโดนทับ
-        minWidth: "280px",
-        maxWidth: "100%",
-        maxHeight: "auto",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        alignItems: "center",
-        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
-        overflow: "hidden",
-        resize: "both",
-    },
-    
-    loadingText: { fontSize: '24px', color: '#888' },
-    error: { color: 'red', marginBottom: '10px' },
-    summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', gap: '20px' },
-    summaryContainer: { display: 'flex', flexDirection: 'column', gap: '20px', width: '25%' },
-    summaryBox: { 
-        minHeight: 'auto', // ลบความสูงคงที่ และให้มันยืดขนาดตามเนื้อหาที่แสดง
-        backgroundColor: '#ffffff', 
-        padding: '15px', 
-        borderRadius: '15px', 
-        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', 
-        textAlign: 'center',
-        position: 'relative',
-        display: 'flex',  // ใช้ flexbox
-        justifyContent: 'space-between',  // ให้ข้อความอยู่ที่ขอบซ้ายและขวา
-        alignItems: 'center',  // ให้ข้อความอยู่กึ่งกลางในแนวตั้ง
-    },
-
-    salesCountBox: { 
-        backgroundColor: '#ffffff', 
-        padding: '5px', 
-        borderRadius: '15px', 
-        height: '78px', 
-        display: 'flex', 
-        justifyContent: 'space-between', // ให้ข้อความอยู่ที่ขอบซ้ายและขวา
-        alignItems: 'center', 
-        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', 
-        marginRight: '10px', // เพิ่มระยะห่างจากขอบขวา
-    },
-    
-   
-    totalSalesValueContainer: { 
-        display: 'flex', 
-        justifyContent: 'flex-end',
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        flexDirection: 'column', 
-        marginTop: '10px', 
-    },
-    
-    totalSalesValue: { 
-        fontSize: '22px', 
-        fontWeight: 'bold', 
-        color: '#3498db',
-        margin: '5px 0',  // ปรับระยะห่างแนวตั้ง
-        paddingLeft: '15px', // ✅ ดันข้อความไปทางขวา
-        textAlign: 'left', 
-    }, 
-    salesCountValue: { 
-        fontSize: '20px', 
-        fontWeight: 'bold', 
-        color: '#3498db', 
-        margin: '5px 0',
-        paddingLeft: '15px', // ✅ ใช้ padding แทน marginLeft เพื่อความสมดุล
-        textAlign: 'left',
-    },
-    salesCountValueMonth: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: '#3498db',
-        margin: '5px 0',
-        paddingLeft: '15px', // ✅ ทำให้ข้อความขยับไปทางขวาแต่ยังชิดซ้าย
-        textAlign: 'left',
-    },
-    
-    salesCountTitle: { 
-        fontSize: '27px', 
-        fontWeight: 'bold', 
-        color: '#18373f',  // สีสำหรับหัวข้อ "จำนวนการขาย"
-        textAlign: 'left', 
-        marginLeft: '10px',
-    },
-    chartBox: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', minHeight: '300px', maxHeight: '400px' },
-    chartTitle: { fontSize: '16px', color: '#201f1f', marginBottom: '15px', fontWeight: 'bold' },
-    summaryTitle: { 
-        fontSize: "27px",
-        fontWeight: "bold",
-        color: "#18373f",
-        textAlign: "left",
-        marginBottom: "25px",  // ✅ เพิ่มระยะห่างระหว่างหัวข้อกับเนื้อหา
-    },
-    
-    summaryChartContainer: {
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: '20px',
-        width: '100%',   // ✅ ให้เต็มหน้าจอ
-        flexWrap: "wrap", // ✅ ป้องกันการล้นหน้าจอเมื่อแสดงหลายรายการ
-    },
-    
-    buttonContainer: {
-        display: "flex",
-        justifyContent: "center",
-        gap: "15px",
-        flexWrap: "wrap",
-        marginBottom: "10px",
-        
-    },
-    icon: {
-        cursor: "pointer",
-        transition: "transform 0.2s ease, color 0.2s ease",
-        color: "#888", // ✅ สีปกติ
-    },
-    selectedIcon: {
-        cursor: "pointer",
-        transform: "scale(1.1)", // ✅ ขยายเล็กน้อยเมื่อถูกเลือก
-        color: "#3498db", // ✅ เปลี่ยนเป็นสีฟ้าเมื่อถูกเลือก
-        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.2)", // ✅ เพิ่มเงาเพื่อให้เด่นขึ้น
-    },
-    button: {
-        width: "40px", 
-        height: "40px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "50%",
-        border: "none",
-        cursor: "pointer",
-        backgroundColor: "#eee", // พื้นหลังปกติ
-        fontSize: "14px",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease",
-        
-    },
-    raisedButton: {
-        transform: "translateY(-4px)", // ยกสูงขึ้นเล็กน้อย
-        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)", // เงาเบาๆ
-    },
-    raisedIcon: {
-        transform: "translateY(-4px)", // ยกขึ้นเล็กน้อย
-        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.2)", // เงาเบาๆ
-        cursor: "pointer",
-    },
-    chartTypeSelector: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        gap: "12px",
-        width: "100%",
-        paddingRight: "10px",
-    },
-    iconButtonActive: {
-        background: "linear-gradient(135deg, #007bff, #0056b3)",
-        transform: "scale(1.08)",
-        boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.3)",
-    },
-    iconButton: {
-        width: "42px",
-        height: "42px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "50%",
-        border: "none",
-        cursor: "pointer",
-        background: "linear-gradient(135deg, #cccccc, #999999)",
-        color: "#ffffff",
-        fontSize: "16px",
-        transition: "all 0.3s ease-in-out",
-        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.15)",
-    },
-    activeButton: {
-        width: "40px",
-        height: "40px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "50%",
-        border: "none",
-        cursor: "pointer",
-        backgroundColor: "#3498db",
-        color: "#fff",
-        fontSize: "14px",
-    },
-    chartContainer: {
-        flexGrow: 1, // ✅ กราฟจะกินพื้นที่ทั้งหมดที่เหลือในบล็อค
-        width: "100%",
-        minHeight: "400px", // ✅ ทำให้กราฟสูงขึ้น
-        height: "100%",
-    },
-    
-    listWrapper: {
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        overflowY: "auto", // ✅ อนุญาตให้เลื่อนแนวตั้ง
-        overflowX: "hidden", // ✅ ปิดการเลื่อนแนวนอน
-        maxHeight: "340px", // ✅ ปรับความสูงให้รายการอยู่ใกล้ชื่อบล็อก
-        paddingLeft: "10px",
-        marginTop: "-25px", // ✅ ขยับขึ้นไปใกล้ชื่อบล็อก
-        scrollbarWidth: "none", // ✅ ปิดแสดง scrollbar บน Firefox
-        msOverflowStyle: "none", // ✅ ปิดแสดง scrollbar บน IE และ Edge
-    },
-    
-    // ปรับส่วนของรายการอาหาร
-    listContainer: {
-        display: "flex",
-        flexDirection: "column",
-        listStyleType: "none",
-        padding: "5px 10px", // ✅ เพิ่ม padding
-        margin: "0px",
-        width: "100%",
-        gap: "5px", // ✅ เพิ่มระยะห่างระหว่างรายการ
-    },
-    
-
-    listItem: {
-        display: "flex",
-        justifyContent: "space-between", // ✅ กระจายเนื้อหาไปสุดซ้าย-ขวา
-        alignItems: "center",
-        padding: "4px 8px",
-        fontSize: "14px",
-        borderRadius: "5px",
-        transition: "all 0.3s ease", // ✅ ทำให้มีแอนิเมชันเวลา hover
-        cursor: "pointer",
-        minWidth: "200px", // ✅ ขยายพื้นที่ให้เหมาะสม
-        gap: "10px",
-    },
-    
-    // ✅ เอฟเฟคเมื่อ Hover
-    listItemHover: {
-        backgroundColor: "#e1f5fe", // ✅ เปลี่ยนสีพื้นหลังให้เด่นขึ้นเล็กน้อย
-        transform: "scale(1.02)", // ✅ ขยายขึ้น 2% เพื่อไม่ให้เกินขนาดเดิม
-        boxShadow: "0px 2px 6px rgba(0, 0, 0, 0.1)", // ✅ เพิ่มเงาเล็กน้อยให้ดูนุ่มนวล
-    },
-    
-    // ✅ เอฟเฟคให้ชื่อสินค้าเมื่อ hover
-    itemNameHover: {
-        color: "#007bff", // ✅ เปลี่ยนเป็นสีฟ้า
-        fontWeight: "bold",
-        transition: "color 0.2s ease-in-out",
-    },
-    
-    itemIndex: {
-        width: "25px", // ✅ กำหนดความกว้างให้ตัวเลข
-        textAlign: "left",
-        fontWeight: "bold",
-        color: "#343c43",
-    },
-    itemSales: {
-        fontWeight: "bold",
-        color: "#2185f0",
-        textAlign: "right",
-        whiteSpace: "nowrap", // ✅ ป้องกันการขึ้นบรรทัดใหม่
-        minWidth: "10px", // ✅ ป้องกันการถูกบีบให้เล็กเกินไป
-        marginLeft: "auto", // ✅ ดันไปชิดขวา
-    },
-    itemName: {
-        flex: 1,
-        textAlign: "left", // ✅ จัดชิดซ้าย
-        paddingLeft: "10px", // ✅ เพิ่ม padding ซ้ายเพื่อไม่ให้ติดขอบเกินไป
-        fontWeight: "500",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        color: "#315859", // ✅ ใช้สีเขียวอมน้ำเงินให้เข้ากับระบบ
-    },
-    
-    
-    tableContainer: { marginTop: '20px', textAlign: 'left', width: '80%', margin: 'auto' },
-    container: { 
-        backgroundColor: '#f8fbff', 
-        padding: '20px', 
-        borderRadius: '10px', 
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', 
-        textAlign: 'center', 
-        width: '90%', 
-        margin: 'auto' 
-    },
-    title: { 
-        fontSize: '20px', 
-        fontWeight: 'bold', 
-        color: '#333', 
-        marginBottom: '15px' 
-    },
-    buttonContainer: { 
-        display: 'flex', 
-        justifyContent: 'center', 
-        marginBottom: '15px', 
-        gap: '10px' 
-    },
-    button: { 
-        padding: '8px 16px', 
-        borderRadius: '5px', 
-        border: 'none', 
-        cursor: 'pointer', 
-        backgroundColor: '#ccc', 
-        fontSize: '14px' 
-    },
-    activeButton: { 
-        padding: '8px 16px', 
-        borderRadius: '5px', 
-        border: 'none', 
-        cursor: 'pointer', 
-        backgroundColor: '#3498db', 
-        color: '#fff', 
-        fontSize: '14px' 
-    },
-    chartContainer: { 
-        width: '80%', 
-        height: '300px', 
-        margin: 'auto' 
-    },
-    topSellingHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        width: "100%",
-        marginBottom: "10px",
-    },
-    chartText: {
-        cursor: "pointer",
-        color: "#777",
-        transition: "color 0.2s ease",
-    },
-    selectedChartText: {
-        cursor: "pointer",
-        color: "#000",
-        fontWeight: "bold",
-        textDecoration: "underline",
-    },
-    customLegend: {
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        marginTop: "10px",
-    },
-    legendGrid: {
-        display: "grid",
-        gridTemplateColumns: "repeat(2, auto)", // ✅ ทำให้ legend มี 2 คอลัมน์
-        gap: "10px 20px",
-    },
-    legendItem: {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-    },
-    legendColor: {
-        width: "12px",
-        height: "12px",
-        borderRadius: "50%",
-        display: "inline-block",
-    },
-    legendText: {
-        fontSize: "14px",
-        color: "#333",
-    },
-    chartBox: {
-        flex: 3,
-        backgroundColor: "#ffffff",
-        padding: "20px",
-        borderRadius: "15px",
-        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "stretch", // ✅ ให้บล็อคยืดตามเนื้อหาภายใน
-        justifyContent: "space-between", // ✅ ชิด Title ด้านบน กราฟด้านล่าง
-        minHeight: "660px", // ✅ กำหนดความสูงขั้นต่ำเพื่อให้กราฟเต็มบล็อค
-        height: "auto",
-        maxHeight: "800px", // ✅ เพิ่ม max-height เพื่อให้ขยายเต็มบล็อคโดยไม่ล้น
-    },
-    
-    
-    chartHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "20px", // ✅ เพิ่มช่องว่างระหว่างหัวข้อและกราฟ
-    },
-    chartTitle: {
-        fontSize: "16px",
-        color: "#000",
-        fontWeight: "bold"
-    },
-    chartTypeSelector: {
-        display: "flex",
-        gap: "10px"
-    },
-    button: {
-        padding: "8px 16px",
-        borderRadius: "5px",
-        border: "1px solid #ccc",
-        cursor: "pointer",
-        backgroundColor: "#eee",
-        fontSize: "14px",
-        transition: "all 0.3s ease"
-    },
-    activeButton: {
-        padding: "8px 16px",
-        borderRadius: "5px",
-        border: "none",
-        cursor: "pointer",
-        backgroundColor: "#3498db",
-        color: "#fff",
-        fontSize: "14px",
-        transition: "all 0.3s ease",
-        transform: "scale(1.1)"
-    },
-    downloadButton: {
-        width: "42px",
-        height: "42px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "50%",
-        border: "none",
-        cursor: "pointer",
-        background: "linear-gradient(135deg, #28a745, #1e7e34)",
-        color: "#ffffff",
-        fontSize: "16px",
-        transition: "all 0.3s ease-in-out",
-        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.15)",
-    },
-
-    downloadButtonHover: {
-        background: "linear-gradient(135deg, #1e7e34, #155d27)",
-        transform: "scale(1.08)",
-        boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.3)",
-    },
-    
+const styles = { 
+    pageContainer: { display: 'flex', minHeight: '90vh', overflowY: 'auto', overflowX: 'hidden', marginRight: '0px' }, 
+    content: { flex: 1, padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', resize: 'both', overflow: 'auto', width: '85%', minHeight: '650px', maxHeight: '87vh', border: '1px solid #ffffff', borderRadius: '10px', marginLeft: '120px', marginRight: '5px', marginTop: '15px', backgroundColor: '#f3f9ffbd' }, 
+    titleWithHighlight: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'left' }, 
+    filterContainer: { display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '20px', justifyContent: 'flex-start' }, 
+    label: { fontSize: '20px', color: '#18373f' }, 
+    select: { padding: '12px', border: '1px solid #eefeff', borderRadius: '8px' }, 
+    circleButtonContainer: { display: 'flex', gap: '10px' }, 
+    circleButton: { padding: '8px 16px', fontSize: '14px', borderRadius: '30px', border: 'none', color: '#fff', cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)', transform: 'scale(1)' }, 
+    topSellingBox: { flex: 1, backgroundColor: "#fff", borderRadius: "15px", padding: "15px", paddingTop: "1px", minWidth: "280px", maxWidth: "100%", maxHeight: "auto", display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "center", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)", overflow: "hidden", resize: "both" }, 
+    loadingText: { fontSize: '24px', color: '#888' }, 
+    error: { color: 'red', marginBottom: '10px' }, 
+    summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', gap: '20px' }, 
+    summaryContainer: { display: 'flex', flexDirection: 'column', gap: '20px', width: '25%' }, 
+    summaryBox: { minHeight: 'auto', backgroundColor: '#ffffff', padding: '15px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, 
+    salesCountBox: { backgroundColor: '#ffffff', padding: '5px', borderRadius: '15px', height: '78px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', marginRight: '10px' }, 
+    totalSalesValueContainer: { display: 'flex', justifyContent: 'flex-end', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', marginTop: '10px' }, 
+    totalSalesValue: { fontSize: '18px', fontWeight: 'bold', color: '#3498db', margin: '5px 0', paddingLeft: '15px', textAlign: 'left' }, 
+    salesCountValue: { fontSize: '18px', fontWeight: 'bold', color: '#3498db', margin: '5px 0', paddingLeft: '15px', textAlign: 'left' }, 
+    salesCountValueMonth: { fontSize: '18px', fontWeight: 'bold', color: '#3498db', margin: '5px 0', paddingLeft: '15px', textAlign: 'left' }, 
+    salesCountTitle: { fontSize: '20px', fontWeight: 'bold', color: '#18373f', textAlign: 'left', marginLeft: '10px' }, 
+    chartBox: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', minHeight: '300px', maxHeight: '400px' }, 
+    chartTitle: { fontSize: '16px', color: '#201f1f', marginBottom: '15px', fontWeight: 'bold' }, 
+    summaryTitle: { fontSize: "20px", fontWeight: "bold", color: "#18373f", textAlign: "left", marginBottom: "25px" }, 
+    summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px', width: '100%', flexWrap: "wrap" }, 
+    buttonContainer: { display: "flex", justifyContent: "center", gap: "15px", flexWrap: "wrap", marginBottom: "10px" }, 
+    icon: { cursor: "pointer", transition: "transform 0.2s ease, color 0.2s ease", color: "#888" }, 
+    selectedIcon: { cursor: "pointer", transform: "scale(1.1)", color: "#3498db", boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.2)" }, 
+    button: { width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", backgroundColor: "#eee", fontSize: "14px", transition: "transform 0.2s ease, box-shadow 0.2s ease" }, 
+    raisedButton: { transform: "translateY(-4px)", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)" }, 
+    raisedIcon: { transform: "translateY(-4px)", boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.2)", cursor: "pointer" }, 
+    chartTypeSelector: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "12px", width: "100%", paddingRight: "10px" }, 
+    iconButtonActive: { background: "linear-gradient(135deg, #007bff, #0056b3)", transform: "scale(1.08)", boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.3)" }, 
+    iconButton: { width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", background: "linear-gradient(135deg, #cccccc, #999999)", color: "#ffffff", fontSize: "16px", transition: "all 0.3s ease-in-out", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.15)" }, 
+    activeButton: { width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", backgroundColor: "#3498db", color: "#fff", fontSize: "14px" }, 
+    chartContainer: { flexGrow: 1, width: "100%", minHeight: "400px", height: "100%" }, 
+    listWrapper: { display: "flex", flexDirection: "column", width: "100%", overflowY: "auto", overflowX: "hidden", maxHeight: "340px", paddingLeft: "10px", marginTop: "-25px", scrollbarWidth: "none", msOverflowStyle: "none" }, 
+    listContainer: { display: "flex", flexDirection: "column", listStyleType: "none", padding: "5px 10px", margin: "0px", width: "100%", gap: "5px" }, 
+    listItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 8px", fontSize: "14px", borderRadius: "5px", transition: "all 0.3s ease", cursor: "pointer", minWidth: "200px", gap: "10px" }, 
+    listItemHover: { backgroundColor: "#e1f5fe", transform: "scale(1.02)", boxShadow: "0px 2px 6px rgba(0, 0, 0, 0.1)" }, 
+    itemNameHover: { color: "#007bff", fontWeight: "bold", transition: "color 0.2s ease-in-out" }, 
+    itemIndex: { width: "25px", textAlign: "left", fontWeight: "bold", color: "#343c43" }, 
+    itemSales: { fontWeight: "bold", color: "#2185f0", textAlign: "right", whiteSpace: "nowrap", minWidth: "10px", marginLeft: "auto" }, 
+    itemName: { flex: 1, textAlign: "left", paddingLeft: "10px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#315859" }, 
+    tableContainer: { marginTop: '20px', textAlign: 'left', width: '80%', margin: 'auto' }, 
+    container: { backgroundColor: '#f8fbff', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', width: '90%', margin: 'auto' }, 
+    title: { fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '15px' }, 
+    buttonContainer: { display: 'flex', justifyContent: 'center', marginBottom: '15px', gap: '10px' }, 
+    button: { padding: '8px 16px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: '#ccc', fontSize: '14px' }, 
+    activeButton: { padding: '8px 16px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: '#3498db', color: '#fff', fontSize: '14px' }, 
+    chartContainer: { width: '80%', height: '300px', margin: 'auto' }, 
+    topSellingHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "10px" }, 
+    chartText: { cursor: "pointer", color: "#777", transition: "color 0.2s ease" }, 
+    selectedChartText: { cursor: "pointer", color: "#000", fontWeight: "bold", textDecoration: "underline" }, 
+    customLegend: { display: "flex", flexWrap: "wrap", justifyContent: "center", marginTop: "10px" }, 
+    legendGrid: { display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: "10px 20px" }, 
+    legendItem: { display: "flex", alignItems: "center", gap: "8px" }, 
+    legendColor: { width: "12px", height: "12px", borderRadius: "50%", display: "inline-block" }, 
+    legendText: { fontSize: "14px", color: "#333" }, 
+    chartBox: { flex: 3, backgroundColor: "#ffffff", padding: "20px", borderRadius: "15px", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)", display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "space-between", minHeight: "660px", height: "auto", maxHeight: "800px" }, 
+    chartHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }, 
+    chartTitle: { fontSize: "16px", color: "#000", fontWeight: "bold" }, 
+    chartTypeSelector: { display: "flex", gap: "10px" }, 
+    button: { padding: "8px 16px", borderRadius: "5px", border: "1px solid #ccc", cursor: "pointer", backgroundColor: "#eee", fontSize: "14px", transition: "all 0.3s ease" }, 
+    activeButton: { padding: "8px 16px", borderRadius: "5px", border: "none", cursor: "pointer", backgroundColor: "#3498db", color: "#fff", fontSize: "14px", transition: "all 0.3s ease", transform: "scale(1.1)" }, 
+    downloadButton: { width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", background: "linear-gradient(135deg, #28a745, #1e7e34)", color: "#ffffff", fontSize: "16px", transition: "all 0.3s ease-in-out", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.15)" }, 
+    downloadButtonHover: { background: "linear-gradient(135deg, #1e7e34, #155d27)", transform: "scale(1.08)", boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.3)" } 
 };
