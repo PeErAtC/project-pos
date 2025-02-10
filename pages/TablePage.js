@@ -16,35 +16,42 @@ function TableCard({ table, onClick }) {
             style={{
                 width: '160px',
                 height: '200px',
-                color: isSpecialTable ? '#333' : '#ffffff',
+                color: isSpecialTable ? '#333' : '#fff',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '10px',
-                backgroundColor: isSpecialTable ? '#FFC137' : isAvailable ? '#499cae' : '#ff6b6b',
+                borderRadius: '12px', // ขอบมุมโค้ง
+                background: isSpecialTable
+                    ? 'linear-gradient(145deg, #FFC137, #FFB220)' 
+                    : isAvailable
+                    ? 'linear-gradient(145deg, #499cae, #36758f)' 
+                    : 'linear-gradient(145deg, #ff6b6b, #f14f4f)', // ไล่สีพื้นหลัง
                 boxShadow: isPressed
-                    ? '0px 3px 8px rgba(0, 0, 0, 0.2)'
-                    : '0px 6px 18px rgba(0, 0, 0, 0.15)',
+                    ? '0px 3px 8px rgba(0, 0, 0, 0.2)' // เงาลึกเมื่อกด
+                    : '0px 6px 18px rgba(0, 0, 0, 0.15)', // เงาปกติ
                 cursor: 'pointer',
                 fontSize: '20px',
-                fontWeight: 'bold',
+                fontWeight: '600', // ฟอนต์หนา
                 padding: '15px',
                 textAlign: 'center',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                transform: isPressed ? 'scale(0.95)' : 'scale(1)',
+                transition: 'transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease', // เพิ่มการเปลี่ยนแปลงเมื่อ hover
+                transform: isPressed ? 'scale(0.98)' : 'scale(1)', // ขยายเมื่อกด
+                border: `3px solid ${isSpecialTable ? '#FFC137' : '#fff'}`, // ขอบที่ชัดเจน
             }}
             onClick={() => {
                 setIsPressed(false);
                 onClick(table.id); // เมื่อกดที่โต๊ะให้ไปที่หน้ารายละเอียด
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = '0px 8px 20px rgba(0, 0, 0, 0.25)';
+                e.currentTarget.style.transform = 'scale(1.05)'; // ขยายโต๊ะเมื่อ hover
+                e.currentTarget.style.boxShadow = '0px 10px 25px rgba(0, 0, 0, 0.3)'; // เงาที่มืดขึ้นเมื่อ hover
+                e.currentTarget.style.border = `3px solid ${isAvailable ? '#d9ecf1' : '#fce6b6'}`; // เปลี่ยนสีขอบเมื่อ hover
             }}
             onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0px 6px 18px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'scale(1)'; // กลับขนาดโต๊ะเมื่อออกจาก hover
+                e.currentTarget.style.boxShadow = '0px 6px 18px rgba(0, 0, 0, 0.15)'; // กลับเงาปกติ
+                e.currentTarget.style.border = `3px solid ${isSpecialTable ? '#FFC137' : '#fff'}`; // กลับขอบเดิม
             }}
             onMouseDown={() => setIsPressed(true)}
             onMouseUp={() => setIsPressed(false)}
@@ -57,6 +64,7 @@ function TableCard({ table, onClick }) {
     );
 }
 
+
 export default function MainTablePage() {
     const router = useRouter();
     const [tables, setTables] = useState([]);
@@ -67,7 +75,6 @@ export default function MainTablePage() {
     const [keyboardVisible, setKeyboardVisible] = useState(false); // ใช้เพื่อควบคุมการแสดงคีย์บอร์ด
     const searchInputRef = useRef(null); // ใช้เพื่ออ้างอิงช่องค้นหา
     const keyboardRef = useRef(null); // ใช้เพื่ออ้างอิงคีย์บอร์ด
-    const isTableFetched = useRef(false); // ป้องกันโหลดซ้ำ
 
     const playClickSound = () => {
         const audio = new Audio('/sounds/click-151673.mp3'); // เสียงเมื่อกด
@@ -79,49 +86,35 @@ export default function MainTablePage() {
             const api_url = localStorage.getItem('url_api');
             const slug = localStorage.getItem('slug');
             const authToken = localStorage.getItem('token');
-    
-            if (!api_url || !slug || !authToken) {
-                console.error("❌ Missing API URL, Slug, or Token!");
-                return;
-            }
-    
+
             const url = `${api_url}/${slug}/table_codes`;
-            console.log(`🔹 Fetching tables from: ${url}`);
-    
             const response = await axios.get(url, {
-                headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
             });
-    
-            console.log("✅ API Response:", response.data);
-    
-            if (response.data && Array.isArray(response.data)) {
-                console.log("📌 Raw Tables Data:", response.data);
-                const specialTable = response.data.find((table) => table.table_code === 'CT001');
-                const otherTables = response.data.filter((table) => table.table_code !== 'CT001');
-    
-                setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
-                console.log("📌 Processed Tables:", specialTable ? [specialTable, ...otherTables] : otherTables);
-            } else {
-                console.warn("⚠️ No valid data received from API");
-                setError('ไม่พบข้อมูลโต๊ะ');
-            }
+            const tablesData = response.data;
+
+            const specialTable = tablesData.find((table) => table.table_code === 'CT001');
+            const otherTables = tablesData.filter((table) => table.table_code !== 'CT001');
+            setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
+            setError(null);
         } catch (error) {
-            console.error("❌ Error fetching tables:", error);
-            setError('เกิดข้อผิดพลาดในการดึงข้อมูลโต๊ะ');
+            console.error('Error fetching tables:', error);
+            setError('เกิดข้อผิดพลาดในการดึงข้อมูล');
         }
     };
-    
+
     const fetchUserName = () => {
-        const storedUserName = localStorage.getItem('username');
+        const storedUserName = localStorage.getItem('username'); // สมมติว่าชื่อผู้ใช้เก็บใน localStorage key `username`
         if (storedUserName) {
-            console.log("✅ Found Username:", storedUserName);
             setUserName(storedUserName);
         } else {
-            console.warn("⚠️ No Username found in LocalStorage");
             setError('ไม่พบข้อมูลผู้ใช้');
         }
     };
-    
+
     useEffect(() => {
         fetchTables();
         fetchUserName(); // ดึงชื่อผู้ใช้จาก localStorage
@@ -131,17 +124,6 @@ export default function MainTablePage() {
 
     const handleSearchChange = (event) => {
         setSearchQuery(event.target.value);
-    };
-
-    const handleKeyboardInput = (key) => {
-        if (key === 'DELETE') {
-            setSearchQuery(searchQuery.slice(0, -1)); // ลบตัวอักษร
-        } else if (key === 'SPACE') {
-            setSearchQuery(searchQuery + ' '); // เพิ่มช่องว่าง
-        } else if (key === 'ENTER') {
-        } else {
-            setSearchQuery(searchQuery + key); // เพิ่มอักขระที่กด
-        }
     };
 
     const filteredTables = tables.filter((table) => {
@@ -157,129 +139,47 @@ export default function MainTablePage() {
         });
     };
 
-    const handleFocusSearch = () => {
-        setKeyboardVisible(true);
-    };
-
-    const handleCloseKeyboard = () => {
-        setKeyboardVisible(false);
-    };
-
-    const handleClickOutside = (event) => {
-        if (
-            searchInputRef.current &&
-            !searchInputRef.current.contains(event.target) &&
-            keyboardRef.current &&
-            !keyboardRef.current.contains(event.target)
-        ) {
-            setKeyboardVisible(false);
-        }
-    };
-
-    useEffect(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
     return (
         <div style={{ display: 'flex', minHeight: '100vh' }}>
             <Sidebar /> {/* เพิ่ม Sidebar */}
-            <div
-                style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    background: 'rgb(221, 236, 237)', // สีพื้นหลังใหม่
-                }}
-            >
-                {tableCode ? (
-                    <div style={styles.header}>
-                        <h1>รวมเมนูอาหาร</h1>
-                    </div>
-                ) : (
-                    <div style={styles.tableSelectionContainer}>
-                        <h1 style={styles.title}>
-                            {userName ? `ผู้ใช้งาน: ${userName}` : 'กำลังโหลด...'}
-                        </h1>
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="ค้นหาโต๊ะ"
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                            onFocus={handleFocusSearch}
-                            style={styles.searchInput}
-                        />
-                            <div style={styles.tableGrid}>
-                                {error ? (
-                                    <p style={styles.errorText}>{error}</p>
-                                ) : tables.length > 0 ? (
-                                    tables.map((table, index) => (
-                                        table && table.table_code ? ( // ตรวจสอบว่ามี table_code หรือไม่
-                                            <TableCard key={index} table={table} onClick={handleTableClick} />
-                                        ) : (
-                                            <p key={index} style={{ color: "red" }}>⚠️ ข้อมูลโต๊ะไม่สมบูรณ์</p>
-                                        )
-                                    ))
-                                ) : (
-                                    <p style={styles.noTableText}>ไม่พบข้อมูลโต๊ะ</p>
-                                )}
-                            </div>
-                        {keyboardVisible && (
-                            <Keyboard
-                                onKeyPress={handleKeyboardInput}
-                                onClose={handleCloseKeyboard}
-                                ref={keyboardRef}
-                            />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#f0f2f5' }}>
+                <div style={styles.tableSelectionContainer}>
+                    <h1 style={styles.title}>{userName ? `ยินดีต้อนรับ: ${userName}` : 'กำลังโหลด...'}</h1>
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="ค้นหาโต๊ะ"
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        style={styles.searchInput}
+                    />
+                    <div style={styles.tableGrid}>
+                        {error ? (
+                            <p style={styles.errorText}>{error}</p>
+                        ) : filteredTables.length > 0 ? (
+                            filteredTables.map((table) => (
+                                <TableCard
+                                    key={table.id}
+                                    table={table}
+                                    onClick={handleTableClick}
+                                />
+                            ))
+                        ) : (
+                            <p style={styles.noTableText}>ไม่พบข้อมูลโต๊ะ</p>
                         )}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
 }
 
 const styles = {
-    header: {
-        padding: '20px',
-        textAlign: 'center',
-        backgroundColor: '#f0f2f5',
-        width: '100%',
-    },
-    tableSelectionContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: '30px',
-        fontFamily: '"Montserrat", sans-serif',
-        color: '#000',
-    },
-    searchInput: {
-        width: '50%',
-        padding: '10px',
-        fontSize: '16px',
-        marginBottom: '20px',
-        borderRadius: '5px',
-        border: '1px solid #ccc',
-    },
-    tableGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '20px',
-        justifyContent: 'center',
-        padding: '20px',
-        width: '100%',
-        maxWidth: '1000px',
-    },
+    header: { padding: '20px', textAlign: 'center', backgroundColor: '#f0f2f5', width: '100%' },
+    tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' },
+    title: { fontSize: '28px', fontWeight: '600', textAlign: 'center', marginBottom: '30px', color: '#333' },
+    searchInput: { width: '50%', padding: '10px', fontSize: '16px', marginBottom: '20px', borderRadius: '5px', border: '1px solid #ccc' },
+    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' },
     errorText: { color: 'red' },
     noTableText: { color: '#333' },
 };
