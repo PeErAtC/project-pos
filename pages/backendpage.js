@@ -50,29 +50,31 @@ export default function BackendPage() {
   // ฟังก์ชันดึงรายการอาหารจาก API
   const fetchItems = async () => {
     try {
-      let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-      const slug = localStorage.getItem('slug') || 'default_slug';
-      const authToken = localStorage.getItem('token') || 'default_token';
-      if (!api_url.endsWith('/api')) api_url += '/api';
+        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
+        
+        if (!api_url.endsWith('/api')) api_url += '/api';
 
-      const url = `${api_url}/${slug}/products`;
-      const response = await axios.get(url, {
-        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
-      });
-      setItems(response.data || []);
+        const url = `${api_url}/${slug}/products`;
+        const response = await axios.get(url, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+        });
+
+        console.log("Fetched Data:", response.data);
+        setItems(response.data || []);
     } catch (error) {
-      console.error('Error:', error.message);
-      showNotification('เกิดข้อผิดพลาด: ' + error.message, 'error');
+        console.error('Error fetching items:', error);
+        showNotification('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
     }
-  };
-
+};
   // ฟังก์ชันดึงหมวดหมู่อาหารจาก API
   const fetchCategories = async () => {
     try {
       let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
       const slug = localStorage.getItem('slug') || 'default_slug';
       const authToken = localStorage.getItem('token') || 'default_token';
-      if (!api_url.endsWith('/api')) api_url += '/api';
+      if (!api_url.includes('/api')) api_url += '/api';
 
       const url = `${api_url}/${slug}/category`;
       const response = await axios.get(url, {
@@ -90,92 +92,112 @@ export default function BackendPage() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const confirmAction = async (title, text, confirmButtonText) => {
+    return await Swal.fire({
+      title: title,
+      text: text,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: confirmButtonText,
+      cancelButtonText: "ยกเลิก",
+    });
+  };
+  
   const handleAddOrUpdateItem = async () => {
     if (!itemName || !itemCategory || !itemPrice) {
-      showNotification("กรุณากรอกข้อมูลให้ครบถ้วน!", 'error');
+      showNotification("กรุณากรอกข้อมูลให้ครบถ้วน!", "error");
       return;
     }
-
+  
     const formData = new FormData();
-    formData.append('p_name', itemName);
-    formData.append('price', parseFloat(itemPrice) || 0);
-    formData.append('category_id', itemCategory);
-    formData.append('status', itemStatus ? 'Y' : 'N');
-
+    formData.append("p_name", itemName);
+    formData.append("price", parseFloat(itemPrice) || 0);
+    formData.append("category_id", itemCategory);
+    formData.append("status", itemStatus ? "Y" : "N");
+  
     if (itemImage instanceof File) {
-      formData.append('image', itemImage); // ส่งไฟล์รูปภาพไปยัง API
+      formData.append("image", itemImage);
     }
-
+  
     try {
-      let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-      const slug = localStorage.getItem('slug') || 'default_slug';
-      const authToken = localStorage.getItem('token') || 'default_token';
-      if (!api_url.endsWith('/api')) api_url += '/api';
-
+      let api_url = localStorage.getItem("url_api") || "https://default.api.url";
+      const slug = localStorage.getItem("slug") || "default_slug";
+      const authToken = localStorage.getItem("token") || "default_token";
+  
+      if (!api_url.includes("/api")) api_url += "/api";
+  
       const config = {
         headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': itemImage instanceof File ? 'multipart/form-data' : 'application/json',
+          Accept: "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": itemImage instanceof File ? "multipart/form-data" : "application/json",
         },
       };
-
+  
       let response;
+  
       if (editMode && editIndex !== null) {
-        const result = await Swal.fire({
-          title: 'ยืนยันการแก้ไข',
-          text: "คุณต้องการบันทึกการแก้ไขนี้หรือไม่?",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'บันทึก',
-          cancelButtonText: 'ยกเลิก',
-        });
-
+        const itemToEdit = items.find((item) => item.id === editIndex);
+        if (!itemToEdit) {
+          showNotification("ไม่พบข้อมูลที่ต้องการแก้ไข!", "error");
+          return;
+        }
+  
+        const result = await confirmAction("ยืนยันการแก้ไข", "คุณต้องการบันทึกการแก้ไขนี้หรือไม่?", "บันทึก");
+  
         if (result.isConfirmed) {
           const url = `${api_url}/${slug}/products/${editIndex}`;
           response = await axios.put(url, formData, config);
-          showNotification("อัพเดทข้อมูลเรียบร้อยแล้ว!", 'success');
+          showNotification("อัพเดทข้อมูลเรียบร้อยแล้ว!", "success");
         } else {
           return;
         }
       } else {
-        const result = await Swal.fire({
-          title: 'ยืนยันการเพิ่มอาหาร',
-          text: "คุณต้องการเพิ่มอาหารนี้หรือไม่?",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'เพิ่ม',
-          cancelButtonText: 'ยกเลิก',
-        });
-
+        const result = await confirmAction("ยืนยันการเพิ่มอาหาร", "คุณต้องการเพิ่มอาหารนี้หรือไม่?", "เพิ่ม");
+  
         if (result.isConfirmed) {
           const url = `${api_url}/${slug}/upload-image`;
           response = await axios.post(url, formData, config);
-          showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", 'success');
+          showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", "success");
         }
       }
-
-      // รีเฟรชรายการอาหารที่ได้รับการอัปเดต
-      await fetchItems();  // รีเฟรชเพื่อให้แน่ใจว่าได้ดึงข้อมูลที่มีรูปภาพใหม่
-      resetForm(); // รีเซ็ตฟอร์มหลังจากเสร็จสิ้น
-
+  
+      if (response && response.data) {
+        console.log("API Response:", response.data);
+      
+        await fetchItems(); // โหลดข้อมูลใหม่
+      
+        if (response.data.image) {
+          let imageUrl = `https://easyapp.clinic/pos-api/storage/app/public/product/${slug}/${response.data.image}`;
+          imageUrl += `?timestamp=${new Date().getTime()}`;
+      
+          console.log("🔍 Updated Image URL:", imageUrl); // ดูว่า URL เปลี่ยนจริงไหม
+          setItemImage(null);
+      
+          setTimeout(() => {
+            setItemImage(imageUrl);
+          }, 500);
+        }
+      }      
+      
+      
+      
     } catch (error) {
       if (error.response) {
-        console.error('Error Response:', error.response.data);
-        showNotification(`Error: ${error.response.data.message || 'Unknown error'}`, 'error');
+        console.error("Error Response:", error.response.data);
+        showNotification(`Error: ${error.response.data.message || "Unknown error"}`, "error");
       } else if (error.request) {
-        console.error('No Response from Server:', error.request);
-        showNotification('เซิร์ฟเวอร์ไม่ตอบสนอง กรุณาตรวจสอบการเชื่อมต่อ', 'error');
+        console.error("No Response from Server:", error.request);
+        showNotification("เซิร์ฟเวอร์ไม่ตอบสนอง กรุณาตรวจสอบการเชื่อมต่อ", "error");
       } else {
-        console.error('Error Message:', error.message);
-        showNotification('เกิดข้อผิดพลาดในระบบ', 'error');
+        console.error("Error Message:", error.message);
+        showNotification("เกิดข้อผิดพลาดในระบบ", "error");
       }
     }
   };
+  
 
   // ฟังก์ชันรีเซ็ตฟอร์ม
   const resetForm = () => {
@@ -277,13 +299,17 @@ const handleSaveCategory = async () => {
     formData.append('image', event.target.files[0]); // เลือกรูปที่ผู้ใช้เลือก
   
     try {
-      const response = await fetch(`${apiUrl}/upload-image`, {
+      const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+      const authToken = localStorage.getItem('token') || 'default_token';
+      
+      const response = await fetch(`${api_url}/upload-image`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`, // ถ้ามีการใช้งาน token
+          'Authorization': `Bearer ${authToken}`,
         },
         body: formData,
       });
+      
   
       const result = await response.json();
   
@@ -330,8 +356,7 @@ const handleSaveCategory = async () => {
           let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
           const slug = localStorage.getItem('slug') || 'default_slug';
           const authToken = localStorage.getItem('token') || 'default_token';
-
-          if (!api_url.endsWith('/api')) api_url += '/api';
+          if (!api_url.includes('/api')) api_url += '/api';
 
           const url = `${api_url}/${slug}/products/${id}`;
           await axios.delete(url, {
@@ -354,30 +379,33 @@ const handleSaveCategory = async () => {
     const slug = localStorage.getItem('slug') || 'default_slug';
     const authToken = localStorage.getItem('token') || 'default_token';
     const itemToEdit = items.find((item) => item.id === id);
-
-    console.log(api_url, slug, authToken); // ตรวจสอบค่าจาก localStorage
-
+  
+    console.log("API:", api_url, "Slug:", slug, "Token:", authToken); // ตรวจสอบค่าจาก localStorage
+  
     if (!itemToEdit) {
       showNotification('ไม่พบรายการที่ต้องการแก้ไข', 'error');
       return;
     }
-
+  
     setItemName(itemToEdit.p_name || itemToEdit.name);
     setItemCategory(itemToEdit.category_id);
     setItemPrice(itemToEdit.price);
     setItemStatus(itemToEdit.status === 'Y');
     setEditMode(true);
     setEditIndex(id);
-
+  
     // รีเซ็ตค่ารูปภาพก่อนแสดง
     setItemImage(null);
-
-    // ถ้ามีรูปเก่า, ให้โหลดมาผ่าน URL
-    if (itemToEdit.image) {
-      const imageUrl = `https://easyapp.clinic/pos-api/storage/app/public/product/${slug}/${itemToEdit.image}`;
-      setItemImage(imageUrl); // ทำการตั้งค่ารูปภาพใหม่
+  
+    // ถ้ามีรูปเก่า ให้โหลดจาก URL พร้อม timestamp ป้องกันแคช
+    if (itemToEdit.image && !itemToEdit.image.startsWith("http")) {
+      let imageUrl = `https://easyapp.clinic/pos-api/storage/app/public/product/${slug}/${itemToEdit.image}`;
+      imageUrl += `?timestamp=${new Date().getTime()}`;  // บังคับโหลดรูปใหม่
+      setItemImage(imageUrl);
+    } else {
+      setItemImage(itemToEdit.image);
     }
-  };
+  };  
 
   // ฟังก์ชันลบหมวดหมู่
   const handleDeleteCategory = async () => {
@@ -413,10 +441,10 @@ const handleSaveCategory = async () => {
   };
   // ฟังก์ชันกรองรายการอาหารตามคำค้นหาและหมวดหมู่
   const filteredItems = items.filter((item) => {
-    const nameMatch = item.p_name?.toString().includes(searchQuery); // ค้นหาชื่ออาหาร
-    const categoryMatch = filterCategory === '' || item.category_id === parseInt(filterCategory); // ค้นหาหมวดหมู่
-    return nameMatch && categoryMatch; // ส่งคืนรายการที่ตรงตามเงื่อนไข
-  });
+    const nameMatch = item.p_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+    const categoryMatch = filterCategory === '' || item.category_id === parseInt(filterCategory);
+    return nameMatch && categoryMatch;
+  });  
 
   const availableItemsForSale = filteredItems.filter(item => item.status === 'Y'); // รายการที่มีสถานะเปิด
   const sortedItems = items.sort((a, b) => a.id - b.id);
@@ -480,20 +508,32 @@ const handleSaveCategory = async () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredItems.map((item, index) => (
+                {filteredItems.length > 0 ? (
+                  filteredItems.map((item, index) => (
                     <tr key={index} style={styles.row(index)}>
-                      <td style={styles.td}>{item.id.toString().padStart(4, '0')}</td>
+                      <td style={styles.td}>{item.id.toString().padStart(4, "0")}</td>
                       <td style={styles.td}>{item.p_name || item.name}</td>
                       <td style={styles.td}>{item.price.toFixed(2)}</td>
-                      <td style={styles.td}>{categories.find(cat => cat.id === item.category_id)?.c_name}</td>
-                      <td style={{ ...styles.td, color: item.status === 'Y' ? '#111' : 'red' }}>{item.status === 'Y' ? "เปิด" : "ปิด"}</td> {/* แสดงสถานะและสี */}
+                      <td style={styles.td}>
+                        {categories.find((cat) => cat.id === item.category_id)?.c_name}
+                      </td>
+                      <td style={{ ...styles.td, color: item.status === "Y" ? "#111" : "red" }}>
+                        {item.status === "Y" ? "เปิด" : "ปิด"}
+                      </td>
                       <td style={styles.td}>
                         <button onClick={() => handleEditItem(item.id)} style={styles.editButton}>แก้ไข</button>
                         <button onClick={() => handleDeleteItem(item.id)} style={styles.deleteButton}>ลบ</button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: "center", padding: "10px" }}>
+                      ไม่มีข้อมูล
+                    </td>
+                  </tr>
+                )}
+              </tbody>
               </table>
             </div>
           )}
