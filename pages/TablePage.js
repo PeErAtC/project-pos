@@ -67,7 +67,6 @@ export default function MainTablePage() {
     const [keyboardVisible, setKeyboardVisible] = useState(false); // ใช้เพื่อควบคุมการแสดงคีย์บอร์ด
     const searchInputRef = useRef(null); // ใช้เพื่ออ้างอิงช่องค้นหา
     const keyboardRef = useRef(null); // ใช้เพื่ออ้างอิงคีย์บอร์ด
-    const isTableFetched = useRef(false); // ป้องกันโหลดซ้ำ
 
     const playClickSound = () => {
         const audio = new Audio('/sounds/click-151673.mp3'); // เสียงเมื่อกด
@@ -79,49 +78,31 @@ export default function MainTablePage() {
             const api_url = localStorage.getItem('url_api');
             const slug = localStorage.getItem('slug');
             const authToken = localStorage.getItem('token');
-    
-            if (!api_url || !slug || !authToken) {
-                console.error("❌ Missing API URL, Slug, or Token!");
-                return;
-            }
-    
             const url = `${api_url}/${slug}/table_codes`;
-            console.log(`🔹 Fetching tables from: ${url}`);
-    
             const response = await axios.get(url, {
-                headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
             });
-    
-            console.log("✅ API Response:", response.data);
-    
-            if (response.data && Array.isArray(response.data)) {
-                console.log("📌 Raw Tables Data:", response.data);
-                const specialTable = response.data.find((table) => table.table_code === 'CT001');
-                const otherTables = response.data.filter((table) => table.table_code !== 'CT001');
-    
-                setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
-                console.log("📌 Processed Tables:", specialTable ? [specialTable, ...otherTables] : otherTables);
-            } else {
-                console.warn("⚠️ No valid data received from API");
-                setError('ไม่พบข้อมูลโต๊ะ');
-            }
+            const tablesData = response.data;
+            const specialTable = tablesData.find((table) => table.table_code === 'CT001');
+            const otherTables = tablesData.filter((table) => table.table_code !== 'CT001');
+            setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
+            setError(null);
         } catch (error) {
-            console.error("❌ Error fetching tables:", error);
-            setError('เกิดข้อผิดพลาดในการดึงข้อมูลโต๊ะ');
+            console.error('Error fetching tables:', error);
+            setError('เกิดข้อผิดพลาดในการดึงข้อมูล');
         }
     };
-    
     const fetchUserName = () => {
-        const storedUserName = localStorage.getItem('username');
+        const storedUserName = localStorage.getItem('username'); // สมมติว่าชื่อผู้ใช้เก็บใน localStorage key `username`
         if (storedUserName) {
-            console.log("✅ Found Username:", storedUserName);
             setUserName(storedUserName);
         } else {
-            console.warn("⚠️ No Username found in LocalStorage");
             setError('ไม่พบข้อมูลผู้ใช้');
         }
     };
-    
     useEffect(() => {
         fetchTables();
         fetchUserName(); // ดึงชื่อผู้ใช้จาก localStorage
@@ -202,7 +183,7 @@ export default function MainTablePage() {
                 ) : (
                     <div style={styles.tableSelectionContainer}>
                         <h1 style={styles.title}>
-                            {userName ? `ผู้ใช้งาน: ${userName}` : 'กำลังโหลด...'}
+                            {userName ? `ยินดีต้อนรับ: ${userName}` : 'กำลังโหลด...'}
                         </h1>
                         <input
                             ref={searchInputRef}
@@ -213,21 +194,17 @@ export default function MainTablePage() {
                             onFocus={handleFocusSearch}
                             style={styles.searchInput}
                         />
-                            <div style={styles.tableGrid}>
-                                {error ? (
-                                    <p style={styles.errorText}>{error}</p>
-                                ) : tables.length > 0 ? (
-                                    tables.map((table, index) => (
-                                        table && table.table_code ? ( // ตรวจสอบว่ามี table_code หรือไม่
-                                            <TableCard key={index} table={table} onClick={handleTableClick} />
-                                        ) : (
-                                            <p key={index} style={{ color: "red" }}>⚠️ ข้อมูลโต๊ะไม่สมบูรณ์</p>
-                                        )
-                                    ))
-                                ) : (
-                                    <p style={styles.noTableText}>ไม่พบข้อมูลโต๊ะ</p>
-                                )}
-                            </div>
+                        <div style={styles.tableGrid}>
+                            {error ? (
+                                <p style={styles.errorText}>{error}</p>
+                            ) : filteredTables.length > 0 ? (
+                                filteredTables.map((table) => (
+                                    <TableCard key={table.id} table={table} onClick={handleTableClick} />
+                                ))
+                            ) : (
+                                <p style={styles.noTableText}>ไม่พบข้อมูลโต๊ะ</p>
+                            )}
+                        </div>
                         {keyboardVisible && (
                             <Keyboard
                                 onKeyPress={handleKeyboardInput}
