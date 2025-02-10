@@ -3,7 +3,7 @@
     // นำเข้า axios สำหรับการดึงข้อมูล API
     import axios from 'axios';
     // นำเข้า BackendSidebar ซึ่งเป็น Component สำหรับ Sidebar
-    import BackendSidebar from './components/backendsidebar';
+    import BackendSidebar from './components/backendsideber';
     // นำเข้า SweetAlert2 สำหรับการแจ้งเตือนแบบ Popup
     import Swal from 'sweetalert2';
     // นำเข้าไอคอนต่าง ๆ จาก react-icons สำหรับตกแต่ง UI
@@ -340,80 +340,115 @@ const showOrderDetails = async (orderId) => {
         `;
         
         
-// สร้างตารางประวัติการชำระเงิน
-const payments = orderDetails?.payments || [];
-const paymentHistoryTableHTML = `
-    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-        <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
-            <tr>
-                <th style="padding: 5px; border: 1px solid #ddd;">ลำดับ</th>
-                <th style="padding: 5px; border: 1px solid #ddd;">แยกชำระ</th>
-                <th style="padding: 5px; border: 1px solid #ddd;">วิธีการชำระ</th>
-                <th style="padding: 5px; border: 1px solid #ddd;">วันที่ชำระ</th>
-                <th style="padding: 5px; border: 1px solid #ddd;">คงเหลือ</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${
-                payments.length > 0
-                    ? payments.map((payment, index) => `
-                        <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">${index + 1}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? payment.amount + " ฿" : 'N/A'}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.pay_channel_id === 1 ? 'เงินสด' : payment.pay_channel_id === 2 ? 'QR Code พร้อมเพย์' : 'อื่นๆ'}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'N/A'}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${payment.change_amount ? payment.change_amount + " ฿" : 'N/A'}</td>
-                        </tr>
-                    `).join('')
-                    : `
-                        <tr>
-                            <td colspan="5" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
-                                ไม่มีข้อมูลการชำระเงิน
-                            </td>
-                        </tr>
-                    `
+        // สร้างตารางประวัติการชำระเงิน
+        const payments = orderDetails?.payments || [];
+        // คำนวณยอดคงเหลือหลังจากการชำระเงินแต่ละครั้ง
+        let remainingBalance = orderDetails.order.total_amount;  // เริ่มจากยอดรวมทั้งหมด
+
+        const totalIccome = payments.reduce((sum, p) => sum + (p.icome ? parseFloat(p.icome) : 0), 0);
+        const totalMoneyChanges = payments.reduce((sum, p) => sum + (p.money_changes ? parseFloat(p.money_changes) : 0), 0);
+
+        const totalAmountPaid = payments
+            .map(p => p.amount ? parseFloat(p.amount) : 0)
+            .reduce((sum, value) => sum + value, 0);
+
+
+        const paymentHistoryTableHTML = `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
+                    <tr>
+                        <th style="padding: 5px; border: 1px solid #ddd;">ลำดับ</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">แยกชำระ</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">รับเงิน</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">วิธีการชำระ</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">วันที่ชำระ</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">ยอดคงเหลือ</th>
+                        <th style="padding: 5px; border: 1px solid #ddd;">เงินทอน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${
+                        payments.length > 0
+                            ? payments.map((payment, index) => {
+                                return `
+                                    <tr>
+                                        <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">${index + 1}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? payment.amount + " ฿" : '0 ฿'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.icome ? payment.icome + " ฿" : '0 ฿'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.pay_channel_id === 1 ? 'เงินสด' : payment.pay_channel_id === 2 ? 'QR Code พร้อมเพย์' : 'อื่นๆ'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'N/A'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.balances ? payment.balances + " ฿" : "0 ฿"}</td> 
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.money_changes ? payment.money_changes + " ฿" : '0 ฿'}</td>
+                                    </tr>
+                                `;
+                            }).join('')
+                            : `
+                                <tr>
+                                    <td colspan="7" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
+                                        ไม่มีข้อมูลการชำระเงิน
+                                    </td>
+                                </tr>
+                            `
+                    }
+                </tbody>
+                    <tfoot style="background-color: #f8f8f8; font-weight: bold; position: sticky; bottom: 0; z-index: 2;">
+    <tr>
+        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
+            รวมยอดแยกชำระ:
+        </td>
+        <td style="padding: 5px; border: 1px solid #ddd;">
+            ${totalAmountPaid.toFixed(2)} ฿
+        </td>
+        <td colspan="1" style="padding: 5px; border: 1px solid #ddd;"></td>
+        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
+            **เงินทอน:**
+        </td>
+        <td style="padding: 5px; border: 1px solid #ddd;">
+            ${totalMoneyChanges.toFixed(2)} ฿
+        </td>
+    </tr>
+</tfoot>
+
+            </table>
+        `;
+
+
+
+
+                // แสดงผลใน SweetAlert
+                Swal.fire({
+                    html: `
+                        <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
+                            <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
+                            <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
+                                ${itemsTableHTML}
+                            </div>
+                            <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
+                                <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
+                            </div>
+                            <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
+                            <div style="max-height: 150px; overflow-y: auto;">
+                                ${paymentHistoryTableHTML}
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonText: 'ปิด',
+                    width: '900px',
+                    padding: '20px',
+                    background: '#fff',
+                });
+
+            } catch (error) {
+                console.error('Error showing order details:', error);
+                Swal.fire({
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
+                    icon: 'error',
+                    confirmButtonText: 'ปิด',
+                });
             }
-        </tbody>
-    </table>
-    <div style="margin-top: 10px; font-weight: bold; font-size: 16px; text-align: right;">
-        <p>เงินทอนทั้งหมด: ${payments.length > 0 ? payments.reduce((total, payment) => total + (parseFloat(payment.change_amount) || 0), 0).toFixed(2) : 'N/A'} ฿</p>
-    </div>
-`;
+        };
 
-// แสดงผลใน SweetAlert
-Swal.fire({
-    html: `
-        <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
-            <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
-            <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
-                ${itemsTableHTML}
-            </div>
-            <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
-                <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
-            </div>
-            <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
-            <div style="max-height: 150px; overflow-y: auto;">
-                ${paymentHistoryTableHTML}
-            </div>
-        </div>
-    `,
-    confirmButtonText: 'ปิด',
-    width: '900px',
-    padding: '20px',
-    background: '#fff',
-});
-
-
-    } catch (error) {
-        console.error('Error showing order details:', error);
-        Swal.fire({
-            title: 'เกิดข้อผิดพลาด',
-            text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
-            icon: 'error',
-            confirmButtonText: 'ปิด',
-        });
-    }
-};
         const calculateTotals = (orders) => {
             const totalAmount = orders.reduce((total, order) => total + parseFloat(order.total_amount || 0), 0).toFixed(2);
             const totalDiscount = orders.reduce((total, order) => total + parseFloat(order.discount || 0), 0).toFixed(2);
