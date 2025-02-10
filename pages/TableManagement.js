@@ -22,7 +22,7 @@ export default function TableManagement() {
 
     useEffect(() => {
         fetchTables();
-    },);
+    }, []);
 
     const fetchTables = async () => {
         const api_url = localStorage.getItem('url_api');
@@ -336,7 +336,7 @@ export default function TableManagement() {
 }
 
 const styles = {
-    pageContainer: { display: 'flex', minHeight: '100vh', backgroundColor: '#f4f6f8' },
+    pageContainer: { display: 'flex', minHeight: '10vh', backgroundColor: '#f4f6f8' },
     contentContainer: { display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', justifyContent: 'space-between', alignItems: 'flex-start', fontFamily: 'Arial, sans-serif', width: 'calc(100% - 100px)', marginLeft: '100px' },
     listContainer: { flex: 6, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', height: 'calc(90vh - 40px)' }, 
     formContainer: { flex: 3, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', textAlign: 'center', height: 'calc(90vh - 40px)' },
