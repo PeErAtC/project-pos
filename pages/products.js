@@ -701,7 +701,7 @@ const loadTableLastOrder = async (tableCode) => {
     //     }
     // };
 
-    const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
+    const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount, balances, moneyChanges, receivedAmount) => {
         try {
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
@@ -711,7 +711,7 @@ const loadTableLastOrder = async (tableCode) => {
             if (!api_url.endsWith('/api')) api_url += '/api';
     
             // ใช้เส้นทาง /payments แทน /payments/{order_id}/list
-            const url = `${api_url}/${slug}/payments`;  // เปลี่ยนเส้นทาง
+            const url = `${api_url}/${slug}/payments`;
     
             // ตรวจสอบข้อมูลที่จำเป็น
             if (!orderId || !paymentMethod || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
@@ -724,12 +724,15 @@ const loadTableLastOrder = async (tableCode) => {
                 pay_channel_id: paymentMethod === 'cash' ? 1 : 2, 
                 payment_date: new Date().toISOString(),
                 amount: parseFloat(amount),  // จำนวนเงินที่ชำระ
+                icome: parseFloat(receivedAmount), // ✅ บันทึกค่ารับเงินที่ได้รับจริง
+                balances: balances,  // ยอดคงเหลือ
+                money_changes: moneyChanges.toFixed(2), // เงินทอนที่คำนวณ
                 status: 'PARTIAL',  // สถานะการชำระ
             };
     
             console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
     
-            // ส่งข้อมูลการแยกชำระไปยัง API
+            // ส่งข้อมูลการชำระเงินไปยัง API
             const response = await axios.post(url, paymentData, {
                 headers: {
                     'Accept': 'application/json',
@@ -747,7 +750,7 @@ const loadTableLastOrder = async (tableCode) => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระได้', 'error');
         }
     };
-
+    
     const paymentDate = new Date('2025-02-06T03:33:15.615Z');  // ใช้เวลา UTC
 
     // แสดงวันที่และเวลาในรูปแบบที่ต้องการ โดยกำหนดเขตเวลา
@@ -971,66 +974,60 @@ const loadTableLastOrder = async (tableCode) => {
     const calculateChange = () => {
         const remainingDue = calculateRemainingDue(partialPayments);
         console.log("ยอดคงเหลือที่ต้องชำระ:", remainingDue);
-                return Math.max(receivedAmount - remainingDue, 0).toFixed(2); // เงินทอน = รับเงิน - ยอดคงเหลือ
+        return Math.max(receivedAmount - remainingDue, 0).toFixed(2);
     };
     
-    const handlePayment = () => {
+    
+    const handlePayment = async () => {
         try {
-            const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
-            const totalPaid = calculateTotalPaid() + receivedAmount; // รวมยอดที่ชำระทั้งหมด
-    
-            if (isNaN(totalDue) || isNaN(totalPaid) || isNaN(receivedAmount)) {
-                console.error("❌ Error: ค่าที่ใช้คำนวณเป็น NaN", { totalDue, totalPaid, receivedAmount });
-                Swal.fire({
-                    icon: "error",
-                    title: "เกิดข้อผิดพลาด",
-                    text: "ข้อมูลการชำระเงินไม่ถูกต้อง กรุณาลองใหม่",
-                });
+            const totalDue = calculateTotalDue();  // ยอดที่ต้องชำระทั้งหมด
+            const amountPaid = parseFloat(receivedAmount) || 0;  // จำนวนที่ลูกค้าชำระ
+            
+            if (amountPaid <= 0) {
+                Swal.fire("ข้อผิดพลาด", "กรุณากรอกจำนวนเงินที่ชำระ", "warning");
                 return;
             }
     
-            if (totalPaid < totalDue) {
-                Swal.fire({
-                    icon: "error",
-                    title: "ยอดเงินไม่เพียงพอ",
-                    text: `กรุณาชำระเงินให้ครบ: ${(totalDue - totalPaid).toFixed(2)} บาท`,
-                });
-                return;
-            }
+            // คำนวณยอดคงเหลือที่ถูกต้อง
+            let previousBalance = currentOrder.balances || totalDue; // ถ้าไม่มีค่า balances ให้ใช้ totalDue
+            let remainingBalance = Math.max(previousBalance - amountPaid, 0); // ✅ หักเงินที่ชำระออกจากยอดคงเหลือก่อนหน้า
+            let change = amountPaid > previousBalance ? amountPaid - previousBalance : 0; // คำนวณเงินทอน
     
-            const change = Math.max(totalPaid - totalDue, 0); // คำนวณเงินทอน
+            // เตรียมข้อมูลส่งไปยัง API
+            const paymentData = {
+                order_id: currentOrder.id,
+                amount: amountPaid,
+                balances: remainingBalance, // ✅ ส่งยอดคงเหลือใหม่
+                money_changes: change, // ✅ เงินทอน
+                pay_channel_id: selectedPaymentMethod, // วิธีการชำระ
+                payment_date: new Date().toISOString(),
+            };
     
-            // ส่งข้อมูลที่ชำระและเงินทอนให้กับ UI ใบเสร็จ
-            setShowReceipt(true); // แสดงใบเสร็จ
-            setReceivedAmount(receivedAmount); // อัปเดตยอดรับเงิน
-            setChange(change); // อัปเดตเงินทอน
+            const api_url = localStorage.getItem('url_api');
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
     
-            // เปิดการแจ้งเตือนสำเร็จ
-            Swal.fire({
-                icon: "success",
-                title: "ชำระเงินสำเร็จ!",
-                text: `ยอดชำระ: ${receivedAmount.toFixed(2)} บาท\nเงินทอน: ${change.toFixed(2)} บาท`,
-                timer: 2000,
-                showConfirmButton: false,
-            }).then(() => {
-                setTemporaryPayments([ // เพิ่มข้อมูลการชำระไปยังการชำระเงินชั่วคราว
-                    ...temporaryPayments,
-                    {
-                        amount: receivedAmount,
-                        paymentMethod,
-                        timestamp: new Date(),
-                    },
-                ]);
+            // เรียก API บันทึกการชำระเงิน
+            const response = await axios.post(`${api_url}/${slug}/payments`, paymentData, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
             });
+    
+            if (response.status === 200) {
+                Swal.fire("สำเร็จ", "บันทึกการชำระเงินเรียบร้อย", "success");
+                fetchReportData(); // โหลดข้อมูลใหม่หลังการชำระ
+            } else {
+                throw new Error("ไม่สามารถบันทึกข้อมูลได้");
+            }
         } catch (error) {
-            console.error("❌ Error ใน handlePayment:", error);
-            Swal.fire({
-                icon: "error",
-                title: "เกิดข้อผิดพลาด",
-                text: "ไม่สามารถดำเนินการชำระเงินได้ กรุณาลองใหม่",
-            });
+            console.error("Error processing payment:", error);
+            Swal.fire("ข้อผิดพลาด", "เกิดข้อผิดพลาดระหว่างบันทึกการชำระเงิน", "error");
         }
     };
+    
+    
     
     
     
@@ -1222,7 +1219,6 @@ const loadTableLastOrder = async (tableCode) => {
     
     const saveOrderData = async (orderId, paymentMethod, receivedAmount, cart, billDiscount, billDiscountType, vatType, calculateTotalWithBillDiscountAndVAT, calculateVAT) => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
@@ -1231,7 +1227,7 @@ const loadTableLastOrder = async (tableCode) => {
             if (!api_url.endsWith('/api')) {
                 api_url += '/api';
             }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
+    
             // คำนวณส่วนลดรวมต่อสินค้า
             const totalItemDiscount = cart.reduce((acc, item) => {
                 const itemDiscountAmount = (item.discountType === 'THB') 
@@ -1253,9 +1249,12 @@ const loadTableLastOrder = async (tableCode) => {
             // ยอดสุทธิ
             const netAmount = calculateTotalWithBillDiscountAndVAT();
     
+            // คำนวณเงินทอน
+            const moneyChanges = receivedAmount > netAmount ? receivedAmount - netAmount : 0;
+    
             // บันทึกข้อมูลการชำระเงิน
             await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
-    
+            console.log("📌 เงินทอนที่คำนวณได้:", moneyChanges);
             // อัปเดตข้อมูลบิลในฐานข้อมูล
             const response = await axios.put(
                 `${api_url}/api/${slug}/orders/${orderId}`,
@@ -1265,6 +1264,7 @@ const loadTableLastOrder = async (tableCode) => {
                     vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, // เปอร์เซ็นต์ VAT
                     net_amount: netAmount, // ยอดสุทธิ
                     discount: totalDiscount.toFixed(2), // บันทึกส่วนลดรวมในฟิลด์เดียว
+                    money_changes: moneyChanges.toFixed(2), // บันทึกเงินทอน
                 },
                 {
                     headers: {
@@ -1278,7 +1278,7 @@ const loadTableLastOrder = async (tableCode) => {
                 Swal.fire({
                     icon: 'success',
                     title: 'บันทึกบิลสำเร็จ',
-                    text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount.toFixed(2)} บาท`,
+                    text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount.toFixed(2)} บาท และเงินทอน: ${moneyChanges.toFixed(2)} บาท`,
                     confirmButtonText: 'ตกลง',
                 });
             } else {
@@ -1289,6 +1289,7 @@ const loadTableLastOrder = async (tableCode) => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
+    
     
     const handleSaveReceipt = async () => {
         await saveOrderData(
@@ -1448,8 +1449,16 @@ const loadTableLastOrder = async (tableCode) => {
     
     const closeReceipt = async () => {
         try {
-            const totalDue = calculateTotalWithBillDiscountAndVAT(); 
-            const amountToPay = receivedAmount || calculateTotalPaid(); // ใช้ receivedAmount หรือรวมยอดที่จ่ายไปแล้ว
+            const totalDue = parseFloat(calculateTotalWithBillDiscountAndVAT()); // คำนวณยอดทั้งหมดที่ต้องชำระ
+            const amountToPay = receivedAmount ? parseFloat(receivedAmount) : parseFloat(calculateTotalPaid()); // ใช้ receivedAmount หรือยอดที่ชำระจริง
+    
+            // คำนวณเงินทอน
+            const moneyChanges = amountToPay > totalDue ? amountToPay - totalDue : 0;
+    
+            console.log("📌 ยอดที่ต้องชำระ (totalDue):", totalDue);
+            console.log("📌 ยอดที่รับเงิน (receivedAmount):", receivedAmount);
+            console.log("📌 ยอดชำระ (amountToPay):", amountToPay);
+            console.log("📌 เงินทอนที่คำนวณได้:", moneyChanges);
     
             if (!orderId) {
                 Swal.fire('ผิดพลาด', 'ไม่พบเลขที่ออเดอร์ กรุณาลองอีกครั้ง', 'error');
@@ -1471,22 +1480,18 @@ const loadTableLastOrder = async (tableCode) => {
             console.log("📌 ค่า paymentMethod:", paymentMethod);
             console.log("📌 ค่า receivedAmount:", amountToPay);
     
-            // ✅ ตรวจสอบให้แน่ใจว่าการบันทึกข้อมูลการชำระเงินสำเร็จ
-            const paymentResponse = await savePaymentToDatabase(orderId, paymentMethod, amountToPay);
-            if (!paymentResponse || !paymentResponse.success) {
-                throw new Error('❌ บันทึกข้อมูลการชำระเงินล้มเหลว');
-            }
-    
+            // ✅ ตรวจสอบว่ามีการอัปเดตเงินทอนลงฐานข้อมูล
             const response = await axios.put(
                 `${api_url}/${slug}/orders/${orderId}`,
                 {
                     status: 'Y',
-                    vat_amt: vatType.includes('exclude') ? calculateVAT() : 0, 
-                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, 
+                    vat_amt: vatType.includes('exclude') ? calculateVAT() : 0,
+                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0,
                     net_amount: totalDue,
-                    discount: billDiscount.toFixed(2),
-                    payment_method: paymentMethod, 
-                    updated_by: 1, // ✅ อาจต้องกำหนดค่า updated_by เพื่อให้ API ยอมรับ
+                    discount: parseFloat(billDiscount).toFixed(2),
+                    payment_method: paymentMethod,
+                    money_changes: moneyChanges.toFixed(2), // ส่งเงินทอนที่คำนวณ
+                    updated_by: 1, // กำหนดค่า updated_by
                 },
                 {
                     headers: {
@@ -1498,11 +1503,10 @@ const loadTableLastOrder = async (tableCode) => {
     
             console.log("📌 API Response:", response.data);
     
-            // ✅ แก้ไขเงื่อนไขการตรวจสอบ response
+            // ✅ ตรวจสอบ response
             if (response && (response.status === 200 || response.status === 201) && response.data?.order) {
                 console.log("✅ บันทึกข้อมูลบิลสำเร็จ:", response.data.order);
             } else {
-                console.warn("⚠️ API ตอบกลับสำเร็จแต่ไม่มีข้อมูล order:", response.data);
                 Swal.fire("แจ้งเตือน", "บิลถูกบันทึกแต่ไม่มีข้อมูล order", "warning");
             }
     
@@ -1535,7 +1539,7 @@ const loadTableLastOrder = async (tableCode) => {
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกบิลสำเร็จ',
-                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${totalDue.toFixed(2)} บาท`,
+                text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${totalDue.toFixed(2)} บาท และเงินทอน: ${moneyChanges.toFixed(2)} บาท`,
                 confirmButtonText: 'ตกลง',
             }).then(() => {
                 resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
@@ -1546,6 +1550,8 @@ const loadTableLastOrder = async (tableCode) => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
+    
+    
     
     
     const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
@@ -1614,7 +1620,7 @@ const calculateRemainingDue = (partialPayments = []) => {
         const seconds = pad(date.getSeconds());
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
-    const savePaymentToDatabase = async (orderId, paymentMethod, amount) => {
+    const savePaymentToDatabase = async (orderId, paymentMethod, amount, receivedAmount = 0) => {
         try {
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
@@ -1623,27 +1629,40 @@ const calculateRemainingDue = (partialPayments = []) => {
             if (!api_url.endsWith('/api')) api_url += '/api';
             const url = `${api_url}/${slug}/payments`;
     
+            // ตรวจสอบความถูกต้องของข้อมูล
             if (!orderId || !paymentMethod || isNaN(amount) || amount <= 0) {
                 console.error("❌ ข้อมูลชำระเงินไม่ถูกต้อง:", { orderId, paymentMethod, amount });
                 Swal.fire("เกิดข้อผิดพลาด", "ข้อมูลชำระเงินไม่ถูกต้อง", "error");
                 return { success: false };
             }
     
+            // คำนวณยอดคงเหลือและเงินทอน
+            const totalDue = amount; // ยอดที่ต้องชำระ
+            const totalPaid = receivedAmount; // ยอดที่ชำระแล้ว
+            const remainingDue = totalDue - totalPaid; // คำนวณยอดคงเหลือ
+            const moneyChanges = Math.max(receivedAmount - totalDue, 0); // คำนวณเงินทอน
+    
+            // ฟอร์แมตจำนวนเงิน
             const formattedAmount = parseFloat(amount).toFixed(2);
             const paymentDate = new Date().toISOString().slice(0, 19).replace("T", " ");
     
+            // คำนวณช่องทางการชำระเงิน (cash = 1, อื่นๆ = 2)
             const payChannelId = paymentMethod === "cash" ? 1 : 2;
     
+            // ข้อมูลที่จะส่งไปยัง API
             const paymentData = {
                 order_id: orderId,
                 pay_channel_id: payChannelId,
                 payment_date: paymentDate,
                 amount: formattedAmount,
-                status: "Y",
+                balances: remainingDue.toFixed(2),  // เพิ่มยอดคงเหลือ
+                money_changes: moneyChanges.toFixed(2),  // เพิ่มเงินทอน
+                status: "Y", // สถานะการชำระเงิน (ชำระแล้ว)
             };
     
             console.log("📤 Data ที่ส่งไปยัง API:", paymentData);
     
+            // ส่งข้อมูลไปยัง API
             const response = await axios.post(url, paymentData, {
                 headers: {
                     Accept: "application/json",
@@ -1654,7 +1673,7 @@ const calculateRemainingDue = (partialPayments = []) => {
             console.log("✅ Response จาก API:", response.data);
             console.log("📌 Response Status:", response.status);
     
-            // ✅ แก้ไขเงื่อนไขให้รองรับทั้ง 200 และ 201
+            // ตรวจสอบผลลัพธ์
             if (response && (response.status === 200 || response.status === 201) && response.data?.id) {
                 console.log("✅ บันทึกข้อมูลการชำระเงินสำเร็จ:", response.data);
                 return { success: true, data: response.data };
@@ -1669,6 +1688,8 @@ const calculateRemainingDue = (partialPayments = []) => {
             return { success: false };
         }
     };
+    
+    
     const updateOrderItems = async (cartItems) => {
         try {
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
@@ -1766,53 +1787,59 @@ const calculateRemainingDue = (partialPayments = []) => {
     };
     
     const handlePartialPayment = async () => {
-        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระทั้งหมด
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมทั้งหมด
         const totalPaid = calculateTotalPaid(); // ยอดที่ชำระไปแล้ว
-        const remainingDue = totalDue - totalPaid; // ยอดคงเหลือ
+        let remainingDue = totalDue - totalPaid; // ยอดคงเหลือก่อนชำระ
         const change = Math.max(receivedAmount - remainingDue, 0); // คำนวณเงินทอน
-    
+        
         if (receivedAmount <= 0) {
             Swal.fire({
                 icon: 'error',
                 title: 'ยอดเงินไม่ถูกต้อง',
-                text: `กรุณาระบุยอดเงินที่ถูกต้อง (ยอดเงินต้องมากกว่า 0 บาท)`,
+                text: 'กรุณาระบุยอดเงินที่ถูกต้อง (ยอดเงินต้องมากกว่า 0 บาท)',
             });
             return;
         }
     
+        // คำนวณยอดคงเหลือใหม่หลังหักยอดชำระแล้ว
+        const newRemainingDue = Math.max(remainingDue - receivedAmount, 0);
+    
         try {
-            // บันทึกข้อมูลการแยกชำระ
-            await savePartialPaymentToDatabase(orderId, paymentMethod, receivedAmount);
+            // ✅ บันทึกค่ารับเงิน (`receivedAmount`) ลงในฟิลด์ `icome`
+            await savePartialPaymentToDatabase(orderId, paymentMethod, receivedAmount, newRemainingDue, change, receivedAmount);
     
             // เพิ่มข้อมูลการแยกชำระใน state
             const newPayment = {
                 amount: receivedAmount,
                 paymentMethod,
                 timestamp: new Date(),
+                balances: newRemainingDue, // ✅ ใช้ยอดคงเหลือที่ถูกต้อง
+                icome: receivedAmount, // ✅ บันทึกค่ารับเงิน
             };
     
             setTemporaryPayments((prevPayments) => [...prevPayments, newPayment]);
     
-            // อัปเดตยอดคงเหลือทันทีหลังจากชำระ
-            recalculateRemainingDue();
+            // อัปเดตยอดคงเหลือให้ถูกต้อง
+            setRemainingDue(newRemainingDue);
     
             Swal.fire({
                 icon: 'success',
                 title: 'ชำระเรียบร้อย',
                 html: `
                     ยอดที่ชำระ: ${receivedAmount.toFixed(2)} บาท<br>
-                    ยอดคงเหลือ: ${Math.max(remainingDue - receivedAmount, 0).toFixed(2)} บาท<br>
+                    ยอดคงเหลือ: ${newRemainingDue.toFixed(2)} บาท<br>
                     ${change > 0 ? `เงินทอน: ${change.toFixed(2)} บาท` : ''}
                 `,
             });
     
-            setReceivedAmount(0); // รีเซ็ตยอดรับเงิน
+            setReceivedAmount(0); // รีเซ็ตช่องกรอกเงิน
     
         } catch (error) {
             console.error('เกิดข้อผิดพลาดในการบันทึกข้อมูลการแยกชำระ:', error.message);
             Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระเงินได้', 'error');
         }
     };
+    
     
     
     
