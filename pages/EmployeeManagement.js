@@ -371,7 +371,6 @@ export default function EmployeeManagement() {
   );
 }
 
-
 const styles = {
   container: { display: 'flex', flexDirection: 'row', height: '92vh', fontFamily: 'Kanit, sans-serif', backgroundColor: '#f9f9f9' },
   mainContent: { width: 'calc(100% - 100px)', marginLeft: '110px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '10px', backgroundColor: '#ffffff' },
