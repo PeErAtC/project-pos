@@ -16,35 +16,42 @@ function TableCard({ table, onClick }) {
             style={{
                 width: '160px',
                 height: '200px',
-                color: isSpecialTable ? '#333' : '#ffffff',
+                color: isSpecialTable ? '#333' : '#fff',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '10px',
-                backgroundColor: isSpecialTable ? '#FFC137' : isAvailable ? '#499cae' : '#ff6b6b',
+                borderRadius: '12px', // ขอบมุมโค้ง
+                background: isSpecialTable
+                    ? 'linear-gradient(145deg, #FFC137, #FFB220)' 
+                    : isAvailable
+                    ? 'linear-gradient(145deg, #499cae, #499cae)' 
+                    : 'linear-gradient(145deg, #ff6b6b, #f14f4f)', // ไล่สีพื้นหลัง
                 boxShadow: isPressed
-                    ? '0px 3px 8px rgba(0, 0, 0, 0.2)'
-                    : '0px 6px 18px rgba(0, 0, 0, 0.15)',
+                    ? '0px 3px 8px rgba(0, 0, 0, 0.2)' // เงาลึกเมื่อกด
+                    : '0px 6px 18px rgba(0, 0, 0, 0.15)', // เงาปกติ
                 cursor: 'pointer',
                 fontSize: '20px',
-                fontWeight: 'bold',
+                fontWeight: '600', // ฟอนต์หนา
                 padding: '15px',
                 textAlign: 'center',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                transform: isPressed ? 'scale(0.95)' : 'scale(1)',
+                transition: 'transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease', // เพิ่มการเปลี่ยนแปลงเมื่อ hover
+                transform: isPressed ? 'scale(0.98)' : 'scale(1)', // ขยายเมื่อกด
+                border: `3px solid ${isSpecialTable ? '#FFC137' : '#fff'}`, // ขอบที่ชัดเจน
             }}
             onClick={() => {
                 setIsPressed(false);
                 onClick(table.id); // เมื่อกดที่โต๊ะให้ไปที่หน้ารายละเอียด
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = '0px 8px 20px rgba(0, 0, 0, 0.25)';
+                e.currentTarget.style.transform = 'scale(1.05)'; // ขยายโต๊ะเมื่อ hover
+                e.currentTarget.style.boxShadow = '0px 10px 25px rgba(0, 0, 0, 0.3)'; // เงาที่มืดขึ้นเมื่อ hover
+                e.currentTarget.style.border = `3px solid ${isAvailable ? '#d9ecf1' : '#fce6b6'}`; // เปลี่ยนสีขอบเมื่อ hover
             }}
             onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0px 6px 18px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.transform = 'scale(1)'; // กลับขนาดโต๊ะเมื่อออกจาก hover
+                e.currentTarget.style.boxShadow = '0px 6px 18px rgba(0, 0, 0, 0.15)'; // กลับเงาปกติ
+                e.currentTarget.style.border = `3px solid ${isSpecialTable ? '#FFC137' : '#fff'}`; // กลับขอบเดิม
             }}
             onMouseDown={() => setIsPressed(true)}
             onMouseUp={() => setIsPressed(false)}
@@ -54,8 +61,8 @@ function TableCard({ table, onClick }) {
             <p>{isSpecialTable ? 'หน้าขาย' : table.table_code}</p>
             {!isSpecialTable && <p>สถานะ: {isAvailable ? 'ว่าง' : 'ไม่ว่าง'}</p>}
         </div>
-    );
-}
+        );
+    }
 
 export default function MainTablePage() {
     const router = useRouter();
@@ -218,45 +225,12 @@ export default function MainTablePage() {
         </div>
     );
 }
-
 const styles = {
-    header: {
-        padding: '20px',
-        textAlign: 'center',
-        backgroundColor: '#f0f2f5',
-        width: '100%',
-    },
-    tableSelectionContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: '30px',
-        fontFamily: '"Montserrat", sans-serif',
-        color: '#000',
-    },
-    searchInput: {
-        width: '50%',
-        padding: '10px',
-        fontSize: '16px',
-        marginBottom: '20px',
-        borderRadius: '5px',
-        border: '1px solid #ccc',
-    },
-    tableGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '20px',
-        justifyContent: 'center',
-        padding: '20px',
-        width: '100%',
-        maxWidth: '1000px',
-    },
+    header: { padding: '20px', textAlign: 'center', backgroundColor: '#f0f2f5', width: '100%' },
+    tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' },
+    title: { fontSize: '28px', fontWeight: '600', textAlign: 'center', marginBottom: '30px', color: '#333' },
+    searchInput: { width: '50%', padding: '10px', fontSize: '16px', marginBottom: '20px', borderRadius: '5px', border: '1px solid #ccc' },
+    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' },
     errorText: { color: 'red' },
     noTableText: { color: '#333' },
 };
