@@ -3,6 +3,8 @@ import axios from 'axios';
 import Sidebar from './components/backendsidebar';
 import { FaCheckCircle, FaExclamationCircle, FaImage, FaPlusCircle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+
 
 export default function BackendPage() {
   const [items, setItems] = useState([]);
@@ -116,17 +118,20 @@ export default function BackendPage() {
     formData.append("price", parseFloat(itemPrice) || 0);
     formData.append("category_id", itemCategory);
     formData.append("status", itemStatus ? "Y" : "N");
-  
+    
     if (itemImage instanceof File) {
       formData.append("image", itemImage);
     }
+    
   
     try {
-      let api_url = localStorage.getItem("url_api") || "https://default.api.url";
-      const slug = localStorage.getItem("slug") || "default_slug";
-      const authToken = localStorage.getItem("token") || "default_token";
-  
-      if (!api_url.includes("/api")) api_url += "/api";
+      const api_url = localStorage.getItem('url_api');
+      const slug = localStorage.getItem('slug');
+      const authToken = localStorage.getItem('token');
+      if (!api_url || !slug || !authToken) {
+        showNotification('ค่าการเชื่อมต่อ API ไม่สมบูรณ์ กรุณาตรวจสอบ', 'error');
+        return;
+      }
   
       const config = {
         headers: {
@@ -141,7 +146,16 @@ export default function BackendPage() {
       if (editMode && editIndex !== null) {
         const itemToEdit = items.find((item) => item.id === editIndex);
         if (!itemToEdit) {
-          showNotification("ไม่พบข้อมูลที่ต้องการแก้ไข!", "error");
+          await Swal.fire({
+            title: 'ยืนยันการแก้ไข',
+            text: "คุณต้องการบันทึกการแก้ไขนี้หรือไม่?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'บันทึก',
+            cancelButtonText: 'ยกเลิก',
+          });
           return;
         }
   
@@ -150,7 +164,16 @@ export default function BackendPage() {
         if (result.isConfirmed) {
           const url = `${api_url}/${slug}/products/${editIndex}`;
           response = await axios.put(url, formData, config);
-          showNotification("อัพเดทข้อมูลเรียบร้อยแล้ว!", "success");
+          Swal.fire({
+            title: 'ยืนยันการเพิ่มอาหาร',
+            text: "คุณต้องการเพิ่มอาหารนี้หรือไม่?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'เพิ่ม',
+            cancelButtonText: 'ยกเลิก',
+          });
         } else {
           return;
         }
@@ -158,10 +181,13 @@ export default function BackendPage() {
         const result = await confirmAction("ยืนยันการเพิ่มอาหาร", "คุณต้องการเพิ่มอาหารนี้หรือไม่?", "เพิ่ม");
   
         if (result.isConfirmed) {
-          const url = `${api_url}/${slug}/upload-image`;
+          const url = `${api_url}/${slug}/products`;
+
           response = await axios.post(url, formData, config);
           showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", "success");
+
         }
+        console.error('API Error:', error);
       }
   
       if (response && response.data) {
@@ -181,9 +207,6 @@ export default function BackendPage() {
           }, 500);
         }
       }      
-      
-      
-      
     } catch (error) {
       if (error.response) {
         console.error("Error Response:", error.response.data);
@@ -192,12 +215,9 @@ export default function BackendPage() {
         console.error("No Response from Server:", error.request);
         showNotification("เซิร์ฟเวอร์ไม่ตอบสนอง กรุณาตรวจสอบการเชื่อมต่อ", "error");
       } else {
-        console.error("Error Message:", error.message);
-        showNotification("เกิดข้อผิดพลาดในระบบ", "error");
       }
     }
   };
-  
 
   // ฟังก์ชันรีเซ็ตฟอร์ม
   const resetForm = () => {
@@ -233,6 +253,16 @@ const handleSaveCategory = async () => {
     showNotification('กรุณากรอกชื่อหมวดหมู่หรือเลือกหมวดหมู่', 'error');
     return;
   }
+  const result = await Swal.fire({
+    title: 'ยืนยันการเพิ่มหมวดหมู่',
+    text: `คุณต้องการเพิ่มหมวดหมู่ "${newCategoryName}" หรือไม่?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'เพิ่ม',
+    cancelButtonText: 'ยกเลิก',
+  });
+
+  if (!result.isConfirmed) return; // ถ้ากดยกเลิก ให้หยุดทำงานที่นี่
 
   const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
   const slug = localStorage.getItem('slug') || 'default_slug';
@@ -247,26 +277,51 @@ const handleSaveCategory = async () => {
       response = await axios.put(url, formData, {
         headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
       });
-      showNotification('แก้ไขหมวดหมู่เรียบร้อยแล้ว!', 'success');
+
+    
+      Swal.fire({
+        icon: 'success',
+        title: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว!',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#28a745'
+      });
+      fetchCategories();  // โหลดหมวดหมู่ใหม่
+      setShowCategoryModal(false);  // ปิด modal
+      
     } else if (categoryAction === 'add') {
       const url = `${api_url}/${slug}/category`;
       response = await axios.post(url, formData, {
         headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
       });
-      showNotification('เพิ่มหมวดหมู่เรียบร้อยแล้ว!', 'success');
+      Swal.fire({
+        icon: 'success',
+        title: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว!',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#28a745'
+      });
     } else if (categoryAction === 'delete' && selectedCategory) {
       const url = `${api_url}/${slug}/category/${selectedCategory}`;
       response = await axios.delete(url, {
         headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
       });
-      showNotification('ลบหมวดหมู่เรียบร้อยแล้ว!', 'success');
+      Swal.fire({
+        icon: 'success',
+        title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#28a745'
+      });
     }
 
     fetchCategories();  // รีเฟรชหมวดหมู่
     setShowCategoryModal(false);  // ปิด modal
   } catch (error) {
     console.error('Error:', error);
-    showNotification('เกิดข้อผิดพลาดในการจัดการหมวดหมู่', 'error');
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาดในการจัดการหมวดหมู่',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#d33'
+    });
   }
 };  
   
@@ -299,20 +354,20 @@ const handleSaveCategory = async () => {
     formData.append('image', event.target.files[0]); // เลือกรูปที่ผู้ใช้เลือก
   
     try {
+      const slug = localStorage.getItem('slug') || 'default_slug';
       const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
       const authToken = localStorage.getItem('token') || 'default_token';
       
-      const response = await fetch(`${api_url}/upload-image`, {
+      const response = await fetch(`${api_url}/${slug}/upload-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
         body: formData,
       });
-      
   
       const result = await response.json();
-  
+    
       if (result.success) {
         Swal.fire({
           icon: 'success',
@@ -337,7 +392,8 @@ const handleSaveCategory = async () => {
         text: 'ไม่สามารถอัพโหลดรูปภาพได้',
       });
     }
-  };  
+  };
+  
 
   // ฟังก์ชันจัดการการลบรายการอาหาร
   const handleDeleteItem = async (id) => {
@@ -409,34 +465,50 @@ const handleSaveCategory = async () => {
 
   // ฟังก์ชันลบหมวดหมู่
   const handleDeleteCategory = async () => {
+    if (!selectedCategory) {
+      showNotification('กรุณาเลือกหมวดหมู่ที่ต้องการลบ', 'error');
+      return;
+    }
+  
     const result = await Swal.fire({
       title: 'ยืนยันการลบหมวดหมู่',
-      text: "คุณต้องการลบหมวดหมู่นี้หรือไม่?", 
+      text: 'คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้?',
       icon: 'warning',
       showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
       confirmButtonText: 'ลบ',
       cancelButtonText: 'ยกเลิก',
     });
   
-    if (result.isConfirmed) {
-      // การลบหมวดหมู่จาก API
-      try {
-        let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-        const slug = localStorage.getItem('slug') || 'default_slug';
-        const authToken = localStorage.getItem('token') || 'default_token';
-        const url = `${api_url}/${slug}/category/${selectedCategory}`;
+    if (!result.isConfirmed) return; // ถ้าผู้ใช้กดยกเลิก ให้หยุดที่นี่
   
-        await axios.delete(url, {
-          headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
-        });
+    const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+    const slug = localStorage.getItem('slug') || 'default_slug';
+    const authToken = localStorage.getItem('token') || 'default_token';
+    const url = `${api_url}/${slug}/category/${selectedCategory}`;
   
-        showNotification('ลบหมวดหมู่เรียบร้อยแล้ว!', 'success');
-        fetchCategories();
-        setShowCategoryModal(false); // ปิด modal
-      } catch (error) {
-        console.error('Error:', error);
-        showNotification('เกิดข้อผิดพลาดในการลบหมวดหมู่', 'error');
-      }
+    try {
+      await axios.delete(url, {
+        headers: { Authorization: `Bearer ${authToken}`, Accept: 'application/json' },
+      });
+  
+      Swal.fire({
+        icon: 'success',
+        title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#28a745'
+      });
+      fetchCategories();
+      setShowCategoryModal(false);
+    } catch (error) {
+      console.error('Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาดในการลบหมวดหมู่',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#d33'
+      });
     }
   };
   // ฟังก์ชันกรองรายการอาหารตามคำค้นหาและหมวดหมู่
@@ -478,7 +550,7 @@ const handleSaveCategory = async () => {
           <h1 style={styles.title}>รายการอาหาร</h1>
           
           <div style={styles.searchContainer}>
-            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} style={styles.dropdown}>
+            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} style={styles.dropdown_all}>
               <option value="">หมวดหมู่ (ทั้งหมด)</option>
               {categories.map(category => (
                 <option key={category.id.toString()} value={category.id}>{category.c_name}</option>
@@ -539,45 +611,48 @@ const handleSaveCategory = async () => {
           )}
         </div>
         {/* Modal สำหรับการจัดการหมวดหมู่ */}
-                {showCategoryModal && (
-        <div style={styles.modal}>
-        <div style={styles.modalContent}>
-          <h2>{categoryAction === 'edit' ? 'แก้ไขหมวดหมู่' : categoryAction === 'delete' ? 'ลบหมวดหมู่' : 'เพิ่มหมวดหมู่'}</h2>
-          <input 
-            type="text" 
-            placeholder="ชื่อหมวดหมู่" 
-            value={newCategoryName} 
-            onChange={(e) => setNewCategoryName(e.target.value)} 
-            style={styles.inputModal} 
-          />
-          
-          {/* เพิ่ม dropdown สำหรับเลือกหมวดหมู่ */}
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            style={styles.dropdown}
-          >
-            <option value="">เลือกหมวดหมู่</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>{category.c_name}</option>
-            ))}
-          </select>
+        {showCategoryModal && (
+        <div style={styles.overlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalContent}>
+              <h2>{categoryAction === 'edit' ? 'แก้ไขหมวดหมู่' : categoryAction === 'delete' ? 'ลบหมวดหมู่' : 'เพิ่มหมวดหมู่'}</h2>
+              <input
+                type="text"
+                placeholder="ชื่อหมวดหมู่"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                style={styles.inputModal}
+              />
+              
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                style={styles.dropdown}
+              >
+                <option value="">เลือกหมวดหมู่</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>{category.c_name}</option>
+                ))}
+              </select>
 
-      {/* แสดงปุ่มตามสถานะของ selectedCategory */}
-      {selectedCategory ? (
-        <div>
-          <button onClick={handleDeleteCategory} style={styles.DeleteButtonModal}>ลบ</button>
-          <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
-        </div>
-      ) : (
-        <div>
-          <button onClick={handleSaveCategory} style={styles.saveButton}>บันทึก</button>
-          <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
+              {/* จัดการปุ่มเรียงลำดับลง */}
+              <div style={styles.buttonGroup}>
+                {selectedCategory ? (
+                  <div>
+                    <button onClick={handleDeleteCategory} style={styles.DeleteButtonModal}>ลบ</button>
+                    <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
+                  </div>
+                ) : (
+                  <div>
+                    <button onClick={handleSaveCategory} style={styles.saveButton}>บันทึก</button>
+                    <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
-    </div>
-  </div>
-        )}
         <div style={styles.formContainer}>
           <h1 style={styles.title}>{editMode ? 'แก้ไขอาหาร' : 'เพิ่มอาหาร'}</h1>
           <input
@@ -592,7 +667,7 @@ const handleSaveCategory = async () => {
             maxLength={18} 
             style={styles.input}
           />
-          <select value={itemCategory} onChange={(e) => setItemCategory(e.target.value)} style={styles.dropdown}>
+          <select value={itemCategory} onChange={(e) => setItemCategory(e.target.value)} style={styles.dropdown_out}>
             <option>กรุณาเลือกหมวดหมู่</option>
             {categories.map(category => (
               <option key={category.id} value={category.id}>{category.c_name}</option>
@@ -640,32 +715,211 @@ const styles = {
   contentContainer: { display: 'flex', flex: 1, padding: '25px 0 20px 130px', fontFamily: 'Arial, sans-serif' },
   addCategoryButton: {backgroundColor: '#ccc',color: '#fff',border: 'none',borderRadius: '5px',cursor: 'pointer',width: '40px',  height:'42px',marginBottom: '1px',},
   dropdownContainer: {display: 'flex',justifyContent: 'space-between', alignItems: 'center',width: '100%',maxWidth: '400px', },
-  modal: {position: 'fixed',top: '50%',left: '50%',transform: 'translate(-50%, -50%)',display: 'flex',backgroundColor: '#ccc',justifyContent: 'center',alignItems: 'center',zIndex: '1000',width: '400px',height: 'auto',borderRadius: '8px',padding: '1px',boxShadow: '#333', },
-  modalContent: {backgroundColor: '#fff',width: '100%',padding: '20px',borderRadius: '8px',display: 'flex',flexDirection: 'column',alignItems: 'center',justifyContent: 'center',minHeight: '250px',border: 'none', },
-  inputModal: {padding: '12px',borderRadius: '5px',border: '1px solid #ccc',marginBottom: '15px',width: '275px', },
-  saveButton: {backgroundColor: '#499cae',color: '#fff',padding: '12px 20px',border: 'none',borderRadius: '5px',cursor: 'pointer',width: '350px', marginTop: '10px',},
-  cancelButtonModal: {backgroundColor: '#ccc',color: '#fff',padding: '12px 20px',border: 'none',borderRadius: '5px',cursor: 'pointer',marginTop: '10px',width: '350px',},
-  DeleteButtonModal: {backgroundColor: '#d9534f',color: '#fff',padding: '12px 20px',border: 'none',borderRadius: '5px',cursor: 'pointer',marginTop: '10px',width: '350px',},
-  notification: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', padding: '15px 25px', color: '#fff', fontSize: '16px', borderRadius: '15px', zIndex: 1000 },
-  formContainer: { flex: 1, backgroundColor: '#ffffff', borderRadius: '10px', alignItems: 'center', display: 'flex', flexDirection: 'column' },
-  title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' },
-  searchContainer: { display: 'flex', gap: '10px', marginBottom: '20px' },
-  dropdown: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', width: '300px', marginBottom: '15px' },
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',  // สีมืดพื้นหลัง
+    backdropFilter: 'blur(5px)',  // เบลอพื้นหลัง
+    zIndex: 999,  // ให้ฟอร์มแสดงเหนือพื้นหลังที่เบลอ
+  },
+  modal: {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: '#fff',
+    padding: '25px',
+    borderRadius: '8px',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
+    zIndex: 1000, // ฟอร์มต้องอยู่เหนือ overlay
+    width: '400px',
+    height: 'auto',
+  },
+  modalContent: {
+    width: '100%',
+    padding: '0px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // ฟิลด์ที่มีกรอบสีขาว
+  inputModal: {
+    padding: '12px',
+    borderRadius: '5px',
+    border: '1px solid #ccc', // กรอบสีขาว
+    marginBottom: '15px',
+    width: '320px',
+    
+  },
+  dropdown: {
+    padding: '12px',
+    borderRadius: '5px',
+    border: '1px solid #ccc', // กรอบสีขาว
+    width: '350px',
+    marginBottom: '5px',
+  },
+  saveButton: {
+    backgroundColor: '#499cae',
+    color: '#fff',
+    padding: '12px 20px',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    width: '350px',
+    marginTop: '10px',
+    marginLeft:'20px',
+  },
+  cancelButtonModal: {
+    backgroundColor: '#ccc',
+    color: '#fff',
+    padding: '12px 20px',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    marginTop: '10px',
+    width: '350px',
+    marginLeft:'20px',
+  },
+  DeleteButtonModal: {
+    backgroundColor: '#d9534f',
+    color: '#fff',
+    padding: '12px 20px',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    marginTop: '10px',
+    width: '350px',
+    marginLeft:'20px',
+  },
+  notification: {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '15px 25px',
+    color: '#fff',
+    fontSize: '16px',
+    borderRadius: '15px',
+    zIndex: 1000,
+  },
+  formContainer: {
+    marginLeft:'50px',
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    alignItems: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    marginBottom: '20px',
+  },
+  searchContainer: {
+    display: 'flex',
+    gap: '10px',
+    marginBottom: '20px',
+  },
+  itemCount: {
+    fontSize: '16px',
+    marginBottom: '10px',
+  },
+  tableContainer: {
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    height: '510px',
+    borderRadius: '8px',
+    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
+    width: '1000px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    borderSpacing: '0',
+    fontSize: '14px',
+  },
+  th: {
+    padding: '10px 15px',
+    backgroundColor: '#499cae',
+    textAlign: 'left',
+    fontWeight: 'bold',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1,
+    color: '#fff',
+  },
+  td: {
+    padding: '10px 15px',
+    borderTop: '1px solid #e0e0e0',
+    width: '305px',
+    color: '#111',
+  },
+  row: (index) => ({
+    backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0',
+    transition: 'background-color 0.2s',
+  }),
+  input: {
+    padding: '14px',
+    borderRadius: '5px',
+    border: '1px solid #ccc',
+    width: '320px',
+    marginBottom: '15px',
+  },
+  fileInput: {
+    display: 'none',
+  },
+  imageContainer: {
+    height: '100px',
+    border: '1px dashed #ccc',
+    borderRadius: '5px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '15px',
+    color: '#888',
+  },
+  button: {
+    width: '305px',
+    padding: '12px',
+    borderRadius: '5px',
+    backgroundColor: '#499cae',
+    color: '#fff',
+    fontWeight: 'bold',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  // เพิ่มให้ปุ่มแสดงเรียงกันข้างล่าง
+  buttonGroup: {
+    display: 'flex',
+    flexDirection: 'column', // จัดเรียงปุ่มลง
+    gap: '10px',
+    width: '390px',
+    marginTop: '10px',
+  },
+  dropdown_all:{    padding: '12px',
+    borderRadius: '5px',
+    border: '1px solid #ccc', // กรอบสีขาว
+    width: '350px',
+    marginBottom: '15px',
+  },
+    dropdown_out: {
+      padding: '12px',
+      borderRadius: '5px',
+      border: '1px solid #ccc', // กรอบสีขาว
+      width: '350px',
+      marginBottom: '15px',
+    },
   searchInput: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', flex: 1, marginBottom: '15px' },
-  itemCount: { fontSize: '16px', marginBottom: '10px' },
-  tableContainer: { overflowY: 'auto', overflowX: 'hidden', height: '510px', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)', width:'1000px' },
-  table: { width: '100%', borderCollapse: 'collapse', borderSpacing: '0', fontSize:'14px' },
-  th: { padding: '10px 15px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', position: 'sticky', top: 0, zIndex: 1, color: '#fff' },
-  td: { padding: '10px 15px', borderTop: '1px solid #e0e0e0', width: '305px',color:'#111', },
-  row: (index) => ({ backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0', transition: 'background-color 0.2s' }),
-  input: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', width: '280px', marginBottom: '15px' },
-  fileInput: { display: 'none' },
-  imageContainer: { height: '100px', border: '1px dashed #ccc', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px', color: '#888' },
-  button: { width: '305px', padding: '12px', borderRadius: '5px', backgroundColor: '#499cae', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
   editButton: { background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px' },
   deleteButton: { background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer' },
   cancelButton: { width: '305px', padding: '12px', borderRadius: '5px', backgroundColor: '#d9534f', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '10px' },
-  imageUpload: { border: '2px dashed #aaa', borderRadius: '10px', width: '310px', height: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888', marginBottom: '15px', textAlign: 'center' },
+  imageUpload: { border: '2px dashed #aaa', borderRadius: '10px', width: '350px', height: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888', marginBottom: '15px', textAlign: 'center' },
   imagePreview: { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' },
   statusToggle: { display: 'flex', gap: '10px', marginBottom: '15px' },
   statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' }
