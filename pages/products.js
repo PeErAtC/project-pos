@@ -24,14 +24,16 @@ export default function SalesPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [orderNumber, setOrderNumber] = useState("");
     const [categories, setCategories] = useState([]);
-    const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
+    // const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
     const [orderId, setOrderId] = useState(null);
-    const VAT_RATE = 0.07;
+    // const VAT_RATE = 0.07;
     const [paymentMethod, setPaymentMethod] = useState(''); // เก็บวิธีการชำระเงินที่เลือก
-    const [qrCode, setQrCode] = useState(null); // เก็บข้อมูล QR Code
+    const [qrCodeData, setQrCodeData] = useState(null);
+    const [showQRCode, setShowQRCode] = useState(false);
     const [vatType, setVatType] = useState('noTax'); // ค่าเริ่มต้นเป็นไม่มีภาษี
     const [totalWithVAT, setTotalWithVAT] = useState(0);
     const [payments, setPayments] = useState([]); // State เก็บข้อมูลการชำระเงินที่ทำไปแล้ว
+    const [paymentMethods, setPaymentMethods] = useState([]);
     const [temporaryPayments, setTemporaryPayments] = useState([]); // เก็บข้อมูลการแยกชำระเงินชั่วคราว
     const [isSplitPaymentPopupOpen, setIsSplitPaymentPopupOpen] = useState(false);
     const [splitPaymentCount, setSplitPaymentCount] = useState(0); // เก็บจำนวนรายการแยกชำระ
@@ -41,7 +43,11 @@ export default function SalesPage() {
     const [scrollLeft, setScrollLeft] = useState(0);
     const [partialPayments, setPartialPayments] = useState([]);
     const [remainingDue, setRemainingDue] = useState(0); // สร้าง state สำหรับยอดคงเหลือ
-    const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
+    const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
+    const [promptPayAPI, setPromptPayAPI] = useState("");
+    const [promptPayAcc, setPromptPayAcc] = useState("");
+
+    // const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
 
     const getApiConfig = () => {
         let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
@@ -76,42 +82,20 @@ export default function SalesPage() {
     // ฟังก์ชัน fetchProducts
     const fetchProducts = async () => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            
+            const { api_url, slug, authToken } = getApiConfig();
             const response = await axios.get(`${api_url}/${slug}/products`, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
+                headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${authToken}` },
             });
     
-            if (response.data && Array.isArray(response.data)) {
+            if (Array.isArray(response.data)) {
                 setProducts(response.data);
             } else {
-                console.warn('รูปแบบข้อมูลที่ได้รับจาก API ไม่ถูกต้อง');
+                console.warn('API response format is incorrect');
                 setProducts([]);
             }
         } catch (error) {
-            if (error.response) {
-                console.error('API Error:', error.response.status, error.response.data);
-                if (error.response.status === 404) {
-                    console.error('API endpoint ไม่พบ:', error.response.config.url);
-                }
-            } else if (error.request) {
-                console.error('ไม่มีการตอบสนองจากเซิร์ฟเวอร์:', error.message);
-            } else {
-                console.error('เกิดข้อผิดพลาดในการตั้งค่า API:', error.message);
-            }
-            setProducts([]); // ตั้งค่า products เป็นค่าว่างหาก API ล้มเหลว
+            console.error('Error fetching products:', error.message);
+            setProducts([]);
         }
     };
     useEffect(() => {
@@ -300,83 +284,6 @@ const loadTableLastOrder = async (tableCode) => {
 };
 
     //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
-    const fetchOrdersByTable = async (tableCode) => {
-        try {
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-        
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-    
-            const today = new Date();
-            const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
-    
-            const response = await axios.get(`${api_url}/api/${slug}/orders`, {
-                params: {
-                    table_code: tableCode, // กรองตามโต๊ะ
-                    status: 'N', // ออเดอร์ที่ยังไม่ได้ชำระ
-                    order_by: 'created_at',
-                    direction: 'desc',
-                    date: formattedDate, // กรองเฉพาะวันที่ปัจจุบัน
-                },
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-    
-            if (response.data && response.data.orders) {
-                return response.data.orders; // ส่งกลับรายการออเดอร์
-            } else {
-                throw new Error('ไม่มีข้อมูลออเดอร์');
-            }
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการดึงข้อมูลออเดอร์:', error.message);
-            return [];
-        }
-    };
-                                                                            
-    const fetchOrderItems = async (orderId) => {
-        try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            const response = await axios.get(`${api_url}/api/${slug}/order-items`, {
-                params: { order_id: orderId },
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-            if (response.data && response.data.items) {
-                setCart(
-                    response.data.items.map((item) => ({
-                        id: item.product_id,
-                        p_name: item.name,
-                        price: item.price,
-                        quantity: item.quantity,
-                        discount: 0,
-                        discountType: "THB",
-                    }))
-                );
-            } else {
-                console.warn('ไม่มีข้อมูลรายการสินค้า');
-            }
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการดึงรายการสินค้า:', error);
-            setCart([]);
-        }
-    };
     
     useEffect(() => {
         const loadOrdersForTable = async () => {
@@ -429,72 +336,54 @@ const loadTableLastOrder = async (tableCode) => {
         setSplitPaymentCount(payments.length);
     }, [payments]);
 
-    const closeOrder = async (orderId) => {
+    useEffect(() => {
+        fetchPaymentChanels();
+    }, []);
+
+    const fetchPaymentChanels = async () => {
         try {
-            console.log("🔍 Debug: กำลังปิดออเดอร์...");
-            console.log("📌 Order ID:", orderId);
-
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-
-            // ตรวจสอบว่า api_url, slug, และ authToken มีค่า
-            if (!api_url || !slug || !authToken) {
-                Swal.fire('ผิดพลาด', 'ไม่พบข้อมูลสำหรับการเชื่อมต่อกับ API', 'error');
-                return;
+            let api_url = localStorage.getItem('url_api') || 'https://easyapp.clinic/pos-api/api';
+            const slug = localStorage.getItem('slug') || 'abc';
+            const authToken = localStorage.getItem('token') || '';
+    
+            const endpoint = `${api_url}/${slug}/payChanels`; // ✅ แก้ไขให้ถูกต้อง
+            console.log(`📌 เรียก API: ${endpoint}`);
+    
+            const response = await axios.get(endpoint, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            console.log("📌 Response Status:", response.status);
+            console.log("📌 Response Data:", response.data);
+    
+            if (!response.data || response.status !== 200) {
+                throw new Error('❌ API Response ไม่ถูกต้อง หรือไม่มีข้อมูล');
             }
-
-            if (!api_url.endsWith('/api')) api_url += '/api';
-
-            // เรียก API เพื่อปิดออเดอร์
-            const response = await axios.put(
-                `${api_url}/${slug}/orders/${orderId}`,
-                { status: 'Y' }, // เปลี่ยนสถานะเป็น 'Y' (ชำระเงินแล้ว)
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                }
-            );
-
-            // ตรวจสอบการตอบกลับจาก API
-            if (response.status === 200 && response.data && response.data.success) {
-                Swal.fire('สำเร็จ', 'ปิดออเดอร์เรียบร้อยแล้ว', 'success');
-            } else {
-                console.error("❌ API Response Error:", response.data);
-                throw new Error('ไม่สามารถปิดออเดอร์ได้');
-            }
+    
+            setPaymentMethods(response.data);
         } catch (error) {
-            console.error("❌ Error closing order:", error.response?.data || error.message);
-            Swal.fire('ผิดพลาด', `ไม่สามารถปิดออเดอร์ได้: ${error.message}`, 'error');
+            console.error("❌ Error fetching payment channels:", error.response?.data || error.message);
+            Swal.fire('ผิดพลาด', `ไม่สามารถดึงข้อมูลช่องทางการชำระเงินได้: ${error.message}`, 'error');
         }
     };
-
-
-
+    
+    
     
 // ฟังก์ชัน fetchCategories
     const fetchCategories = async () => {
         try {
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-            if (!api_url.endsWith('/api')) api_url += '/api';
-
-            const url = `${api_url}/${slug}/category`;
-            const response = await axios.get(url, {
+            const { api_url, slug, authToken } = getApiConfig();
+            const response = await axios.get(`${api_url}/${slug}/category`, {
                 headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
             });
-            setCategories(response.data);  // เก็บข้อมูลหมวดหมู่ใน state
-            } catch (error) {
-            console.error('Error:', error.message);
-            showNotification('ไม่พบ API endpoint', 'error');
+            setCategories(response.data);
+        } catch (error) {
+            console.error('Error fetching categories:', error.message);
         }
-  };
-
-
-
+    };
 
 
     
@@ -599,7 +488,7 @@ const loadTableLastOrder = async (tableCode) => {
       
     useEffect(() => {
         if (paymentMethod === 'qr') {
-            fetchPaymentChannels(); // ดึง URL QR Code
+            fetchPaymentChanels(); // ดึง URL QR Code
         }
     }, [paymentMethod]);
     
@@ -614,8 +503,27 @@ const loadTableLastOrder = async (tableCode) => {
     };
     
     const handlePaymentChange = (selectedMethod) => {
-        setPaymentMethod(selectedMethod); // เก็บวิธีการชำระเงินที่เลือกใน state
+        setPaymentMethod(selectedMethod); // บันทึกวิธีการชำระเงินที่เลือก
+    
+        // ถ้าเลือก PromptPay ให้ดึงข้อมูล API และ Account
+        const selectedPayment = paymentMethods.find(method => method.id.toString() === selectedMethod);
+        
+        if (selectedPayment?.pay_name === "promptpay") {
+            setPromptPayAPI(selectedPayment.promptpay_api);
+            setPromptPayAcc(selectedPayment.promptpay_acc);
+            generateQRCode(selectedPayment.promptpay_acc);
+        } else {
+            setPromptPayAPI(null);
+            setPromptPayAcc(null);
+        }
     };
+    // สร้าง QRcode
+    const generateQRCode = (accountNumber) => {
+        const qrData = `https://promptpay.io/${accountNumber}`;
+        setQrCodeData(qrData);
+    };
+    
+    
 
     const clearCart = () => {
         Swal.fire({
@@ -653,53 +561,6 @@ const loadTableLastOrder = async (tableCode) => {
         }
         return price;
     };
-    
-    // const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount) => {
-    //     try {
-    //         let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-    //         const slug = localStorage.getItem('slug') || 'default_slug';
-    //         const authToken = localStorage.getItem('token') || 'default_token';
-    
-    //         // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-    //         if (!api_url.endsWith('/api')) api_url += '/api';
-    
-    //         // ใช้ /payments/{order_id}/list เส้นทางการบันทึกข้อมูลการแยกชำระ
-    //         const url = `${api_url}/${slug}/payments/${orderId}/list`; 
-    
-    //         // ตรวจสอบข้อมูลที่จำเป็น
-    //         if (!orderId || !paymentMethod || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
-    //             console.error('❌ ข้อมูลไม่ถูกต้อง:', { orderId, paymentMethod, amount });
-    //             throw new Error('ข้อมูลชำระเงินไม่ถูกต้อง');
-    //         }
-    
-    //         const paymentData = {
-    //             order_id: orderId,
-    //             pay_channel_id: paymentMethod === 'cash' ? 1 : 2, 
-    //             payment_date: new Date().toISOString(),
-    //             amount: parseFloat(amount),  // จำนวนเงินที่ชำระ
-    //             status: 'PARTIAL',  // สถานะการชำระ
-    //         };
-    
-    //         console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
-    
-    //         // ส่งข้อมูลการแยกชำระไปยัง API
-    //         const response = await axios.post(url, paymentData, {
-    //             headers: {
-    //                 'Accept': 'application/json',
-    //                 'Authorization': `Bearer ${authToken}`,
-    //             },
-    //         });
-    
-    //         if (response.data && response.data.success) {
-    //             console.log('✅ บันทึกข้อมูลการแยกชำระสำเร็จ:', response.data);
-    //         } else {
-    //             throw new Error('API ไม่สามารถบันทึกข้อมูลการแยกชำระได้');
-    //         }
-    //     } catch (error) {
-    //         console.error('❌ Error saving partial payment:', error.response?.data || error.message);
-    //         Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระได้', 'error');
-    //     }
-    // };
 
     const savePartialPaymentToDatabase = async (orderId, paymentMethod, amount, balances, moneyChanges, receivedAmount) => {
         try {
@@ -721,14 +582,17 @@ const loadTableLastOrder = async (tableCode) => {
     
             const paymentData = {
                 order_id: orderId,
-                pay_channel_id: paymentMethod === 'cash' ? 1 : 2, 
+                pay_channel_id: paymentMethod, // ไม่ต้องกำหนดเอง ให้ใช้ค่าที่เลือกจาก dropdown
                 payment_date: new Date().toISOString(),
-                amount: parseFloat(amount),  // จำนวนเงินที่ชำระ
-                icome: parseFloat(receivedAmount), // ✅ บันทึกค่ารับเงินที่ได้รับจริง
-                balances: balances,  // ยอดคงเหลือ
-                money_changes: moneyChanges.toFixed(2), // เงินทอนที่คำนวณ
-                status: 'PARTIAL',  // สถานะการชำระ
+                amount: parseFloat(amount),
+                icome: parseFloat(receivedAmount),
+                balances: balances,
+                money_changes: moneyChanges.toFixed(2),
+                status: 'PARTIAL',
             };
+            
+            console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
+            
     
             console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
     
@@ -841,7 +705,9 @@ const loadTableLastOrder = async (tableCode) => {
         }
     }, [orderId]);
     
-
+    useEffect(() => {
+        setRemainingDue(calculateRemainingDue());
+    }, [cart, billDiscount, billDiscountType, vatType]);
 
     useEffect(() => {
         fetchPartialPayments(orderId);
@@ -871,7 +737,6 @@ const loadTableLastOrder = async (tableCode) => {
     useEffect(() => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // คำนวณยอดรวมที่ต้องชำระ
         const totalPaid = calculateTotalPaid() + receivedAmount; // คำนวณยอดที่ชำระไปแล้ว
-        const change = Math.max(totalPaid - totalDue, 0); // คำนวณเงินทอน
     
         // แสดงยอดคงเหลือใน console
         console.log("ยอดคงเหลือ:", totalDue - totalPaid);
@@ -903,133 +768,12 @@ const loadTableLastOrder = async (tableCode) => {
     
         return parseFloat(vatAmount.toFixed(2)) || 0; // คืนค่า VAT เป็นตัวเลข หรือ 0 หากมีปัญหา
     };
-    const CartItem = ({ item, handleItemDiscountChange, updateQuantity }) => (
-        <div style={styles.cartItem}>
-            {item.image ? (
-                <Image
-                    src={`${api_url}/storage/app/public/product/${slug}/${item.image}`}
-                    alt={item.p_name}
-                    width={40}
-                    height={40}
-                    quality={100}
-                    style={styles.cartItemImage}
-                />
-            ) : (
-                <div style={styles.noImage}>
-                    <span style={styles.noImageText}>ไม่มีภาพ</span>
-                </div>
-            )}
-            <div style={styles.cartItemDetails}>
-                <p style={styles.cartItemName}>{item.p_name}</p>
-                <div style={styles.cartItemPriceDiscountRow}>
-                    <p style={styles.cartItemPrice}>ราคา {item.price.toFixed(2)} บาท</p>
-                    <div style={styles.discountContainer}>
-                        <input
-                            type="number"
-                            value={item.discount === 0 ? '' : item.discount}
-                            placeholder="ส่วนลด"
-                            onChange={(e) =>
-                                handleItemDiscountChange(
-                                    item.id,
-                                    parseFloat(e.target.value) || 0,
-                                    item.discountType
-                                )
-                            }
-                            style={{ flex: '1', width: '60px' }}
-                        />
-                        <select
-                            value={item.discountType}
-                            onChange={(e) =>
-                                handleItemDiscountChange(item.id, item.discount, e.target.value)
-                            }
-                            style={{ flex: '1', width: '50px' }}
-                        >
-                            <option value="THB">บาท (฿)</option>
-                            <option value="%">%</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div style={styles.quantityControls}>
-                <button
-                    onClick={() => updateQuantity(item.id, -1)}
-                    style={styles.quantityButton}
-                >
-                    -
-                </button>
-                <span style={styles.quantityDisplay}>{item.quantity}</span>
-                <button
-                    onClick={() => updateQuantity(item.id, 1)}
-                    style={styles.quantityButton}
-                >
-                    +
-                </button>
-            </div>
-        </div>
-    );
-    
-    const handleAmountInput = (amount) => {
-        setReceivedAmount(Number(amount) || 0); // อนุญาตให้ใส่จำนวนเงินใด ๆ
-    };
+
     const calculateChange = () => {
         const remainingDue = calculateRemainingDue(partialPayments);
         console.log("ยอดคงเหลือที่ต้องชำระ:", remainingDue);
         return Math.max(receivedAmount - remainingDue, 0).toFixed(2);
-    };
-    
-    
-    const handlePayment = async () => {
-        try {
-            const totalDue = calculateTotalDue();  // ยอดที่ต้องชำระทั้งหมด
-            const amountPaid = parseFloat(receivedAmount) || 0;  // จำนวนที่ลูกค้าชำระ
-            
-            if (amountPaid <= 0) {
-                Swal.fire("ข้อผิดพลาด", "กรุณากรอกจำนวนเงินที่ชำระ", "warning");
-                return;
-            }
-    
-            // คำนวณยอดคงเหลือที่ถูกต้อง
-            let previousBalance = currentOrder.balances || totalDue; // ถ้าไม่มีค่า balances ให้ใช้ totalDue
-            let remainingBalance = Math.max(previousBalance - amountPaid, 0); // ✅ หักเงินที่ชำระออกจากยอดคงเหลือก่อนหน้า
-            let change = amountPaid > previousBalance ? amountPaid - previousBalance : 0; // คำนวณเงินทอน
-    
-            // เตรียมข้อมูลส่งไปยัง API
-            const paymentData = {
-                order_id: currentOrder.id,
-                amount: amountPaid,
-                balances: remainingBalance, // ✅ ส่งยอดคงเหลือใหม่
-                money_changes: change, // ✅ เงินทอน
-                pay_channel_id: selectedPaymentMethod, // วิธีการชำระ
-                payment_date: new Date().toISOString(),
-            };
-    
-            const api_url = localStorage.getItem('url_api');
-            const slug = localStorage.getItem('slug');
-            const authToken = localStorage.getItem('token');
-    
-            // เรียก API บันทึกการชำระเงิน
-            const response = await axios.post(`${api_url}/${slug}/payments`, paymentData, {
-                headers: {
-                    Accept: 'application/json',
-                    Authorization: `Bearer ${authToken}`,
-                },
-            });
-    
-            if (response.status === 200) {
-                Swal.fire("สำเร็จ", "บันทึกการชำระเงินเรียบร้อย", "success");
-                fetchReportData(); // โหลดข้อมูลใหม่หลังการชำระ
-            } else {
-                throw new Error("ไม่สามารถบันทึกข้อมูลได้");
-            }
-        } catch (error) {
-            console.error("Error processing payment:", error);
-            Swal.fire("ข้อผิดพลาด", "เกิดข้อผิดพลาดระหว่างบันทึกการชำระเงิน", "error");
-        }
-    };
-    
-    
-    
-    
+    }; 
     
     const calculateTotalWithBillDiscount = () => {
         const baseTotal = calculateTotalAfterItemDiscounts(); // ยอดรวมหลังส่วนลดสินค้า
@@ -1215,98 +959,6 @@ const loadTableLastOrder = async (tableCode) => {
         }
     }, [orderId]);
     
-    
-    
-    const saveOrderData = async (orderId, paymentMethod, receivedAmount, cart, billDiscount, billDiscountType, vatType, calculateTotalWithBillDiscountAndVAT, calculateVAT) => {
-        try {
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-    
-            // คำนวณส่วนลดรวมต่อสินค้า
-            const totalItemDiscount = cart.reduce((acc, item) => {
-                const itemDiscountAmount = (item.discountType === 'THB') 
-                    ? item.discount * item.quantity 
-                    : (item.price * item.discount / 100) * item.quantity;
-                return acc + itemDiscountAmount;
-            }, 0);
-    
-            // คำนวณส่วนลดรวมทั้งบิล
-            const totalBillDiscount = (billDiscountType === 'THB') 
-                ? billDiscount 
-                : calculateTotalWithBillDiscountAndVAT() * (billDiscount / 100);
-    
-            const totalDiscount = totalItemDiscount + totalBillDiscount; // รวมส่วนลดทั้งหมด
-    
-            // คำนวณ VAT
-            const vatAmount = vatType.includes('exclude') ? parseFloat(calculateVAT().toFixed(2)) : 0;
-    
-            // ยอดสุทธิ
-            const netAmount = calculateTotalWithBillDiscountAndVAT();
-    
-            // คำนวณเงินทอน
-            const moneyChanges = receivedAmount > netAmount ? receivedAmount - netAmount : 0;
-    
-            // บันทึกข้อมูลการชำระเงิน
-            await savePaymentToDatabase(orderId, paymentMethod, receivedAmount);
-            console.log("📌 เงินทอนที่คำนวณได้:", moneyChanges);
-            // อัปเดตข้อมูลบิลในฐานข้อมูล
-            const response = await axios.put(
-                `${api_url}/api/${slug}/orders/${orderId}`,
-                {
-                    status: 'Y', // บิลชำระแล้ว
-                    vat_amt: vatType.includes('exclude') ? vatAmount : "", // จำนวน VAT
-                    vat_per: vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0, // เปอร์เซ็นต์ VAT
-                    net_amount: netAmount, // ยอดสุทธิ
-                    discount: totalDiscount.toFixed(2), // บันทึกส่วนลดรวมในฟิลด์เดียว
-                    money_changes: moneyChanges.toFixed(2), // บันทึกเงินทอน
-                },
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                }
-            );
-    
-            if (response.data && response.data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'บันทึกบิลสำเร็จ',
-                    text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${netAmount.toFixed(2)} บาท และเงินทอน: ${moneyChanges.toFixed(2)} บาท`,
-                    confirmButtonText: 'ตกลง',
-                });
-            } else {
-                throw new Error('การตอบกลับจาก API ไม่ถูกต้อง');
-            }
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาด:', error.message);
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
-        }
-    };
-    
-    
-    const handleSaveReceipt = async () => {
-        await saveOrderData(
-            orderId,
-            paymentMethod,
-            receivedAmount,
-            cart,
-            billDiscount,
-            billDiscountType,
-            vatType,
-            calculateTotalWithBillDiscountAndVAT,
-            calculateVAT
-        );
-        resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
-        closeSplitPaymentHistory();
-    };
-    
     const addOrderItems = async () => {
         if (!orderId) {
             // ถ้ายังไม่มี orderId หมายความว่าไม่มีการสร้างออเดอร์
@@ -1335,7 +987,31 @@ const loadTableLastOrder = async (tableCode) => {
             console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
         }
     };
+    const handlePaymentSubmit = () => {
+        console.log("ช่องทางที่เลือก:", paymentMethod);
+        console.log("ข้อมูลที่จะส่งไป API:", {
+            order_id: currentOrderId,
+            pay_channel_id: paymentMethod.id,
+            pay_name: paymentMethod.pay_name,
+            amount: totalAmount,
+        });
     
+        axios.post('/api/payment', {
+            order_id: currentOrderId,
+            pay_channel_id: paymentMethod.id,
+            pay_name: paymentMethod.pay_name,
+            amount: totalAmount,
+        })
+        .then(response => {
+            console.log("บันทึกสำเร็จ:", response.data);
+        })
+        .catch(error => {
+            console.error("เกิดข้อผิดพลาด:", error);
+        });
+    };
+    const closePaymentHistory = () => {
+        setIsPaymentHistoryOpen(false);
+    };
     const addItemsToDatabase = async (orderId, items) => {
         const api_url = localStorage.getItem('url_api');
         const slug = localStorage.getItem('slug');
@@ -1392,41 +1068,6 @@ const loadTableLastOrder = async (tableCode) => {
             throw error;
         }
     };
-    
-    
-    
-    const fetchPaymentMethods = async () => {
-        const url = `${api_url}/api/${slug}/payChannels`; // URL สำหรับเรียกข้อมูลช่องทางการชำระเงิน
-            try {
-                //////////////////// ประกาศตัวแปร URL CALL   
-                let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-                const slug = localStorage.getItem('slug') || 'default_slug';
-                const authToken = localStorage.getItem('token') || 'default_token';
-        
-                // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-                if (!api_url.endsWith('/api')) {
-                    api_url += '/api';
-                }
-                //////////////////// ประกาศตัวแปร  END URL CALL 
-                const response = await axios.get(url, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${authToken}`, // ใช้ Token เพื่อยืนยันสิทธิ์
-                    },
-                });
-        
-                // ตรวจสอบว่า Response มีข้อมูลที่ต้องการหรือไม่
-                if (response.status === 200 && Array.isArray(response.data)) {
-                    console.log('Payment Methods:', response.data);
-                    setPaymentMethods(response.data); // บันทึกข้อมูลช่องทางการชำระเงินใน State
-                } else {
-                    console.error('Unexpected response format:', response.data);
-                    Swal.fire('ผิดพลาด', 'รูปแบบข้อมูลช่องทางการชำระเงินไม่ถูกต้อง', 'error');
-                }
-            } catch (error) {
-                console.error('Error fetching payment channels:', error.response?.data || error.message)
-            }
-        };
 
         // ฟังก์ชันอัปเดตจำนวนเงินด้วยปุ่ม
         const handleAmountButton = (amount) => {
@@ -1535,7 +1176,8 @@ const loadTableLastOrder = async (tableCode) => {
             // รีเซ็ตตะกร้าเมื่อบันทึกบิลเสร็จสิ้น
             setCart([]); // ล้างตะกร้า
             localStorage.removeItem(`cart_${tableCode}`); // ลบข้อมูลตะกร้าจาก localStorage
-    
+            closePaymentHistory();
+
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกบิลสำเร็จ',
@@ -1543,6 +1185,7 @@ const loadTableLastOrder = async (tableCode) => {
                 confirmButtonText: 'ตกลง',
             }).then(() => {
                 resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
+                
             });
     
         } catch (error) {
@@ -1551,14 +1194,22 @@ const loadTableLastOrder = async (tableCode) => {
         }
     };
     
-    
+    useEffect(() => {
+        if (paymentMethod === "2") {
+            const promptPayData = paymentMethods.find(method => method.id.toString() === "2");
+            if (promptPayData) {
+                setPromptPayAPI(promptPayData.promptpay_api);
+                setPromptPayAcc(promptPayData.promptpay_acc);
+            }
+        }
+    }, [paymentMethod]);
     
     
     const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
     // ฟังก์ชันคำนวณยอดสุทธิ
-    const calculateNetAmount = (totalDue, billDiscount) => {
-        return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
-    };
+    // const calculateNetAmount = (totalDue, billDiscount) => {
+    //     return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
+    // };
 
     // ฟังก์ชันรีเซ็ตสถานะหลังชำระเงินสำเร็จ
     const resetStateAfterSuccess = () => {
@@ -1581,25 +1232,27 @@ const loadTableLastOrder = async (tableCode) => {
     };
     let previousRemainingDue = null; // ประกาศตัวแปรเพื่อเก็บยอดคงเหลือก่อนหน้า
 
-const calculateRemainingDue = (partialPayments = []) => {
-    const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมทั้งหมดที่ต้องชำระ
-    const totalPaid = calculateTotalPaid(); // ยอดที่ชำระไปแล้ว
+    const calculateRemainingDue = (partialPayments = []) => {
+        const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมทั้งหมดที่ต้องชำระ
+        const totalPaid = calculateTotalPaid(); // ยอดที่ชำระไปแล้ว
 
-    // รวมยอดที่ชำระจากประวัติการแยกชำระ
-    const totalPartialPayments = partialPayments.reduce((acc, payment) => acc + payment.amount, 0);
+        // รวมยอดที่ชำระจากประวัติการแยกชำระ
+        const totalPartialPayments = partialPayments.reduce((acc, payment) => acc + payment.amount, 0);
 
-    // ยอดคงเหลือ = ยอดรวมทั้งหมด - ยอดที่ชำระไปแล้วทั้งหมด (รวมจากการแยกชำระ)
-    const remainingDue = Math.max(totalDue - totalPaid - totalPartialPayments, 0); // หากยอดคงเหลือเป็นลบ ให้กลับเป็น 0
+        // ยอดคงเหลือ = ยอดรวมทั้งหมด - ยอดที่ชำระไปแล้วทั้งหมด (รวมจากการแยกชำระ)
+        const remainingDue = Math.max(totalDue - totalPaid - totalPartialPayments, 0); // หากยอดคงเหลือเป็นลบ ให้กลับเป็น 0
 
-    // ส่งข้อมูลไปที่ console เฉพาะเมื่อยอดคงเหลือเปลี่ยนแปลง
-    if (remainingDue !== previousRemainingDue) {
-        console.log("ยอดคงเหลือที่คำนวณได้:", remainingDue); // ตรวจสอบยอดคงเหลือ
-        previousRemainingDue = remainingDue; // อัปเดตยอดคงเหลือที่เคยมี
-    }
+        // ส่งข้อมูลไปที่ console เฉพาะเมื่อยอดคงเหลือเปลี่ยนแปลง
+        if (remainingDue !== previousRemainingDue) {
+            console.log("ยอดคงเหลือที่คำนวณได้:", remainingDue); // ตรวจสอบยอดคงเหลือ
+            previousRemainingDue = remainingDue; // อัปเดตยอดคงเหลือที่เคยมี
+        }
 
-    return remainingDue;
-};
-
+        return remainingDue;
+    };
+    const toggleQRCode = () => {
+        setShowQRCode(!showQRCode);
+    };
     
     
     
@@ -1610,171 +1263,11 @@ const calculateRemainingDue = (partialPayments = []) => {
             )
         );
     };
-    const formatDateTime = (date) => {
-        const pad = (num) => num.toString().padStart(2, '0');
-        const year = date.getFullYear();
-        const month = pad(date.getMonth() + 1);
-        const day = pad(date.getDate());
-        const hours = pad(date.getHours());
-        const minutes = pad(date.getMinutes());
-        const seconds = pad(date.getSeconds());
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    };
-    const savePaymentToDatabase = async (orderId, paymentMethod, amount, receivedAmount = 0) => {
-        try {
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
+ 
+    useEffect(() => {
+        console.log("📌 อัปเดตค่าของ paymentMethods:", paymentMethods);
+    }, [paymentMethods]);
     
-            if (!api_url.endsWith('/api')) api_url += '/api';
-            const url = `${api_url}/${slug}/payments`;
-    
-            // ตรวจสอบความถูกต้องของข้อมูล
-            if (!orderId || !paymentMethod || isNaN(amount) || amount <= 0) {
-                console.error("❌ ข้อมูลชำระเงินไม่ถูกต้อง:", { orderId, paymentMethod, amount });
-                Swal.fire("เกิดข้อผิดพลาด", "ข้อมูลชำระเงินไม่ถูกต้อง", "error");
-                return { success: false };
-            }
-    
-            // คำนวณยอดคงเหลือและเงินทอน
-            const totalDue = amount; // ยอดที่ต้องชำระ
-            const totalPaid = receivedAmount; // ยอดที่ชำระแล้ว
-            const remainingDue = totalDue - totalPaid; // คำนวณยอดคงเหลือ
-            const moneyChanges = Math.max(receivedAmount - totalDue, 0); // คำนวณเงินทอน
-    
-            // ฟอร์แมตจำนวนเงิน
-            const formattedAmount = parseFloat(amount).toFixed(2);
-            const paymentDate = new Date().toISOString().slice(0, 19).replace("T", " ");
-    
-            // คำนวณช่องทางการชำระเงิน (cash = 1, อื่นๆ = 2)
-            const payChannelId = paymentMethod === "cash" ? 1 : 2;
-    
-            // ข้อมูลที่จะส่งไปยัง API
-            const paymentData = {
-                order_id: orderId,
-                pay_channel_id: payChannelId,
-                payment_date: paymentDate,
-                amount: formattedAmount,
-                balances: remainingDue.toFixed(2),  // เพิ่มยอดคงเหลือ
-                money_changes: moneyChanges.toFixed(2),  // เพิ่มเงินทอน
-                status: "Y", // สถานะการชำระเงิน (ชำระแล้ว)
-            };
-    
-            console.log("📤 Data ที่ส่งไปยัง API:", paymentData);
-    
-            // ส่งข้อมูลไปยัง API
-            const response = await axios.post(url, paymentData, {
-                headers: {
-                    Accept: "application/json",
-                    Authorization: `Bearer ${authToken}`,
-                },
-            });
-    
-            console.log("✅ Response จาก API:", response.data);
-            console.log("📌 Response Status:", response.status);
-    
-            // ตรวจสอบผลลัพธ์
-            if (response && (response.status === 200 || response.status === 201) && response.data?.id) {
-                console.log("✅ บันทึกข้อมูลการชำระเงินสำเร็จ:", response.data);
-                return { success: true, data: response.data };
-            } else {
-                console.error("❌ บันทึกข้อมูลการชำระเงินล้มเหลว:", response.data);
-                Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกการชำระเงินได้", "error");
-                return { success: false };
-            }
-        } catch (error) {
-            console.error("❌ Error saving payment:", error.response?.data || error.message);
-            Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลการชำระเงินได้", "error");
-            return { success: false };
-        }
-    };
-    
-    
-    const updateOrderItems = async (cartItems) => {
-        try {
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-            
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-    
-            const orderId = 'your-order-id'; // ใช้ orderId ที่ได้รับจากการสร้างคำสั่งซื้อก่อนหน้านี้
-            
-            // ส่งข้อมูลไปยัง API
-            const response = await axios.put(`${api_url}/${slug}/orders/${orderId}/items`, {
-                items: cartItems, // ส่งรายการสินค้า (cartItems) ที่จะอัพเดต
-            }, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-    
-            if (response.status === 200) {
-                // ถ้าอัพเดตสำเร็จ
-                console.log("อัพเดตรายการอาหารสำเร็จ", response.data);
-                Swal.fire({
-                    icon: 'success',
-                    title: 'รายการอาหารถูกอัพเดตแล้ว',
-                    text: 'รายการอาหารในออเดอร์ของคุณได้รับการอัพเดต',
-                });
-            } else {
-                throw new Error('ไม่สามารถอัพเดตรายการอาหารได้');
-            }
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการอัพเดตรายการอาหาร:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'เกิดข้อผิดพลาด',
-                text: `ไม่สามารถอัพเดตรายการอาหาร: ${error.message}`,
-            });
-        }
-    };
-    
-    // เรียกใช้ฟังก์ชันเมื่อผู้ใช้คลิกปุ่มอัพเดต
-    const handleUpdateItems = () => {
-        updateOrderItems(cart); // ส่งข้อมูลตะกร้าที่ถูกอัพเดตไปยัง API
-    };
-    
-    const fetchPaymentChannels = async () => {
-        try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-            const response = await axios.get(`${api_url}/api/${slug}/payChannels`, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-
-            if (response.data) {
-                const promptpayChannel = response.data.find(
-                    (channel) => channel.type === "T" && channel.status === "Y"
-                );
-
-                if (promptpayChannel) {
-                    setQrCode(promptpayChannel.promptpay_api); // เก็บ URL QR Code ใน state
-                } else {
-                    throw new Error('ไม่มีช่องทาง PromptPay ที่พร้อมใช้งาน');
-                }
-            }
-        } catch (error) {
-            console.error('เกิดข้อผิดพลาดในการดึงช่องทางชำระเงิน:', error.message);
-            Swal.fire('ผิดพลาด', 'ไม่สามารถดึงข้อมูลช่องทางการชำระเงินได้', 'error');
-        }
-    };
-
     const calculateTotalPaidWithChange = () => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดรวมที่ต้องชำระ
         const totalPaid = calculateTotalPaid(); // ยอดเงินที่ชำระทั้งหมด (รวมจากทุกการแยกชำระ)
@@ -1840,6 +1333,19 @@ const calculateRemainingDue = (partialPayments = []) => {
         }
     };
     
+    const checkPaymentStatus = async () => {
+        try {
+            const response = await axios.get(`${promptPayAPI}/check-payment?account=${promptPayAcc}`);
+            if (response.data.status === "PAID") {
+                Swal.fire("✅ ชำระเงินสำเร็จ", "ระบบได้รับยอดเงินแล้ว", "success");
+                setIsPaid(true);
+            } else {
+                Swal.fire("🚨 รอดำเนินการ", "กรุณาชำระเงินแล้วกดตรวจสอบอีกครั้ง", "warning");
+            }
+        } catch (error) {
+            console.error("❌ ตรวจสอบการชำระเงินล้มเหลว:", error);
+        }
+    };
     
     
     
@@ -1871,6 +1377,63 @@ const calculateRemainingDue = (partialPayments = []) => {
     };
     return (
         <div style={styles.pageContainer}>
+            {showQRCode && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, width: '100vw', height: '100vh',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    background: 'rgba(0, 0, 0, 0.381)',  // ✅ มืดขึ้นอีก
+                    backdropFilter: 'blur(15px)',  // ✅ ความเบลอเพิ่มขึ้น
+                    zIndex: 999999,  // ✅ สูงกว่าทุกองค์ประกอบ
+                    pointerEvents: 'auto',
+                    
+                }}>
+                    <div style={{
+                        background: '#fff', padding: '20px', borderRadius: '15px', textAlign: 'center',
+                        boxShadow: '0px 10px 25px rgba(0,0,0,0.3)',
+                        position: 'relative',
+                        width: '320px',
+                        height: 'auto',
+                        zIndex: 1000000, // ✅ ให้ป๊อปอัพอยู่ด้านหน้าสุด
+                        pointerEvents: 'auto',
+                        boxShadow: 'inset 0px 0px 8px rgba(108, 92, 231, 0.3)', // ✅ เพิ่มเงาภายใน
+
+                    }}>
+                        {/* ปุ่มปิด */}
+                        <button onClick={toggleQRCode} style={{
+                            position: 'absolute', top: '10px', right: '10px',
+                            background: 'none', border: 'none', fontSize: '18px',
+                            cursor: 'pointer', color: '#e74c3c'
+                        }}>✖</button>
+
+                        <h3 style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: '#333' }}>
+                             ชำระเงินผ่าน PromptPay 💳
+                        </h3>
+                        <p style={{ color: '#666', marginBottom: '10px' }}>
+                            เบอร์พร้อมเพย์: <strong>{promptPayAcc}</strong>
+                        </p>
+
+                        <img src={`https://promptpay.io/${promptPayAcc}/${receivedAmount}`} 
+                            alt="PromptPay QR Code" 
+                            style={{ width: '200px', height: '200px', borderRadius: '5px', background: '#f9f9f9', padding: '10px' }}
+                        />
+
+                        <p style={{ color: '#777', fontSize: '14px', marginTop: '10px' }}>
+                             กรุณาสแกน QR Code เพื่อชำระเงิน
+                        </p>
+
+                        <button onClick={toggleQRCode} style={{
+                            marginTop: '15px', padding: '8px 15px', background: '#e74c3c',
+                            color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer',
+                            fontWeight: 'bold', transition: 'background 0.3s ease'
+                        }} onMouseOver={(e) => e.target.style.background = '#c0392b'}
+                        onMouseOut={(e) => e.target.style.background = '#e74c3c'}>
+                            ปิด
+                        </button>
+                    </div>
+                </div>
+            )}
+ 
             <div style={styles.sidebarContainer}>
                 <Sidebar onCategorySelect={(categoryId) => setSelectedCategoryId(categoryId)} />
             </div>
@@ -2174,27 +1737,31 @@ const calculateRemainingDue = (partialPayments = []) => {
                     width: '100%',
                     border: '2px solid #6c5ce7',
                     borderRadius: '5px',
-                    background: 'linear-gradient(145deg, #ffffff, #f2f2f2)', // พื้นหลังแบบเกรเดียนท์
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // เงาบางๆ
+                    background: 'linear-gradient(145deg, #ffffff, #f2f2f2)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                     fontSize: '13px',
                     color: '#010101',
                     cursor: 'pointer',
                     maxWidth: '160px',
                     transition: 'all 0.3s ease',
                     marginBottom: '7px',
-                    textAlign: 'center',
                     marginLeft: '-10px',
                     textAlign: 'left',
                 }}
                 onFocus={(e) => (e.target.style.borderColor = '#6c5ce7')}
                 onBlur={(e) => (e.target.style.borderColor = '#ccc')}
             >
-                <option value="" disabled>
-                    เลือกวิธีการชำระเงิน
-                </option>
-                <option value="cash">เงินสด</option>
-                <option value="qr">QR Code พร้อมเพย์</option>
-            </select>
+                <option value="" style={{ color: '#000000' }}>เลือกวิธีการชำระเงิน</option>
+                {paymentMethods.length > 0 ? (
+                    paymentMethods.map((method) => (
+                        <option key={method.id} value={method.id} style={{ color: '#0b0a0c' }}>
+                            {method.pay_name}
+                        </option>
+                    ))
+                ) : (
+                    <option disabled style={{ color: 'red' }}>ไม่มีข้อมูล</option>
+                )}
+            </select> 
         </div>
     </div>
 
@@ -2427,6 +1994,19 @@ const calculateRemainingDue = (partialPayments = []) => {
                     รับออเดอร์
                 </button>
             )}
+            <button 
+                onClick={toggleQRCode} 
+                disabled={paymentMethod !== "2"} // ✅ ปิดปุ่มหากไม่ได้เลือก PromptPay
+                style={{
+                    ...styles.receiveOrderButton,  // ✅ ใช้ style เดียวกับปุ่มอัพเดทอาหาร
+                    background: paymentMethod === "2" ? '#6c5ce7' : '#5a42e6', // ✅ เปลี่ยนสีปุ่มเมื่อปิดใช้งาน
+                    color: paymentMethod === "2" ? '#ffffff' : '#ffffff', // ✅ เปลี่ยนสีตัวอักษร
+                    cursor: paymentMethod === "2" ? 'pointer' : 'not-allowed', // ✅ เปลี่ยน cursor เป็น not-allowed เมื่อปิด
+                    opacity: paymentMethod === "2" ? 1 : 0.6, // ✅ ลดความชัดเจนของปุ่มเมื่อปิด
+                }}>
+                {showQRCode ? 'ซ่อน QR Code' : 'แสดง QR Code'}
+            </button>
+            
 
             {/* ปุ่มแยกชำระเงิน */}
             <button
@@ -2451,142 +2031,130 @@ const calculateRemainingDue = (partialPayments = []) => {
                 {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'ชำระเงิน'}
             </button>
 
-            {/* <button
-                style={{
-                    ...styles.paymentButton,
-                    ...(orderReceived && cart.length > 0 && paymentMethod && receivedAmount >= calculateTotalWithBillDiscountAndVAT()
-                        ? {}
-                        : styles.paymentButtonDisabled),
-                }}
-                onClick={handlePayment}
-                disabled={!orderReceived || !paymentMethod || cart.length === 0 || receivedAmount < calculateTotalWithBillDiscountAndVAT()}
-            >
-                ชำระเงิน
-            </button> */}
         </div>
     </div>
             </div>
             {isSplitPaymentPopupOpen && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        backgroundColor: 'white',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
-                        zIndex: 1000,
-                        width: '450px',
-                        maxHeight: '950px',
-                        overflow: 'hidden',
-                    }}
-                >
-                    <div style={{ 
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        position: 'relative',
-                        marginBottom: '15px',
-                    }}>
-                        <h3 style={{
-                            margin: 0,
-                            color: '#34495e',
-                            fontSize: '22px',
-                            fontWeight: '600',
-                            letterSpacing: '1px',
-                            textAlign: 'center',
-                            width: '100%',
-                        }}>
-                            ประวัติการชำระ
-                        </h3>
-                        {/* ปุ่มปิดที่มุมขวาบน */}
-                        <button
-                            onClick={toggleSplitPaymentPopup}
+    <div
+        style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
+            zIndex: 1000,
+            width: '450px',
+            maxHeight: '950px',
+            overflow: 'hidden',
+        }}
+    >
+        <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            position: 'relative',
+            marginBottom: '15px',
+        }}>
+            <h3 style={{
+                margin: 0,
+                color: '#34495e',
+                fontSize: '22px',
+                fontWeight: '600',
+                letterSpacing: '1px',
+                textAlign: 'center',
+                width: '100%',
+            }}>
+                ประวัติการชำระ
+            </h3>
+            <button
+                onClick={toggleSplitPaymentPopup}
+                style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '0px',
+                    padding: '6px 12px',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    borderRadius: '10%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
+                    transition: 'background-color 0.3s ease',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e74c3c'}
+            >
+                ×
+            </button>
+        </div>
+
+        <div style={{
+            maxHeight: '300px',
+            overflowY: 'auto',
+            paddingRight: '10px',
+            marginBottom: '10px',
+        }}>
+            {payments && payments.length > 0 ? (
+                payments.map((payment, index) => {
+                    return (
+                        <div
+                            key={index}
                             style={{
-                                position: 'absolute',
-                                top: '10px',
-                                right: '0px',
-                                padding: '6px 12px',
-                                backgroundColor: '#e74c3c',
-                                color: 'white',
-                                borderRadius: '10%',
-                                border: 'none',
+                                marginBottom: '20px',
+                                padding: '20px',
+                                backgroundColor: '#ecf0f1',
+                                borderRadius: '12px',
+                                boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
                                 cursor: 'pointer',
-                                fontSize: '16px',
-                                boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
-                                transition: 'background-color 0.3s ease',
+                                transition: 'transform 0.3s ease-in-out',
                             }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e74c3c'}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                            ×
-                        </button>
-                    </div>
-
-                    <div style={{
-                        maxHeight: '300px',
-                        overflowY: 'auto', // ทำให้สามารถเลื่อนดูประวัติได้
-                        paddingRight: '10px',
-                        marginBottom: '10px',
-                    }}>
-                        {payments && payments.length > 0 ? (
-                            payments.map((payment, index) => (
-                                <div
-                                    key={index}
-                                    style={{
-                                        marginBottom: '20px',
-                                        padding: '20px',
-                                        backgroundColor: '#ecf0f1',
-                                        borderRadius: '12px',
-                                        boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
-                                        cursor: 'pointer',
-                                        transition: 'transform 0.3s ease-in-out',
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    <div style={{
-                                        fontSize: '16px',
-                                        color: '#2c3e50',
-                                        fontWeight: '500',
-                                        marginBottom: '10px',
-                                    }}>
-                                        {payment.formattedDate}
-                                    </div>
-                                    <div style={{
-                                        fontSize: '18px',
-                                        color: '#16a085',
-                                        fontWeight: '600',
-                                        marginBottom: '5px',
-                                    }}>
-                                        จำนวนเงิน: {payment.amount.toFixed(2)} บาท
-                                    </div>
-                                    <div style={{
-                                        fontSize: '16px',
-                                        color: '#2980b9',
-                                        fontWeight: '500',
-                                    }}>
-                                        ช่องทาง: {payment.pay_channel_id === 1 ? 'เงินสด' : 'QR Code'}
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <p style={{
-                                color: '#7f8c8d',
-                                textAlign: 'center',
+                            <div style={{
                                 fontSize: '16px',
-                                fontWeight: '400',
+                                color: '#2c3e50',
+                                fontWeight: '500',
+                                marginBottom: '10px',
                             }}>
-                                ไม่มีประวัติการชำระ
-                            </p>
-                        )}
-                    </div>
-
-                    
-                </div>
+                                {payment.formattedDate}
+                            </div>
+                            <div style={{
+                                fontSize: '18px',
+                                color: '#16a085',
+                                fontWeight: '600',
+                                marginBottom: '5px',
+                            }}>
+                                จำนวนเงิน: {payment.amount.toFixed(2)} บาท
+                            </div>
+                            <div style={{
+                                fontSize: '16px',
+                                color: '#2980b9',
+                                fontWeight: '500',
+                            }}>
+                                ช่องทาง: {payment.pay_name ? payment.pay_name : "ไม่พบข้อมูลช่องทาง"}
+                            </div>
+                        </div>
+                    );
+                })
+            ) : (
+                <p style={{
+                    color: '#7f8c8d',
+                    textAlign: 'center',
+                    fontSize: '16px',
+                    fontWeight: '400',
+                }}>
+                    ไม่มีประวัติการชำระ
+                </p>
             )}
+        </div>
+    </div>
+)}
+
 
         {showReceipt && (
             <div style={styles.receiptOverlay}>
@@ -2667,12 +2235,19 @@ const calculateRemainingDue = (partialPayments = []) => {
                         <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
                         <p style={styles.itemQuantity}></p>
                         <p style={styles.itemPrice}>
-                            <strong>
-                                {paymentMethod === 'cash' ? 'เงินสด' : 
-                                paymentMethod === 'qr' ? 'QR Code พร้อมเพย์' : 
-                                'ยังไม่ได้เลือก'}
-                            </strong>
-                        </p>
+                        <strong>
+                            {Array.isArray(paymentMethod) && paymentMethod.length > 1
+                                ? 'ชำระหลายรูปแบบ'
+                                : paymentMethod.length === 1
+                                ? paymentMethods
+                                    .filter(method => paymentMethod.includes(method.id.toString()))
+                                    .map(method => method.pay_name)
+                                    .join(', ') || 'ไม่พบข้อมูล'
+                                : 'ยังไม่ได้เลือก'}
+                        </strong>
+                    </p>
+
+
                     </div>
                     <div style={styles.buttonContainer}>
                         {calculateTotalWithBillDiscount() === 0 ? (
