@@ -165,14 +165,10 @@ export default function BackendPage() {
           const url = `${api_url}/${slug}/products/${editIndex}`;
           response = await axios.put(url, formData, config);
           Swal.fire({
-            title: 'ยืนยันการเพิ่มอาหาร',
-            text: "คุณต้องการเพิ่มอาหารนี้หรือไม่?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'เพิ่ม',
-            cancelButtonText: 'ยกเลิก',
+            icon: 'success',
+            title: 'แก้ไขเรียบร้อยแล้ว!',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#28a745'
           });
         } else {
           return;
@@ -184,7 +180,12 @@ export default function BackendPage() {
           const url = `${api_url}/${slug}/products`;
 
           response = await axios.post(url, formData, config);
-          showNotification("เพิ่มข้อมูลเรียบร้อยแล้ว!", "success");
+          Swal.fire({
+            icon: 'success',
+            title: 'เพิ่มข้อมูลเรียบร้อยแล้ว!',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#28a745'
+          });
 
         }
         console.error('API Error:', error);
@@ -419,11 +420,19 @@ const handleSaveCategory = async () => {
             headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${authToken}` },
           });
 
-          showNotification('ลบข้อมูลเรียบร้อยแล้ว!', 'success');
+          Swal.fire({
+            icon: 'success',
+            title: 'ลบข้อมูลเรียบร้อยแล้ว!',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#28a745'
+          });
           await fetchItems();
         } catch (error) {
           console.error('Error:', error);
-          showNotification('เกิดข้อผิดพลาดในการลบข้อมูล', 'error');
+          Swal.fire({
+            icon: 'success',
+            title: 'เกิดข้อผิดพลาด!',
+          });
         }
       }
     });
