@@ -6,18 +6,24 @@ import Swal from 'sweetalert2';
 export default function HomePage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
-  const [clicked, setClicked] = useState(null); // เก็บสถานะการคลิกของการ์ด
-  const soundRef = useRef(null); // ใช้ useRef สำหรับจัดการเสียง
+  const [owner, setOwner] = useState(null);
+  const [clicked, setClicked] = useState(null);
+  const soundRef = useRef(null);
 
-  // โหลดเสียงเมื่อ Component ถูก Mount
   useEffect(() => {
     soundRef.current = new Audio('/sounds/click-151673.mp3');
   }, []);
 
-  // ตรวจสอบสถานะการเข้าสู่ระบบ
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const authToken = localStorage.getItem('token');
     const loggedInUsername = localStorage.getItem('username');
+    const isOwner = localStorage.getItem('owner');
+
+    console.log('🔍 Token:', authToken);
+    console.log('👤 Username:', loggedInUsername);
+    console.log('🏷 Owner:', isOwner);
 
     if (!authToken || !loggedInUsername) {
       Swal.fire({
@@ -31,25 +37,36 @@ export default function HomePage() {
       return;
     }
 
-    // ตั้งค่าชื่อผู้ใช้
     setUsername(loggedInUsername);
+    setOwner(isOwner);
   }, [router]);
 
-  // ฟังก์ชันเล่นเสียงคลิก
   const playClickSound = () => {
     if (soundRef.current) {
-      soundRef.current.play();
+      soundRef.current.currentTime = 0;
+      soundRef.current
+        .play()
+        .catch((error) => console.error('ไม่สามารถเล่นเสียงได้:', error));
     }
   };
 
-  // ฟังก์ชันจัดการการคลิกไอคอน
   const handleIconClick = (page, cardName) => {
+    if (page === '/backendpage' && owner !== 'Y') {
+      Swal.fire({
+        title: 'สิทธิ์ไม่เพียงพอ',
+        text: 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้',
+        icon: 'error',
+        confirmButtonText: 'ตกลง',
+      });
+      return;
+    }
+
     playClickSound();
-    setClicked(cardName); // ตั้งค่าการคลิก
+    setClicked(cardName);
+
     setTimeout(() => {
-      setClicked(null); // รีเซ็ตการคลิก
-      router.push(page);
-    }, 200); // ดีเลย์เล็กน้อยเพื่อให้เห็นเอฟเฟกต์
+      router.push(page).then(() => setClicked(null));
+    }, 200);
   };
 
   return (
@@ -61,41 +78,30 @@ export default function HomePage() {
             ...styles.card,
             ...(clicked === 'sell' ? styles.clicked : {}),
           }}
-          onMouseDown={() => setClicked('sell')}
-          onMouseUp={() => setClicked(null)}
           onClick={() => handleIconClick('/TablePage', 'sell')}
         >
           <div style={styles.emojiContainer}>
-            <Image
-              src="/images/store.png"
-              alt="หน้าขาย"
-              width={70}
-              height={70}
-            />
+            <Image src="/images/store.png" alt="หน้าขาย" width={70} height={70} />
           </div>
           <p style={styles.cardTitle}>หน้าขาย</p>
           <p style={styles.cardSubtitle}>เริ่มต้นการขายสินค้าของคุณที่นี่</p>
         </div>
-        <div
-          style={{
-            ...styles.card,
-            ...(clicked === 'backend' ? styles.clicked : {}),
-          }}
-          onMouseDown={() => setClicked('backend')}
-          onMouseUp={() => setClicked(null)}
-          onClick={() => handleIconClick('/backendpage', 'backend')}
-        >
-          <div style={styles.emojiContainer}>
-            <Image
-              src="/images/folder.png"
-              alt="หลังบ้าน"
-              width={70}
-              height={70}
-            />
+
+        {owner === 'Y' && ( // แสดงปุ่ม "หลังบ้าน" เฉพาะ Owner เท่านั้น
+          <div
+            style={{
+              ...styles.card,
+              ...(clicked === 'backend' ? styles.clicked : {}),
+            }}
+            onClick={() => handleIconClick('/backendpage', 'backend')}
+          >
+            <div style={styles.emojiContainer}>
+              <Image src="/images/folder.png" alt="หลังบ้าน" width={70} height={70} />
+            </div>
+            <p style={styles.cardTitle}>หลังบ้าน</p>
+            <p style={styles.cardSubtitle}>จัดการข้อมูลและการตั้งค่าต่างๆ</p>
           </div>
-          <p style={styles.cardTitle}>หลังบ้าน</p>
-          <p style={styles.cardSubtitle}>จัดการข้อมูลและการตั้งค่าต่างๆ</p>
-        </div>
+        )}
       </div>
     </div>
   );
