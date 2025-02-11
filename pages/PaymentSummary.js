@@ -10,6 +10,8 @@ import { Chart as ChartJS, LineElement } from 'chart.js';
 import { FaChartBar, FaList, FaChartPie } from "react-icons/fa"; 
 import { Doughnut } from 'react-chartjs-2';
 import html2canvas from 'html2canvas';
+import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+
 
 ChartJS.register(LineElement);
 
@@ -900,7 +902,7 @@ const styles = {
     summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', gap: '20px' }, 
     summaryContainer: { display: 'flex', flexDirection: 'column', gap: '20px', width: '25%' }, 
     summaryBox: { minHeight: 'auto', backgroundColor: '#ffffff', padding: '15px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, 
-    salesCountBox: { backgroundColor: '#ffffff', padding: '5px', borderRadius: '15px', height: '78px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', marginRight: '10px' }, 
+    salesCountBox: { backgroundColor: '#ffffff', padding: '5px', borderRadius: '15px', height: '78px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', marginRight: '1px' }, 
     totalSalesValueContainer: { display: 'flex', justifyContent: 'flex-end', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', marginTop: '10px' }, 
     totalSalesValue: { fontSize: '18px', fontWeight: 'bold', color: '#3498db', margin: '5px 0', paddingLeft: '15px', textAlign: 'left' }, 
     salesCountValue: { fontSize: '18px', fontWeight: 'bold', color: '#3498db', margin: '5px 0', paddingLeft: '15px', textAlign: 'left' }, 
@@ -936,7 +938,7 @@ const styles = {
     button: { padding: '8px 16px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: '#ccc', fontSize: '14px' }, 
     activeButton: { padding: '8px 16px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: '#3498db', color: '#fff', fontSize: '14px' }, 
     chartContainer: { width: '80%', height: '300px', margin: 'auto' }, 
-    topSellingHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "10px" }, 
+    topSellingHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "60px" }, 
     chartText: { cursor: "pointer", color: "#777", transition: "color 0.2s ease" }, 
     selectedChartText: { cursor: "pointer", color: "#000", fontWeight: "bold", textDecoration: "underline" }, 
     customLegend: { display: "flex", flexWrap: "wrap", justifyContent: "center", marginTop: "10px" }, 
