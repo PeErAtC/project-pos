@@ -3,6 +3,9 @@ import { useRouter } from 'next/router';
 import BackendSidebar from './components/backendsidebar';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import { FaCheckCircle, FaExclamationCircle, FaImage, FaPlusCircle, FaEllipsisH, FaEdit, FaTrashAlt  } from 'react-icons/fa';
+import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+
 
 export default function EmployeeManagement() {
   const [employees, setEmployees] = useState([]);
@@ -19,6 +22,7 @@ export default function EmployeeManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+  const [showMenu, setShowMenu] = useState(false);  // ใช้เพื่อควบคุมการแสดงเมนู
 
   useEffect(() => {
     const slug = localStorage.getItem('slug');
@@ -77,22 +81,8 @@ export default function EmployeeManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // ตรวจสอบการเพิ่มพนักงานใหม่เท่านั้น
-    if (editIndex === null) {
-      const existingEmployee = employees.find(emp => emp.email === formData.email);
-      if (existingEmployee) {
-        Swal.fire({
-          title: 'ข้อผิดพลาด',
-          text: 'อีเมลนี้มีอยู่ในระบบแล้ว!',
-          icon: 'error',
-          confirmButtonText: 'ตกลง'
-        });
-        return; // หยุดการส่งข้อมูล
-      }
-    }
-
-    // เช็คว่า slug มีค่าหรือไม่
+  
+    // ตรวจสอบว่าไม่มีการจำกัดสิทธิ์แก้ไขแล้ว
     if (!formData.slug) {
       Swal.fire('ข้อผิดพลาด', 'กรุณากรอกค่า slug', 'error');
       return; // ไม่ส่งข้อมูลหากไม่มี slug
@@ -149,16 +139,6 @@ export default function EmployeeManagement() {
   };
 
   const handleDelete = async (index) => {
-    if (employees[index].owner !== 'Y') {
-      Swal.fire({
-        title: 'ข้อผิดพลาด',
-        text: 'คุณไม่มีสิทธิ์ในการลบข้อมูลพนักงานนี้',
-        icon: 'error',
-        confirmButtonText: 'ตกลง'
-      });
-      return;
-    }
-
     Swal.fire({
       title: 'คุณแน่ใจหรือไม่?',
       text: 'คุณต้องการลบพนักงานคนนี้จริง ๆ หรือไม่',
@@ -196,16 +176,6 @@ export default function EmployeeManagement() {
   };
 
   const handleEdit = (index) => {
-    // ตรวจสอบว่าเจ้าของ (Owner: 'Y') หรือไม่
-    if (employees[index].owner !== 'Y') {
-      Swal.fire({
-        title: 'ข้อผิดพลาด',
-        text: 'คุณไม่มีสิทธิ์ในการแก้ไขข้อมูลพนักงานนี้',
-        icon: 'error',
-        confirmButtonText: 'ตกลง'
-      });
-      return;
-    }
     setEditIndex(index);
     setFormData(employees[index]);
   };
@@ -218,6 +188,19 @@ export default function EmployeeManagement() {
     employee.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     employee.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const handleMenuToggle = (index) => {
+    setShowMenu(prevState => prevState === index ? null : index);  // Toggle เมนูสำหรับแต่ละรายการ
+  
+
+  const handleEditItem = (id) => {
+    console.log("Editing item", id);
+    // การทำงานเมื่อคลิกปุ่มแก้ไข
+  };
+
+  const handleDeleteItem = (id) => {
+    console.log("Deleting item", id);
+    // การทำงานเมื่อคลิกปุ่มลบ
+  }};
 
   return (
     <div style={styles.container}>
@@ -262,13 +245,27 @@ export default function EmployeeManagement() {
                       <td style={styles.tableCellNoBorder}>{employee.email}</td>
                       <td style={styles.tableCellNoBorder}>{employee.slug}</td>
                       <td style={styles.tableCellNoBorder}>{employee.owner}</td>
-                      <td style={employee.status === 'active' ? styles.activeStatus : styles.inactiveStatus}>
-                        {employee.status === 'active' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-                      </td>
-                      <td style={styles.tableCellNoBorder}>
-                        <button onClick={() => handleEdit(index)} style={styles.editButton}>แก้ไข</button>
-                        <button onClick={() => handleDelete(index)} style={styles.deleteButton}>ลบ</button>
-                      </td>
+                      <td
+                            style={employee.status === 'Y' ? styles.activeStatus : styles.inactiveStatus}
+                          >
+                            {employee.status === 'Y' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                          </td>
+
+                          <td style={styles.tableCellNoBorder}>
+                          <button onClick={() => handleMenuToggle(index)} style={styles.menuButton}>
+                            <FaEllipsisH size={20} />
+                          </button>
+                          {showMenu === index && (
+                            <div style={styles.menu}>
+                              <button onClick={() => handleEdit(index)} style={styles.menuItemEdit}>
+                                <FaEdit size={16} /> แก้ไข
+                              </button>
+                              <button onClick={() => handleDelete(index)} style={styles.menuItemDelete}>
+                                <FaTrashAlt size={16} /> ลบ
+                              </button>
+                            </div>
+                          )}
+                        </td>
                     </tr>
                   ))
                 )}
@@ -352,6 +349,7 @@ export default function EmployeeManagement() {
             <button type="submit" style={styles.button}>
               {editIndex !== null ? 'บันทึกการแก้ไข' : 'เพิ่มพนักงาน'}
             </button>
+
             {editIndex !== null && (
               <button
                 type="button"
@@ -390,6 +388,26 @@ const styles = {
   inactiveStatus: { padding: '10px', textAlign: 'center', fontSize: '14px', color: '#dc3545' },
   noData: { textAlign: 'center', padding: '20px', color: '#999999', fontStyle: 'italic' },
   form: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  menuButton:{
+    color:'#333',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '20px',
+    display: 'inline-block',  // จัดให้ปุ่มเรียงกันข้างๆ
+},
+menu: {
+    display: 'inline',  
+    flexDirection: 'row',  // จัดเรียงปุ่มในแนวนอน
+    alignItems: 'center',
+    marginLeft:'10px',
+},
+menuItemEdit:{
+    background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px'
+},
+menuItemDelete:{
+    background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer'
+},
   input: { padding: '10px', fontSize: '15px', borderRadius: '5px', border: '1px solid #ddd', width: '80%', margin: '0 auto' },
   inputReadOnly: { padding: '10px', fontSize: '15px', borderRadius: '5px', border: '1px solid #ddd', width: '80%', margin: '0 auto', backgroundColor: '#e0e0e0', pointerEvents: 'none', color: '#999' },
   passwordContainer: { position: 'relative', display: 'flex', alignItems: 'center', width: '90%', margin: '0 auto' },
