@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/router';
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa"; // ✅ เพิ่มไอคอน
 
 
 export default function SalesPage() {
@@ -38,6 +39,7 @@ export default function SalesPage() {
     const [isSplitPaymentPopupOpen, setIsSplitPaymentPopupOpen] = useState(false);
     const [splitPaymentCount, setSplitPaymentCount] = useState(0); // เก็บจำนวนรายการแยกชำระ
     const categoryRowRef = useRef(null); // ใช้ reference เพื่อจัดการการเลื่อน
+    const [activeCategory, setActiveCategory] = useState(null);
     const [isMouseDown, setIsMouseDown] = useState(false);
     const [startX, setStartX] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
@@ -46,6 +48,7 @@ export default function SalesPage() {
     const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
     const [promptPayAPI, setPromptPayAPI] = useState("");
     const [promptPayAcc, setPromptPayAcc] = useState("");
+    const userId = localStorage.getItem('userId') || "1";
 
     // const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
 
@@ -732,8 +735,9 @@ const loadTableLastOrder = async (tableCode) => {
             vatAmount = discountedTotal * 0.03; // เพิ่ม VAT 3%
         }
     
-        return Number((discountedTotal + vatAmount).toFixed(2)); // รวม VAT (กรณีไม่รวม VAT)
+        return Math.ceil(discountedTotal + vatAmount); // ✅ ปัดเศษขึ้นให้เป็นจำนวนเต็มบาท
     };
+    
     useEffect(() => {
         const totalDue = calculateTotalWithBillDiscountAndVAT(); // คำนวณยอดรวมที่ต้องชำระ
         const totalPaid = calculateTotalPaid() + receivedAmount; // คำนวณยอดที่ชำระไปแล้ว
@@ -766,9 +770,8 @@ const loadTableLastOrder = async (tableCode) => {
                 vatAmount = 0; // ไม่มี VAT
         }
     
-        return parseFloat(vatAmount.toFixed(2)) || 0; // คืนค่า VAT เป็นตัวเลข หรือ 0 หากมีปัญหา
+        return Math.round(vatAmount); // ✅ ปัดเศษค่าภาษีให้เป็นจำนวนเต็มบาท
     };
-
     const calculateChange = () => {
         const remainingDue = calculateRemainingDue(partialPayments);
         console.log("ยอดคงเหลือที่ต้องชำระ:", remainingDue);
@@ -784,7 +787,7 @@ const loadTableLastOrder = async (tableCode) => {
         const baseTotal = calculateTotalAfterItemDiscounts();
         const vatAmount = calculateVAT();
     
-        return vatType.includes('include') ? baseTotal : baseTotal + vatAmount;
+        return Math.ceil(vatType.includes('include') ? baseTotal : baseTotal + vatAmount); // ✅ ปัดขึ้นยอดรวมเป็นจำนวนเต็มบาท
     };
     
     
@@ -961,113 +964,102 @@ const loadTableLastOrder = async (tableCode) => {
     
     const addOrderItems = async () => {
         if (!orderId) {
-            // ถ้ายังไม่มี orderId หมายความว่าไม่มีการสร้างออเดอร์
-            // ดังนั้นต้องสร้างคำสั่งซื้อใหม่
+            console.warn("⚠️ Order ID ไม่ถูกต้อง กำลังสร้างออเดอร์ใหม่...");
             await receiveOrder(); // สร้างคำสั่งซื้อใหม่
         }
     
-        // เตรียมรายการสินค้าที่จะเพิ่มเข้าไปในออเดอร์
+        if (!orderId) {
+            console.error("❌ ไม่สามารถสร้าง Order ID ได้");
+            return;
+        }
+    
+        // ✅ ดึง userId จาก localStorage และตรวจสอบว่าไม่เป็น null
+        const userId = localStorage.getItem('userId') || "1"; // ใช้ค่า 1 ถ้าไม่มี
+        console.log("📌 User ID ที่ใช้ส่งไปยัง API:", userId); // ✅ Debugging
+    
         const newItems = cart.map((item) => ({
-            product_id: item.id || 0,
-            p_name: item.p_name || 'ไม่มีชื่อสินค้า',
-            quantity: item.quantity || 1,
-            price: item.price || 0,
-            total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
-        }));
+        product_id: item.id || 0,
+        p_name: item.p_name || 'ไม่มีชื่อสินค้า',
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        created_by: userId ? userId : "ไม่พบ user",  // ✅ ป้องกัน null
+        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
+    }));
+
+    
+        console.log("🛒 รายการสินค้าที่จะเพิ่ม:", newItems);
     
         try {
-            // เรียกใช้ฟังก์ชันเพื่อเพิ่มสินค้าในฐานข้อมูล (orders และ order_items)
+            const apiUrl = "https://easyapp.clinic/pos-api/api/order-items";
             await addItemsToDatabase(orderId, newItems);
-    
-            // หลังจากเพิ่มข้อมูลแล้วให้ส่งข้อมูลกลับไปยัง localStorage
             setCart(newItems);
-            // อัปเดตฐานข้อมูลคำสั่งซื้อ (order) หากต้องการ
             await updateOrderInDatabase(orderId, newItems);
         } catch (error) {
-            console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
+            console.error("❌ ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
         }
     };
-    const handlePaymentSubmit = () => {
-        console.log("ช่องทางที่เลือก:", paymentMethod);
-        console.log("ข้อมูลที่จะส่งไป API:", {
-            order_id: currentOrderId,
-            pay_channel_id: paymentMethod.id,
-            pay_name: paymentMethod.pay_name,
-            amount: totalAmount,
-        });
     
-        axios.post('/api/payment', {
-            order_id: currentOrderId,
-            pay_channel_id: paymentMethod.id,
-            pay_name: paymentMethod.pay_name,
-            amount: totalAmount,
-        })
-        .then(response => {
-            console.log("บันทึกสำเร็จ:", response.data);
-        })
-        .catch(error => {
-            console.error("เกิดข้อผิดพลาด:", error);
-        });
+    
+    const addItemsToDatabase = async (orderId, items, retry = 2) => {
+        const apiUrl = "https://easyapp.clinic/pos-api/api/order-items";
+    
+        try {
+            console.log("📡 กำลังส่งข้อมูลไปยัง API:", apiUrl);
+            console.log("📌 ตรวจสอบ created_by ก่อนส่ง:", items.map(i => i.created_by)); // ✅ Debugging
+    
+            const response = await axios.post(apiUrl, { orderId, items });
+    
+            console.log("✅ API Response:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("❌ เกิดข้อผิดพลาด:", error.response?.data || error.message);
+    
+            if (retry > 0) {
+                console.warn(`⚠️ ลองส่ง API อีกครั้ง... เหลือ ${retry} ครั้ง`);
+                return addItemsToDatabase(orderId, items, retry - 1);
+            }
+        }
     };
-    const closePaymentHistory = () => {
-        setIsPaymentHistoryOpen(false);
-    };
-    const addItemsToDatabase = async (orderId, items) => {
+    
+    const updateOrderInDatabase = async (orderId, items, retry = 2) => {
         const api_url = localStorage.getItem('url_api');
         const slug = localStorage.getItem('slug');
         const authToken = localStorage.getItem('token');
     
-
-        const requestUrl = `${api_url}/api/${slug}/order-items`;
-        console.log('Request URL:', requestUrl);  // ตรวจสอบ URL ที่ส่ง
-
-        // ส่งข้อมูลไปยัง API สำหรับการเพิ่มสินค้าใน order_items
+        if (!api_url || !slug) {
+            console.error("API URL หรือ Slug ไม่ถูกต้อง");
+            return;
+        }
+    
+        // 🔧 แก้ไข URL ที่ผิด (api/api/)
+        const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace('/api/api/', '/api/');
+    
+        console.log("📡 กำลังอัปเดตออเดอร์ที่:", endpoint);
+    
         try {
-            const response = await axios.post(`${api_url}/api/${slug}/order-items`, {
-                order_id: orderId,
-                items: items
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+            const response = await axios.put(endpoint, { items, updated_by: userId }, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
             });
     
             if (response.data.success) {
-                console.log("เพิ่มรายการสินค้าในฐานข้อมูลสำเร็จ");
+                console.log("✅ อัปเดตข้อมูลคำสั่งซื้อสำเร็จ");
             } else {
-                throw new Error("ไม่สามารถเพิ่มข้อมูลสินค้าได้");
+                throw new Error("❌ ไม่สามารถอัปเดตข้อมูลคำสั่งซื้อได้");
             }
         } catch (error) {
-            console.error("เกิดข้อผิดพลาดในการบันทึก order_items:", error);
-            throw error;
+            if (retry > 0) {
+                console.warn(`⚠️ ลองส่ง API อีกครั้ง... เหลือ ${retry} ครั้ง`);
+                return updateOrderInDatabase(orderId, items, retry - 1);
+            }
+    
+            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตคำสั่งซื้อ:", error);
+            console.log("🛑 Response:", error.response);
         }
     };
     
-    const updateOrderInDatabase = async (orderId, items) => {
-        const api_url = localStorage.getItem('url_api');
-        const slug = localStorage.getItem('slug');
-        const authToken = localStorage.getItem('token');
     
-        // อัปเดตข้อมูลคำสั่งซื้อ (order)
-        try {
-            const response = await axios.put(`${api_url}/api/${slug}/orders/${orderId}`, {
-                items: items,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
     
-            if (response.data.success) {
-                console.log("อัปเดตข้อมูลคำสั่งซื้อในฐานข้อมูลสำเร็จ");
-            } else {
-                throw new Error("ไม่สามารถอัปเดตข้อมูลคำสั่งซื้อได้");
-            }
-        } catch (error) {
-            console.error("เกิดข้อผิดพลาดในการอัปเดตคำสั่งซื้อ:", error);
-            throw error;
-        }
-    };
+    
 
         // ฟังก์ชันอัปเดตจำนวนเงินด้วยปุ่ม
         const handleAmountButton = (amount) => {
@@ -1087,7 +1079,33 @@ const loadTableLastOrder = async (tableCode) => {
         setReceivedAmount(remainingDue); // ตั้งยอดรับเงินให้เท่ากับยอดคงเหลือ
     };
 
+    // const handlePaymentSubmit = () => {
+    //     console.log("ช่องทางที่เลือก:", paymentMethod);
+    //     console.log("ข้อมูลที่จะส่งไป API:", {
+    //         order_id: currentOrderId,
+    //         pay_channel_id: paymentMethod.id,
+    //         pay_name: paymentMethod.pay_name,
+    //         amount: totalAmount,
+            
+    //     });
     
+    //     axios.post('/api/payment', {
+    //         order_id: currentOrderId,
+    //         pay_channel_id: paymentMethod.id,
+    //         pay_name: paymentMethod.pay_name,
+    //         amount: totalAmount,
+    //     })
+    //     .then(response => {
+    //         console.log("บันทึกสำเร็จ:", response.data);
+    //     })
+    //     .catch(error => {
+    //         console.error("เกิดข้อผิดพลาด:", error);
+    //     });
+    // };
+    const closePaymentHistory = () => {
+        setIsPaymentHistoryOpen(false);
+    };
+
     const closeReceipt = async () => {
         try {
             const totalDue = parseFloat(calculateTotalWithBillDiscountAndVAT()); // คำนวณยอดทั้งหมดที่ต้องชำระ
@@ -1346,7 +1364,12 @@ const loadTableLastOrder = async (tableCode) => {
             console.error("❌ ตรวจสอบการชำระเงินล้มเหลว:", error);
         }
     };
-    
+    const scrollCategory = (direction) => {
+        if (categoryRowRef.current) {
+            const scrollAmount = 250; // ปรับค่าตามความเหมาะสม
+            categoryRowRef.current.scrollLeft += direction === "left" ? -scrollAmount : scrollAmount;
+        }
+    };
     
     
     const handleWheel = (e) => {
@@ -1375,6 +1398,77 @@ const loadTableLastOrder = async (tableCode) => {
     const handleMouseUp = () => {
         setIsMouseDown(false);
     };
+
+    const processCreditCardPayment = async () => {
+        try {
+            if (!orderId) {
+                Swal.fire('ผิดพลาด', 'ไม่พบเลขที่ออเดอร์ กรุณาลองอีกครั้ง', 'error');
+                return;
+            }
+    
+            const totalDue = calculateTotalWithBillDiscountAndVAT(); // ยอดที่ต้องชำระ
+            const receivedAmount = totalDue; // บัตรเครดิตจะคิดเต็มจำนวน
+    
+            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            if (!api_url.endsWith('/api')) api_url += '/api';
+    
+            const paymentData = {
+                order_id: orderId,
+                pay_channel_id: paymentMethod, // ช่องทางการชำระเงินเป็นบัตรเครดิต
+                payment_date: new Date().toISOString(),
+                amount: parseFloat(receivedAmount),
+                icome: parseFloat(receivedAmount),
+                balances: 0, // ยอดคงเหลือเป็น 0
+                money_changes: 0, // ไม่มีเงินทอนสำหรับบัตรเครดิต
+                status: 'PAID', // กำหนดสถานะเป็น "PAID"
+            };
+    
+            console.log("📤 กำลังส่งข้อมูลชำระบัตรเครดิต:", paymentData);
+    
+            // ส่งข้อมูลไปยัง API
+            const response = await axios.post(`${api_url}/${slug}/payments`, paymentData, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+    
+            if (response.data && response.data.success) {
+                console.log('✅ ชำระเงินด้วยบัตรเครดิตสำเร็จ:', response.data);
+                Swal.fire('สำเร็จ', 'ชำระเงินด้วยบัตรเครดิตเรียบร้อยแล้ว', 'success');
+    
+                // อัปเดตสถานะออเดอร์เป็น "ชำระแล้ว"
+                await axios.put(
+                    `${api_url}/${slug}/orders/${orderId}`,
+                    { status: 'Y', net_amount: totalDue, payment_method: paymentMethod },
+                    { headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` } }
+                );
+    
+                // อัปเดตสถานะโต๊ะเป็น "ว่าง" หลังจากชำระเงินแล้ว
+                if (tableCode) {
+                    await axios.patch(
+                        `${api_url}/${slug}/table_codes/${tableCode}`,
+                        { status: 'Y' },
+                        { headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` } }
+                    );
+                }
+    
+                // รีเซ็ตค่าและแสดงบิล
+                resetStateAfterSuccess();
+                setShowReceipt(true);
+            } else {
+                throw new Error('API ไม่สามารถบันทึกการชำระเงินได้');
+            }
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการชำระบัตรเครดิต:', error);
+            Swal.fire('ผิดพลาด', 'ไม่สามารถดำเนินการชำระเงินด้วยบัตรเครดิตได้', 'error');
+        }
+    };
+    
+    
     return (
         <div style={styles.pageContainer}>
             {showQRCode && (
@@ -1382,32 +1476,23 @@ const loadTableLastOrder = async (tableCode) => {
                     position: 'fixed',
                     top: 0, left: 0, width: '100vw', height: '100vh',
                     display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    background: 'rgba(0, 0, 0, 0.381)',  // ✅ มืดขึ้นอีก
-                    backdropFilter: 'blur(15px)',  // ✅ ความเบลอเพิ่มขึ้น
-                    zIndex: 999999,  // ✅ สูงกว่าทุกองค์ประกอบ
-                    pointerEvents: 'auto',
-                    
+                    background: 'rgba(0, 0, 0, 0.5)', 
+                    backdropFilter: 'blur(10px)',
+                    zIndex: 9999,
                 }}>
                     <div style={{
-                        background: '#fff', padding: '20px', borderRadius: '15px', textAlign: 'center',
-                        boxShadow: '0px 10px 25px rgba(0,0,0,0.3)',
-                        position: 'relative',
-                        width: '320px',
-                        height: 'auto',
-                        zIndex: 1000000, // ✅ ให้ป๊อปอัพอยู่ด้านหน้าสุด
-                        pointerEvents: 'auto',
-                        boxShadow: 'inset 0px 0px 8px rgba(108, 92, 231, 0.3)', // ✅ เพิ่มเงาภายใน
-
+                        background: '#fff', padding: '20px', borderRadius: '15px',
+                        textAlign: 'center', boxShadow: '0px 10px 25px rgba(0,0,0,0.3)',
+                        position: 'relative', width: '350px',
                     }}>
-                        {/* ปุ่มปิด */}
-                        <button onClick={toggleQRCode} style={{
+                        <button onClick={() => setShowQRCode(false)} style={{
                             position: 'absolute', top: '10px', right: '10px',
                             background: 'none', border: 'none', fontSize: '18px',
                             cursor: 'pointer', color: '#e74c3c'
                         }}>✖</button>
 
                         <h3 style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', color: '#333' }}>
-                             ชำระเงินผ่าน PromptPay 💳
+                            ชำระเงินผ่าน PromptPay 💳
                         </h3>
                         <p style={{ color: '#666', marginBottom: '10px' }}>
                             เบอร์พร้อมเพย์: <strong>{promptPayAcc}</strong>
@@ -1419,20 +1504,37 @@ const loadTableLastOrder = async (tableCode) => {
                         />
 
                         <p style={{ color: '#777', fontSize: '14px', marginTop: '10px' }}>
-                             กรุณาสแกน QR Code เพื่อชำระเงิน
+                            กรุณาสแกน QR Code เพื่อชำระเงิน
                         </p>
 
-                        <button onClick={toggleQRCode} style={{
-                            marginTop: '15px', padding: '8px 15px', background: '#e74c3c',
-                            color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer',
-                            fontWeight: 'bold', transition: 'background 0.3s ease'
-                        }} onMouseOver={(e) => e.target.style.background = '#c0392b'}
-                        onMouseOut={(e) => e.target.style.background = '#e74c3c'}>
-                            ปิด
-                        </button>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '15px' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowQRCode(false);
+                                    handlePartialPayment(); // ✅ ดำเนินการชำระเงินเมื่อกดยืนยัน
+                                }}
+                                style={{
+                                    padding: '10px 15px', background: '#2ecc71', color: '#fff',
+                                    border: 'none', borderRadius: '5px', cursor: 'pointer',
+                                    fontWeight: 'bold'
+                                }}>
+                                ยืนยันการชำระ
+                            </button>
+
+                            <button 
+                                onClick={() => setShowQRCode(false)} 
+                                style={{
+                                    padding: '10px 15px', background: '#e74c3c', color: '#fff',
+                                    border: 'none', borderRadius: '5px', cursor: 'pointer',
+                                    fontWeight: 'bold'
+                                }}>
+                                ปิด
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
+
  
             <div style={styles.sidebarContainer}>
                 <Sidebar onCategorySelect={(categoryId) => setSelectedCategoryId(categoryId)} />
@@ -1441,88 +1543,178 @@ const loadTableLastOrder = async (tableCode) => {
                 <div style={styles.productListContainer}>
                 <div style={styles.headerContainer}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}>
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'flex-start', 
-                    alignItems: 'center', 
-                    overflowX: 'auto',  // เพิ่มการเลื่อนในแนวนอน
-                    whiteSpace: 'nowrap',  // ห้ามให้หมวดหมู่ขึ้นบรรทัดใหม่
-                    flexWrap: 'nowrap',  // ห้ามให้หมวดหมู่ข้ามบรรทัด
-                    width: '950px',  // ปรับความยาวหมวดหมู่    <=========ตรงนี้
-                    marginBottom: '0px',  // ป้องกันไม่ให้หมวดหมู่ชนกับเนื้อหาอื่น
-                    scrollBehavior: 'smooth',  // การเลื่อนที่เนียน
-                    touchAction: 'none',  // เลื่อนบนจอสัมผัส
-                    '-webkit-overflow-scrolling': 'touch',  // สำหรับ iOS Safari
-                    scrollbarWidth: 'none', // สำหรับ Firefox
-                    paddingBottom: '5px', // ป้องกันไม่ให้เนื้อหาบีบ
-                    // ซ่อนสกอล์บาร์
-                    '::-webkit-scrollbar': {
-                        display: 'none'
-                    },
-                }}
-                onWheel={handleWheel}  // เพิ่ม event นี้เพื่อรองรับการเลื่อนด้วยสกอล์เมาส์
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}  // เมื่อเมาส์ออกจากพื้นที่ เลิกคลิกค้าง
+                <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                   {/* ปุ่มเลื่อนซ้าย */}
+                <button
+                    onClick={() => scrollCategory("left")}
+                    style={{
+                        position: "absolute",
+                        left: "10px",
+                        zIndex: 10,
+                        background: "#347cae",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "14px",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "3px 6px 12px rgba(0, 0, 0, 0.2)",
+                        transition: "0.3s ease-in-out",
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.2)";
+                        e.currentTarget.style.borderRadius = "30%";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
+                        e.currentTarget.style.borderRadius = "50%";
+                    }}
                 >
-                    {/* เพิ่มตัวเลือก "ทั้งหมด" ที่สามารถเลือกได้ */}
+                    <FaArrowLeft size={20} color="#fff" />
+                </button>
+
+                {/* ปุ่มเลื่อนขวา */}
+                <button
+                    onClick={() => scrollCategory("right")}
+                    style={{
+                        position: "absolute",
+                        right: "10px",
+                        zIndex: 10,
+                        background: "#347cae",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "14px",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "3px 6px 12px rgba(0, 0, 0, 0.2)",
+                        transition: "0.3s ease-in-out",
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.2)";
+                        e.currentTarget.style.borderRadius = "30%";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
+                        e.currentTarget.style.borderRadius = "50%";
+                    }}
+                >
+                    <FaArrowRight size={20} color="#fff" />
+                </button>
+
+
                     <div
-                        key="all"
-                        onClick={() => handleCategorySelect(null)}  // เมื่อเลือก "ทั้งหมด" จะไม่กรองหมวดหมู่
-                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        ref={categoryRowRef}
                         style={{
-                            ...styles.categoryCircle,
-                            backgroundColor: '#ffffff',
-                            borderBottom: `5px solid #1000c2`, // สีฟ้า
-                            animation: 'colorTransitionBlue 4s ease-in-out infinite',
-                            marginRight: '10px',  // ช่องว่างระหว่างหมวดหมู่
-                            minWidth: '120px'  // กำหนดขนาดขั้นต่ำของหมวดหมู่
+                            display: "flex",
+                            overflowX: "auto",
+                            whiteSpace: "nowrap",
+                            scrollBehavior: "smooth",
+                            width: "80%",
+                            maxWidth: "900px",
+                            scrollbarWidth: "none",
+                            paddingBottom: "5px",
+                            position: "relative",
+                            maskImage: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1) 3%, rgba(255,255,255,1) 93%, rgba(255,255,255,0))",
+                            WebkitMaskImage: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1) 3%, rgba(255,255,255,1) 93%, rgba(255,255,255,0))"
                         }}
-                        onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(76, 158, 255, 0.8)'}
-                        onBlur={(e) => e.target.style.boxShadow = 'none'}
-                        tabIndex={0}
                     >
-                        <span style={styles.iconText}></span>
-                        <span style={styles.labelText}>ทั้งหมด</span>  {/* แสดง "ทั้งหมด" */}
+                        {/* หมวดหมู่ "ทั้งหมด" */}
+                        <div
+                            key="all"
+                            onClick={() => handleCategorySelect(null)}
+                            style={{
+                                padding: "12px 20px",
+                                cursor: "pointer",
+                                minWidth: "90px",
+                                height: "15px",
+                                textAlign: "center",
+                                fontSize: "14px",
+                                fontWeight: "bold",
+                                backgroundColor: selectedCategoryId === null ? "#35aace" : "#ffffff",
+                                color: selectedCategoryId === null ? "#fff" : "#333",
+                                borderRadius: "10px",
+                                transition: "0.3s ease-in-out",
+                                boxShadow: selectedCategoryId === null ? "0px 4px 10px rgba(108, 92, 231, 0.3)" : "none",
+                                transform: selectedCategoryId === null ? "scale(1.05)" : "scale(1)",
+                                position: "relative",
+                                border: selectedCategoryId === null ? "1px solid #ecfffe" : "2px solid #ddd",
+                                margin:"5px",
+
+                            }}
+                        >
+                            ทั้งหมด
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    bottom: "-5px",
+                                    left: "10%",
+                                    width: "80%",
+                                    height: "4px",
+                                    backgroundImage: selectedCategoryId === null
+                                        ? "linear-gradient(to right, #ffa20b 0%, #36d6fa 100%)"
+                                        : "linear-gradient(to right, #ddd 0%, #ddd 100%)",
+                                    borderRadius: "2px",
+                                    transition: "0.3s"
+                                }}
+                            />
+                        </div>
+
+                        {/* แสดงหมวดหมู่จาก API */}
+                        {categories.map((category, index) => {
+                            const colors = ['#4c9eff', '#78d259', '#ff7dbf', '#ff9f0f', '#ffeb4b', '#ff9f0f', '#b97aff'];
+                            const borderColor = colors[index % colors.length];
+
+                            return (
+                                <div
+                                    key={category.id}
+                                    onClick={() => handleCategorySelect(category.id)}
+                                    style={{
+                                        padding: "12px 20px",
+                                        cursor: "pointer",
+                                        minWidth: "90px",
+                                        height: "15px",
+                                        textAlign: "center",
+                                        fontSize: "14px",
+                                        fontWeight: "bold",
+                                        backgroundColor: selectedCategoryId === category.id ? "#35aace" : "#fff",
+                                        border: selectedCategoryId === category.id 
+                                            ? "1px solid #b9fffa"  // ✅ เส้นขอบหนาขึ้นเมื่อเลือก
+                                            : "2px solid #ddd",
+                                        color: selectedCategoryId === category.id ? "#fff" : "#333",
+                                        borderRadius: "10px",
+                                        transition: "0.3s ease-in-out",
+                                        boxShadow: selectedCategoryId === category.id ? "0px 4px 10px rgba(108, 92, 231, 0.3)" : "none",
+                                        transform: selectedCategoryId === category.id ? "scale(1.1)" : "scale(1)", // ✅ ขยายขนาดให้เด่นขึ้น
+                                        position: "relative",
+                                        margin: "5px",
+                                    }}
+                                >
+                                    {category.c_name || "หมวดหมู่"}
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            bottom: "-5px",
+                                            left: "10%",
+                                            width: "80%",
+                                            height: "4px",
+                                            backgroundImage: selectedCategoryId === category.id
+                                                ? `linear-gradient(to right, ${borderColor} 0%, #ffb400 100%)`
+                                                : "linear-gradient(to right, #ddd 0%, #ddd 100%)",
+                                            borderRadius: "2px",
+                                            transition: "0.3s"
+                                        }}
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
 
-                    {/* แสดงหมวดหมู่ที่ดึงมาจาก API */}
-                    {categories.length > 0 ? categories.map((category, index) => {
-                        // กำหนดสีที่แตกต่างกันให้กับเส้นขีด
-                        const colors = ['#4c9eff', '#78d259', '#ff7dbf', '#ff9f0f', '#ffeb4b', '#ff9f0f', '#b97aff'];
-                        const borderColor = colors[index % colors.length]; // เลือกสีที่ไม่ซ้ำกัน
-
-                        return (
-                            <div
-                                key={category.id}  // สมมุติว่าแต่ละ category มี property id
-                                onClick={() => handleCategorySelect(category.id)}  // เมื่อเลือกหมวดหมู่จะกรองรายการตามหมวดหมู่
-                                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                style={{
-                                    ...styles.categoryCircle,
-                                    backgroundColor: '#fff',
-                                    borderBottom: `5px solid ${borderColor}`,  // ใช้สีที่เลือกให้กับเส้นขีด
-                                    animation: `colorTransition${category.c_name || 'Default'} 4s ease-in-out infinite`,
-                                    marginRight: '10px',  // ช่องว่างระหว่างหมวดหมู่
-                                    flexShrink: 0, // ป้องกันไม่ให้หมวดหมู่หดตัว
-                                    minWidth: '120px'  // กำหนดขนาดขั้นต่ำของหมวดหมู่
-                                }}
-                                onFocus={(e) => e.target.style.boxShadow = '0px 0px 12px rgba(76, 158, 255, 0.8)'}
-                                onBlur={(e) => e.target.style.boxShadow = 'none'}
-                                tabIndex={0}
-                            >
-                                <span style={styles.iconText}></span>
-                                <span style={styles.labelText}>{category.c_name || 'หมวดหมู่'}</span>  {/* ใช้ c_name สำหรับชื่อหมวดหมู่ */}
-                            </div>
-                        );
-                    }) : (
-                        <div>
-                            {categories.length === 0 ? "กำลังโหลดหมวดหมู่..." : "หมวดหมู่ทั้งหมดจะมาแสดงที่นี่"}
-                        </div>
-                    )}
+                    
                 </div>
+
 
 
                 </div>
@@ -1710,24 +1902,25 @@ const loadTableLastOrder = async (tableCode) => {
         }}
     >
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-        <h3
-            style={{
-                ...styles.totalText,
-                fontSize: '1.1rem',
-                fontWeight: '400',
-                textAlign: 'left',
-                marginTop: '0',
-                marginBottom: '0',
-                color: '#444',
-                paddingLeft: '5px',
-                lineHeight: '1.2',
-                fontFamily: 'Impact, sans-serif',
-                textTransform: 'uppercase',
-                letterSpacing: '2px',
-            }}
-        >
-            รวม: {calculateTotalWithBillDiscountAndVAT().toFixed(2)} ฿
-        </h3>
+    <h3
+        style={{
+            ...styles.totalText,
+            fontSize: '1.1rem',
+            fontWeight: '400',
+            textAlign: 'left',
+            marginTop: '0',
+            marginBottom: '0',
+            color: '#444',
+            paddingLeft: '5px',
+            lineHeight: '1.2',
+            fontFamily: 'Impact, sans-serif',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+        }}
+    >
+        รวม: {calculateTotalWithBillDiscountAndVAT()} ฿ {/* ✅ เอาทศนิยมออก */}
+    </h3>
+
         <div style={{ width: '220px', marginRight: '-70px' }}>
             <select
                 value={paymentMethod}
@@ -1994,42 +2187,57 @@ const loadTableLastOrder = async (tableCode) => {
                     รับออเดอร์
                 </button>
             )}
-            <button 
-                onClick={toggleQRCode} 
-                disabled={paymentMethod !== "2"} // ✅ ปิดปุ่มหากไม่ได้เลือก PromptPay
-                style={{
-                    ...styles.receiveOrderButton,  // ✅ ใช้ style เดียวกับปุ่มอัพเดทอาหาร
-                    background: paymentMethod === "2" ? '#6c5ce7' : '#5a42e6', // ✅ เปลี่ยนสีปุ่มเมื่อปิดใช้งาน
-                    color: paymentMethod === "2" ? '#ffffff' : '#ffffff', // ✅ เปลี่ยนสีตัวอักษร
-                    cursor: paymentMethod === "2" ? 'pointer' : 'not-allowed', // ✅ เปลี่ยน cursor เป็น not-allowed เมื่อปิด
-                    opacity: paymentMethod === "2" ? 1 : 0.6, // ✅ ลดความชัดเจนของปุ่มเมื่อปิด
-                }}>
-                {showQRCode ? 'ซ่อน QR Code' : 'แสดง QR Code'}
-            </button>
-            
-
-            {/* ปุ่มแยกชำระเงิน */}
-            <button
+           <button
                 style={{
                     ...styles.paymentButton,
-                    backgroundColor: orderReceived && calculateRemainingDue() === 0 ? '#2ecc71' : '#d2c809',
+                    backgroundColor:
+                        orderReceived && calculateRemainingDue() === 0
+                            ? '#3498db' // ✅ สีปุ่ม "แสดงบิล"
+                            : paymentMethod === "2"
+                            ? '#2ecc71' // ✅ สีปุ่ม "ชำระ QR Code"
+                            : paymentMethod === "credit_card"
+                            ? '#e67e22' // ✅ สีปุ่ม "ชำระด้วยบัตรเครดิต"
+                            : '#d2c809',
                     ...(orderReceived && paymentMethod && (receivedAmount > 0 || calculateRemainingDue() === 0)
                         ? {}
                         : styles.paymentButtonDisabled),
                 }}
                 onClick={() => {
                     if (orderReceived && calculateRemainingDue() === 0) {
-                        // ถ้ายอดคงเหลือเป็น 0 และออเดอร์ได้รับแล้ว ให้แสดงบิล
-                        setShowReceipt(true); // เปิดหน้าต่างแสดงบิล
+                        setShowReceipt(true); // ✅ แสดงใบเสร็จ
+                    } else if (orderReceived && paymentMethod === "2") {
+                        setShowQRCode(true); // ✅ แสดง QR Code
+                    } else if (orderReceived && paymentMethod === "credit_card") {
+                        Swal.fire({
+                            title: 'ยืนยันการชำระเงิน?',
+                            text: "คุณต้องการดำเนินการชำระด้วยบัตรเครดิตหรือไม่?",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#e67e22',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'ใช่, ดำเนินการ',
+                            cancelButtonText: 'ยกเลิก'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                processCreditCardPayment(); // ✅ ดำเนินการชำระผ่านบัตรเครดิต
+                            }
+                        });
                     } else if (orderReceived) {
-                        // ถ้ายังมียอดคงเหลือ หรือยังไม่ได้รับการชำระทั้งหมด ให้ดำเนินการแยกชำระ
-                        handlePartialPayment(); // ดำเนินการแยกชำระเงิน
+                        handlePartialPayment(); // ✅ ดำเนินการแยกชำระ
                     }
                 }}
                 disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)}
             >
-                {orderReceived && calculateRemainingDue() === 0 ? 'แสดงบิล' : 'ชำระเงิน'}
+                {orderReceived && calculateRemainingDue() === 0
+                    ? 'แสดงบิล'
+                    : orderReceived && paymentMethod === "2"
+                    ? 'ชำระ QR Code'
+                    : orderReceived && paymentMethod === "credit_card"
+                    ? 'ชำระด้วยบัตรเครดิต'
+                    : 'ชำระเงิน'}
             </button>
+
+
 
         </div>
     </div>
@@ -2235,19 +2443,15 @@ const loadTableLastOrder = async (tableCode) => {
                         <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
                         <p style={styles.itemQuantity}></p>
                         <p style={styles.itemPrice}>
-                        <strong>
-                            {Array.isArray(paymentMethod) && paymentMethod.length > 1
-                                ? 'ชำระหลายรูปแบบ'
-                                : paymentMethod.length === 1
-                                ? paymentMethods
-                                    .filter(method => paymentMethod.includes(method.id.toString()))
-                                    .map(method => method.pay_name)
-                                    .join(', ') || 'ไม่พบข้อมูล'
-                                : 'ยังไม่ได้เลือก'}
-                        </strong>
-                    </p>
-
-
+                            <strong>
+                                {payments && payments.length > 0 
+                                    ? payments.length > 1 
+                                        ? 'ชำระหลายวิธี' // ✅ ถ้ามีมากกว่า 1 วิธี ให้แสดง "ชำระหลายวิธี"
+                                        : payments.map(payment => payment.pay_name).join(', ') || 'ไม่พบข้อมูลช่องทาง'
+                                    : 'ยังไม่ได้เลือก' // ✅ ถ้าไม่มีข้อมูล แสดง "ยังไม่ได้เลือก"
+                                }
+                            </strong>
+                        </p>
                     </div>
                     <div style={styles.buttonContainer}>
                         {calculateTotalWithBillDiscount() === 0 ? (
