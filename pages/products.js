@@ -8,6 +8,7 @@ import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/router';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa"; // ✅ เพิ่มไอคอน
+import Keyboard from './keyboard'; 
 
 
 export default function SalesPage() {
@@ -49,7 +50,14 @@ export default function SalesPage() {
     const [promptPayAPI, setPromptPayAPI] = useState("");
     const [promptPayAcc, setPromptPayAcc] = useState("");
     const userId = localStorage.getItem('userId') || "1";
-
+    const [showKeyboard, setShowKeyboard] = useState(false);
+    const [activeField, setActiveField] = useState('');
+    const [keyboardPosition, setKeyboardPosition] = useState({
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)'
+    });
+    
     // const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
 
     const getApiConfig = () => {
@@ -285,6 +293,67 @@ const loadTableLastOrder = async (tableCode) => {
         setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
     }
 };
+const handleInputFocus = (field, itemId = null) => {
+    setActiveField({ field, itemId });
+    setShowKeyboard(true);
+
+    // ดึงตำแหน่งของ input field ที่ถูกเลือก
+    const inputElement = document.activeElement; // ช่อง input ที่ถูกคลิก
+    if (inputElement) {
+        const rect = inputElement.getBoundingClientRect(); // ตำแหน่งของ input
+        setKeyboardPosition({
+            top: `${rect.bottom + window.scrollY + 10}px`, // ให้ Keyboard อยู่ใต้ช่อง input
+            left: `${rect.left + window.scrollX}px`, // ให้ Keyboard อยู่ชิดกับ input
+        });
+    }
+};
+
+
+
+    const handleKeyPress = (key) => {
+        if (!activeField || !activeField.field) return; // ป้องกัน error ถ้า activeField ไม่มีค่า
+
+        if (activeField.field === "search") {
+            // ✅ ใช้งานกับช่องค้นหา
+            if (key === "DELETE") {
+                setSearchTerm((prev) => prev.slice(0, -1));
+            } else {
+                setSearchTerm((prev) => prev + key);
+            }
+        } else if (activeField.field === "discount") {
+            // ✅ ใช้งานกับช่องใส่ส่วนลดของสินค้าในตะกร้า
+            setCart((prevCart) =>
+                prevCart.map((item) =>
+                    item.id === activeField.itemId
+                        ? {
+                            ...item,
+                            discount: key === "DELETE"
+                                ? parseFloat(item.discount.toString().slice(0, -1)) || 0 // ลบตัวเลขตัวสุดท้าย
+                                : parseFloat((item.discount || "").toString() + key) || 0, // เพิ่มตัวเลขต่อท้าย
+                        }
+                        : item
+                )
+            );
+        } else if (activeField.field === "billDiscount") {
+            // ✅ ใช้งานกับช่องส่วนลดรวมของบิล
+            if (key === "DELETE") {
+                setBillDiscount((prev) => parseFloat(prev.toString().slice(0, -1)) || 0);
+            } else {
+                setBillDiscount((prev) => parseFloat((prev || "").toString() + key) || 0);
+            }
+        } else if (activeField.field === "receivedAmount") {
+            // ✅ ใช้งานกับช่องรับเงิน
+            setReceivedAmount((prev) => {
+                if (key === "DELETE") {
+                    return parseFloat(prev.toString().slice(0, -1)) || 0; // ลบตัวเลขตัวสุดท้าย
+                } else {
+                    return parseFloat((prev || "").toString() + key) || 0; // เพิ่มตัวเลขต่อท้าย
+                }
+            });
+        }
+    };
+
+
 
     //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     
@@ -1398,7 +1467,16 @@ const loadTableLastOrder = async (tableCode) => {
     const handleMouseUp = () => {
         setIsMouseDown(false);
     };
-
+    const keyboardStyles = {
+        position: 'fixed', // ใช้ fixed เพื่อให้อยู่บนหน้าจอ
+        top: '50%', // จัดให้อยู่กึ่งกลางแนวตั้ง
+        left: '50%', // จัดให้อยู่กึ่งกลางแนวนอน
+        transform: 'translate(-1100%, -1000%)', // ใช้ transform เพื่อให้ตำแหน่งเป็นจุดศูนย์กลาง
+        zIndex: 9999, // ให้ keyboard อยู่ด้านหน้าสุด
+        padding: '15px',
+        borderRadius: '10px',
+    };
+    
     const processCreditCardPayment = async () => {
         try {
             if (!orderId) {
@@ -1536,9 +1614,17 @@ const loadTableLastOrder = async (tableCode) => {
             )}
 
  
-            <div style={styles.sidebarContainer}>
-                <Sidebar onCategorySelect={(categoryId) => setSelectedCategoryId(categoryId)} />
-            </div>
+        <div style={styles.sidebarContainer}>
+            <Sidebar onCategorySelect={(categoryId) => setSelectedCategoryId(categoryId)} />
+        </div>
+            {showKeyboard && (
+                <div style={keyboardStyles}>
+                    <Keyboard
+                        onKeyPress={handleKeyPress}
+                        onClose={() => setShowKeyboard(false)}
+                    />
+                </div>
+            )}
             <div style={styles.mainContent}>
                 <div style={styles.productListContainer}>
                 <div style={styles.headerContainer}>
@@ -1721,11 +1807,12 @@ const loadTableLastOrder = async (tableCode) => {
                         <div style={styles.searchAndTableCodeContainer}>
                             <div style={styles.searchContainer}>
                                 <h5 style={styles.tableCode}>โต๊ะ: {formattedTableCode}</h5>
-                            <input 
+                                <input 
                                     type="text" 
                                     placeholder="ค้นหาชื่ออาหาร..." 
                                     style={styles.searchInput} 
                                     value={searchTerm}
+                                    onFocus={() => handleInputFocus('search')} // ✅ เปิด Keyboard เมื่อกดที่ช่องค้นหา
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                                 <p style={styles.productCount}>รายการ: {filteredProducts.length}</p>
@@ -1846,6 +1933,7 @@ const loadTableLastOrder = async (tableCode) => {
                                         type="number"
                                         value={item.discount === 0 ? '' : item.discount}
                                         placeholder="ส่วนลด"
+                                        onFocus={() => handleInputFocus("discount", item.id)} // ✅ เพิ่มฟังก์ชันนี้
                                         onChange={(e) =>
                                             handleItemDiscountChange(
                                                 item.id,
@@ -1855,6 +1943,7 @@ const loadTableLastOrder = async (tableCode) => {
                                         }
                                         style={{ flex: '1', width: '60px' }}
                                     />
+
                                     <select
                                         value={item.discountType}
                                         onChange={(e) =>
@@ -1994,20 +2083,32 @@ const loadTableLastOrder = async (tableCode) => {
                     <input
                         type="number"
                         placeholder="ส่วนลดรวม"
-                        value={billDiscount || ''}
-                        onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
+                        value={billDiscount === 0 ? '' : billDiscount} // แก้ให้ช่องว่างเมื่อไม่มีส่วนลด
+                        onFocus={() => {
+                            setActiveField({ field: 'billDiscount' }); // ✅ กำหนดให้ Keyboard ใช้กับช่องส่วนลดรวม
+                            setShowKeyboard(true); // ✅ เปิด Keyboard เสมือน
+                        }}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) { // ✅ ตรวจสอบให้เป็นตัวเลขเท่านั้น
+                                setBillDiscount(parseFloat(value) || 0);
+                            }
+                        }}
                         style={{
                             backgroundColor: 'white',
                             border: '1px solid #cccccc',
                             borderRadius: '4px',
                             padding: '8px 1px',
                             fontSize: '13px',
-                            width:'75px',
+                            width: '75px',
                             color: '#333',
                             outline: 'none',
                             flex: 1,
+                            textAlign: 'right', // ✅ จัดข้อความให้อยู่ด้านขวา
                         }}
                     />
+
+
 
                     <select
                         value={billDiscountType}
@@ -2044,20 +2145,26 @@ const loadTableLastOrder = async (tableCode) => {
                         gap: '3px',
                     }}
                 >
-                    <input
+                   <input
                         type="number"
                         placeholder="รับเงิน"
-                        value={receivedAmount || ''}
+                        value={receivedAmount === 0 ? '' : receivedAmount} // ✅ ช่องว่างถ้าไม่มีค่า
+                        onFocus={() => {
+                            setActiveField({ field: 'receivedAmount' }); // ✅ กำหนดให้ Keyboard ใช้กับช่องรับเงิน
+                            setShowKeyboard(true); // ✅ เปิด Keyboard เสมือน
+                        }}
                         onChange={(e) => {
-                            const inputAmount = parseFloat(e.target.value) || 0;
-                            setReceivedAmount(inputAmount);
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) { // ✅ ตรวจสอบให้เป็นตัวเลขเท่านั้น
+                                setReceivedAmount(parseFloat(value) || 0);
+                            }
                         }}
                         style={{
                             ...styles.amountInputHalf,
                             flex: 2,
+                            textAlign: 'right', // ✅ ตัวเลขจัดชิดขวา
                         }}
                     />
-
                     <button
                         onClick={handleFullAmount}
                         style={{
