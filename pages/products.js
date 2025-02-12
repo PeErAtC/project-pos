@@ -49,7 +49,6 @@ export default function SalesPage() {
     const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
     const [promptPayAPI, setPromptPayAPI] = useState("");
     const [promptPayAcc, setPromptPayAcc] = useState("");
-    const userId = localStorage.getItem('userId') || "1";
     const [showKeyboard, setShowKeyboard] = useState(false);
     const [activeField, setActiveField] = useState('');
     const [keyboardPosition, setKeyboardPosition] = useState({
