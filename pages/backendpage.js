@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Sidebar from './components/backendsidebar';
-import { FaCheckCircle, FaExclamationCircle, FaImage, FaPlusCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaImage, FaPlusCircle, FaEllipsisH, FaEdit, FaTrashAlt  } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
 
@@ -25,6 +25,7 @@ export default function BackendPage() {
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);  // ใช้เพื่อควบคุมการแสดงเมนู
   
 
   useEffect(() => {
@@ -254,7 +255,8 @@ const handleSaveCategory = async () => {
     showNotification('กรุณากรอกชื่อหมวดหมู่หรือเลือกหมวดหมู่', 'error');
     return;
   }
-  const result = await Swal.fire({
+  const result = await 
+  Swal.fire({
     title: 'ยืนยันการเพิ่มหมวดหมู่',
     text: `คุณต้องการเพิ่มหมวดหมู่ "${newCategoryName}" หรือไม่?`,
     icon: 'question',
@@ -520,6 +522,21 @@ const handleSaveCategory = async () => {
       });
     }
   };
+
+  const handleMenuToggle = (index) => {
+    setShowMenu(prevState => prevState === index ? null : index);  // Toggle เมนูสำหรับแต่ละรายการ
+  
+
+  const handleEditItem = (id) => {
+    console.log("Editing item", id);
+    // การทำงานเมื่อคลิกปุ่มแก้ไข
+  };
+
+  const handleDeleteItem = (id) => {
+    console.log("Deleting item", id);
+    // การทำงานเมื่อคลิกปุ่มลบ
+  }};
+  
   // ฟังก์ชันกรองรายการอาหารตามคำค้นหาและหมวดหมู่
   const filteredItems = items.filter((item) => {
     const nameMatch = item.p_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
@@ -533,7 +550,7 @@ const handleSaveCategory = async () => {
   return (
     <div style={styles.container}>
       <Sidebar onListClick={() => console.log('List clicked')} />
-
+      
       <div style={styles.contentContainer}>
         {notification && (
           <div style={{
@@ -557,7 +574,7 @@ const handleSaveCategory = async () => {
 
         <div style={styles.listContainer}>
           <h1 style={styles.title}>รายการอาหาร</h1>
-          
+
           <div style={styles.searchContainer}>
             <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} style={styles.dropdown_all}>
               <option value="">หมวดหมู่ (ทั้งหมด)</option>
@@ -589,8 +606,7 @@ const handleSaveCategory = async () => {
                   </tr>
                 </thead>
                 <tbody>
-                {filteredItems.length > 0 ? (
-                  filteredItems.map((item, index) => (
+                  {filteredItems.map((item, index) => (
                     <tr key={index} style={styles.row(index)}>
                       <td style={styles.td}>{item.id.toString().padStart(4, "0")}</td>
                       <td style={styles.td}>{item.p_name || item.name}</td>
@@ -601,20 +617,24 @@ const handleSaveCategory = async () => {
                       <td style={{ ...styles.td, color: item.status === "Y" ? "#111" : "red" }}>
                         {item.status === "Y" ? "เปิด" : "ปิด"}
                       </td>
+
                       <td style={styles.td}>
-                        <button onClick={() => handleEditItem(item.id)} style={styles.editButton}>แก้ไข</button>
-                        <button onClick={() => handleDeleteItem(item.id)} style={styles.deleteButton}>ลบ</button>
+                        <button onClick={() => handleMenuToggle(index)} style={styles.menuButton}><FaEllipsisH size={20} /></button>
+                      
+                        {showMenu === index && (
+                          <div style={styles.menu}>
+                            <button onClick={() => handleEditItem(item.id)} style={styles.menuItemEdit}>
+                              <FaEdit size={16} /> แก้ไข
+                            </button>
+                            <button onClick={() => handleDeleteItem(item.id)} style={styles.menuItemDelete}>
+                              <FaTrashAlt size={16} /> ลบ
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" style={{ textAlign: "center", padding: "10px" }}>
-                      ไม่มีข้อมูล
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+                  ))}
+                </tbody>
               </table>
             </div>
           )}
@@ -818,7 +838,7 @@ const styles = {
     zIndex: 1000,
   },
   formContainer: {
-    marginLeft:'50px',
+    marginLeft:'40px',
     backgroundColor: '#ffffff',
     borderRadius: '10px',
     alignItems: 'center',
@@ -845,7 +865,7 @@ const styles = {
     height: '510px',
     borderRadius: '8px',
     boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
-    width: '1000px',
+    width: '1050px',
   },
   table: {
     width: '100%',
@@ -863,10 +883,11 @@ const styles = {
     zIndex: 1,
     color: '#fff',
   },
+  tdActions: { padding: '10px 25px', textAlign: 'center' },
   td: {
     padding: '10px 15px',
     borderTop: '1px solid #e0e0e0',
-    width: '305px',
+    width: '30px',
     color: '#111',
   },
   row: (index) => ({
@@ -911,7 +932,8 @@ const styles = {
     width: '390px',
     marginTop: '10px',
   },
-  dropdown_all:{    padding: '12px',
+  dropdown_all: { 
+    padding: '12px',
     borderRadius: '5px',
     border: '1px solid #ccc', // กรอบสีขาว
     width: '350px',
@@ -924,9 +946,26 @@ const styles = {
       width: '350px',
       marginBottom: '15px',
     },
+    menuButton: {
+      color:'#333',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      fontSize: '20px',
+      padding:'5px',
+    },
+    menu: {
+      display: 'inline',  
+      alignItems: 'center',
+      marginRight:'40px',
+    },
+    menuItemEdit: {
+     background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px'
+    },
+    menuItemDelete: {
+      background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer',
+    },
   searchInput: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', flex: 1, marginBottom: '15px' },
-  editButton: { background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px' },
-  deleteButton: { background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer' },
   cancelButton: { width: '305px', padding: '12px', borderRadius: '5px', backgroundColor: '#d9534f', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '10px' },
   imageUpload: { border: '2px dashed #aaa', borderRadius: '10px', width: '350px', height: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888', marginBottom: '15px', textAlign: 'center' },
   imagePreview: { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' },
