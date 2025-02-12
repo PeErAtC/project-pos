@@ -1571,7 +1571,7 @@ const loadTableLastOrder = async (tableCode) => {
                         e.currentTarget.style.borderRadius = "50%";
                     }}
                 >
-                    <FaArrowLeft size={20} color="#fff" />
+                    <FaArrowLeft size={15} color="#fff" />
                 </button>
 
                 {/* ปุ่มเลื่อนขวา */}
@@ -1601,7 +1601,7 @@ const loadTableLastOrder = async (tableCode) => {
                         e.currentTarget.style.borderRadius = "50%";
                     }}
                 >
-                    <FaArrowRight size={20} color="#fff" />
+                    <FaArrowRight size={15} color="#fff" />
                 </button>
 
 
@@ -1611,14 +1611,14 @@ const loadTableLastOrder = async (tableCode) => {
                             display: "flex",
                             overflowX: "auto",
                             whiteSpace: "nowrap",
+                            marginRight:'0px',
                             scrollBehavior: "smooth",
-                            width: "80%",
-                            maxWidth: "900px",
+                            width: "85%",
+                            maxWidth: "920px",
                             scrollbarWidth: "none",
-                            paddingBottom: "5px",
                             position: "relative",
-                            maskImage: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1) 3%, rgba(255,255,255,1) 93%, rgba(255,255,255,0))",
-                            WebkitMaskImage: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1) 3%, rgba(255,255,255,1) 93%, rgba(255,255,255,0))"
+                            maskImage: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1) 1%, rgba(255,255,255,1) 99%, rgba(255,255,255,0))",
+                            WebkitMaskImage: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1) 1%, rgba(255,255,255,1) 99%, rgba(255,255,255,0))"
                         }}
                     >
                         {/* หมวดหมู่ "ทั้งหมด" */}
