@@ -4,6 +4,9 @@ import { MdRestaurant } from 'react-icons/md';
 import axios from 'axios';
 import Keyboard from './keyboard'; // คีย์บอร์ดเสมือนที่คุณสร้างขึ้นมา
 import Sidebar from './components/sidebar'; // Sidebar
+import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+import Image from 'next/image';
+import './styles.css';  // เพิ่มไฟล์ CSS ที่คุณสร้างใหม่เข้ามา
 
 // Component สำหรับแสดงข้อมูลโต๊ะ
 function TableCard({ table, onClick }) {
@@ -16,58 +19,61 @@ function TableCard({ table, onClick }) {
             style={{
                 width: '160px',
                 height: '200px',
-                color: isSpecialTable ? '#333' : '#fff',
+                color: isSpecialTable ? '#333' : '#ffffff',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '12px', // ขอบมุมโค้ง
-                background: isSpecialTable
-                    ? 'linear-gradient(145deg, #FFC137, #FFB220)' 
-                    : isAvailable
-                    ? 'linear-gradient(145deg, #499cae, #499cae)' 
-                    : 'linear-gradient(145deg, #ff6b6b, #f14f4f)', // ไล่สีพื้นหลัง
+                borderRadius: '10px',
+                backgroundColor: isSpecialTable ? '#ffd700' : isAvailable ? '#499cae' : '#d33',
                 boxShadow: isPressed
-                    ? '0px 3px 8px rgba(0, 0, 0, 0.2)' // เงาลึกเมื่อกด
-                    : '0px 6px 18px rgba(0, 0, 0, 0.15)', // เงาปกติ
+                    ? '0px 3px 8px rgba(0, 0, 0, 0.2)'
+                    : '0px 6px 18px rgba(0, 0, 0, 0.15)',
                 cursor: 'pointer',
                 fontSize: '20px',
-                fontWeight: '600', // ฟอนต์หนา
+                fontWeight: 'bold',
                 padding: '15px',
                 textAlign: 'center',
-                transition: 'transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease', // เพิ่มการเปลี่ยนแปลงเมื่อ hover
-                transform: isPressed ? 'scale(0.98)' : 'scale(1)', // ขยายเมื่อกด
-                border: `3px solid ${isSpecialTable ? '#FFC137' : '#fff'}`, // ขอบที่ชัดเจน
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                transform: isPressed ? 'scale(0.95)' : 'scale(1)',
             }}
             onClick={() => {
                 setIsPressed(false);
                 onClick(table.id); // เมื่อกดที่โต๊ะให้ไปที่หน้ารายละเอียด
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)'; // ขยายโต๊ะเมื่อ hover
-                e.currentTarget.style.boxShadow = '0px 10px 25px rgba(0, 0, 0, 0.3)'; // เงาที่มืดขึ้นเมื่อ hover
-                e.currentTarget.style.border = `3px solid ${isAvailable ? '#d9ecf1' : '#fce6b6'}`; // เปลี่ยนสีขอบเมื่อ hover
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0px 8px 20px rgba(0, 0, 0, 0.25)';
+                e.currentTarget.style.border = `3px solid ${isAvailable ? '#d9ecf1' : '#fce6b6'}`;
             }}
             onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)'; // กลับขนาดโต๊ะเมื่อออกจาก hover
-                e.currentTarget.style.boxShadow = '0px 6px 18px rgba(0, 0, 0, 0.15)'; // กลับเงาปกติ
-                e.currentTarget.style.border = `3px solid ${isSpecialTable ? '#FFC137' : '#fff'}`; // กลับขอบเดิม
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0px 6px 18px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.border = `3px solid ${isSpecialTable ? '#FFC137' : '#fff'}`;
             }}
             onMouseDown={() => setIsPressed(true)}
             onMouseUp={() => setIsPressed(false)}
             aria-label={`Table ${table.table_code}, ${isAvailable ? 'Available' : 'Occupied'}`}
         >
-            <MdRestaurant style={{ fontSize: '50px', marginBottom: '10px' }} />
-            <p>{isSpecialTable ? 'หน้าขาย' : table.table_code}</p>
-            {!isSpecialTable && <p>สถานะ: {isAvailable ? 'ว่าง' : 'ไม่ว่าง'}</p>}
+            <Image
+                src={isSpecialTable ? "/images/reception.png" : "/images/food-serving.png"} 
+                alt="Table Icon"
+                width={70}
+                height={70}
+                style={{ marginBottom: '10px' }}
+            />
+            <p>{isSpecialTable ? 'หน้าขาย' :table.table_code }</p>
+            {!isSpecialTable && (
+                <p>{isAvailable ? 'พร้อมให้บริการ' : 'กำลังให้บริการ'}</p>
+            )}
         </div>
-        );
-    }
+    );
+}
 
 export default function MainTablePage() {
     const router = useRouter();
     const [tables, setTables] = useState([]);
-    const [userName, setUserName] = useState(''); // สำหรับเก็บชื่อผู้ใช้
+    const [storeName, setStoreName] = useState(''); // สำหรับเก็บชื่อร้าน
     const [error, setError] = useState(null);
     const { tableCode } = router.query;
     const [searchQuery, setSearchQuery] = useState(''); // ใช้สำหรับการค้นหาตาราง
@@ -98,22 +104,20 @@ export default function MainTablePage() {
             setTables(specialTable ? [specialTable, ...otherTables] : otherTables);
             setError(null);
         } catch (error) {
-            console.error('Error fetching tables:', error);
             setError('เกิดข้อผิดพลาดในการดึงข้อมูล');
         }
     };
-    const fetchUserName = () => {
-        const storedUserName = localStorage.getItem('username'); // สมมติว่าชื่อผู้ใช้เก็บใน localStorage key `username`
-        if (storedUserName) {
-            setUserName(storedUserName);
-        } else {
-            setError('ไม่พบข้อมูลผู้ใช้');
-        }
-    };
+    
     useEffect(() => {
+        const storedStoreName = localStorage.getItem('store');
+        if (storedStoreName) {
+            setStoreName(storedStoreName);
+        } else {
+            setStoreName('Easy POS'); // ค่าเริ่มต้นถ้าไม่มีใน localStorage
+        }
+
         fetchTables();
-        fetchUserName(); // ดึงชื่อผู้ใช้จาก localStorage
-        const interval = setInterval(fetchTables, 5000); // ดึงข้อมูลทุก 5 วินาที
+        const interval = setInterval(fetchTables, 10000); // ดึงข้อมูลทุก 5 วินาที
         return () => clearInterval(interval);
     }, []);
 
@@ -141,7 +145,7 @@ export default function MainTablePage() {
         playClickSound();
         router.push({
             pathname: '/products',
-            query: { tableCode },
+            query: { tableCode: tableCode },
         });
     };
 
@@ -172,16 +176,16 @@ export default function MainTablePage() {
     }, []);
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-            <Sidebar /> {/* เพิ่ม Sidebar */}
-            <div
-                style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    background: 'rgb(221, 236, 237)', // สีพื้นหลังใหม่
-                }}
+            <div style={{ display: 'flex', minHeight: '100vh' }}>
+                <Sidebar />  {/* แสดง Sidebar ด้านซ้าย */}
+                <div
+                    style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        background: 'rgb(221, 236, 237)',
+                    }}
             >
                 {tableCode ? (
                     <div style={styles.header}>
@@ -190,7 +194,7 @@ export default function MainTablePage() {
                 ) : (
                     <div style={styles.tableSelectionContainer}>
                         <h1 style={styles.title}>
-                            {userName ? `ยินดีต้อนรับ: ${userName}` : 'กำลังโหลด...'}
+                            {storeName ? `${storeName}` : 'กำลังโหลด...'}
                         </h1>
                         <input
                             ref={searchInputRef}
@@ -225,12 +229,72 @@ export default function MainTablePage() {
         </div>
     );
 }
+
 const styles = {
-    header: { padding: '20px', textAlign: 'center', backgroundColor: '#f0f2f5', width: '100%' },
-    tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' },
-    title: { fontSize: '28px', fontWeight: '600', textAlign: 'center', marginBottom: '30px', color: '#333' },
-    searchInput: { width: '50%', padding: '10px', fontSize: '16px', marginBottom: '20px', borderRadius: '5px', border: '1px solid #ccc' },
-    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', justifyContent: 'center', padding: '20px', width: '100%', maxWidth: '1000px' },
+    sidebar: {
+        height: '87vh',
+        backgroundColor: '#499cae',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '10px 0',
+        borderRadius: '20px',
+        boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
+        transition: 'width 0.3s ease',
+        position: 'absolute',  // เปลี่ยนจาก 'fixed' เป็น 'absolute'
+        top: '20px',
+        left: '20px',
+        zIndex: 1000,
+        width: '215px',
+      },
+    header: {
+        padding: '50px',
+        textAlign: 'center',
+        background_Color: '#f0f2f5',
+        width: '100%',
+        border:'2px solid white',
+    },
+    tableSelectionContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+    },
+    title: {
+        padding:'10px',
+        fontSize: '30px',
+        fontWeight: '600',
+        textAlign: 'center',
+        marginBottom: '30px',
+        fontFamily: '"Montserrat", sans-serif',
+        color: '#222',
+    },
+    searchInput: {
+        width: '65%',
+        padding: '10px',
+        fontSize: '16px',
+        marginBottom: '20px',
+        borderRadius: '5px',
+        border: '1px solid #ccc',
+    },
+    tableGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: '20px',
+        justifyContent: 'center',
+        padding: '30px',
+        width: '100%',
+        maxWidth: '1000px',
+        border: '5px solid white', /* กรอบสีขาว */
+        borderRadius: '10px', /* มุมโค้ง */
+        backgroundColor: '#ffffff', // ทำให้พื้นหลังของกริดโต๊ะเป็นสีขาวทึบ
+        boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.2)', /* เพิ่มเงา */
+        maxHeight: '470px',  // จำกัดความสูงให้แสดงแค่ 2 แถว
+        overflowY: 'auto',  // เพิ่มเลื่อนลงหากโต๊ะเกิน 2 แถว
+    },
     errorText: { color: 'red' },
     noTableText: { color: '#333' },
+    sale: {
+        color:'#000',
+    },
 };
