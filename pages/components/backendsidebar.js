@@ -130,7 +130,7 @@ export default function BackendSidebar() {
           style={{ ...styles.icon, ...(activeMenu === '/TableManagement' ? styles.activeIcon : {}) }}
           onClick={() => handleMenuClick('/TableManagement')}
         >
-          <Image src="/images/dinner-table.png" alt="Table" width={35} height={35} />
+          <Image src="/images/dinner-table.png" alt="Table" width={40} height={40} />
           {isExpanded && <span style={styles.iconLabel}>จัดการโต๊ะ</span>}
         </div>
 
@@ -162,121 +162,17 @@ export default function BackendSidebar() {
   );
 }
 const styles = {
-  sidebar: {
-    height: '87vh',
-    backgroundColor: '#499cae',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '10px 0',
-    borderRadius: '20px',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
-    transition: 'width 0.3s ease',
-    position: 'fixed',
-    top: '20px',
-    left: '20px',
-    zIndex: 1000,
-  },
-  toggleButton: {
-    cursor: 'pointer',
-    fontSize: '20px',
-    fontWeight: 'bold',
-    marginBottom: '20px',
-    backgroundColor: '#494cba',
-    color: '#499cae',
-    borderRadius: '50%',
-    width: '30px',
-    height: '30px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    position: 'absolute',
-    top: '20px',
-    right: '-15px',
-    zIndex: 1100,
-  },
-  arrow: {
-    fontSize: '20px',
-    color: '#fff',
-  },
-  iconWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: '10px',
-    padding: '10px',
-    display: 'flex',
-    alignItems: 'center', // จัดให้อยู่ตรงกลางในแนวแกน Y
-    justifyContent: 'flex-start', // จัดแนวในแกน X
-    gap: '10px',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-    flexDirection: 'row',
-    marginTop: '30px',
-    marginBottom: '20px',
-    width: '100%', // ให้มีความกว้างเท่ากับกรอบด้านนอก
-  },
-  storeInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start', // จัดข้อความให้อยู่ชิดซ้าย
-    justifyContent: 'center',
-  },
-  marqueeContainer: {
-    display: 'flex',
-    overflow: 'hidden',
-    width: '120px',  // ปรับตามขนาดที่ต้องการ
-    whiteSpace: 'nowrap',
-    position: 'relative',
-  },
-  marqueeContent: {
-    display: 'inline-block',
-    whiteSpace: 'nowrap',
-    animation: 'marquee 5s linear infinite',
-    color: '#499cae', 
-    fontSize: '16px',
-    fontWeight: 'bold',
-  },
-  storeName: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#499cae',
-    padding:'5px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  userName: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#444',
-  },
-  iconContainer: (isExpanded) => ({
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: isExpanded ? 'flex-start' : 'center',
-    gap: '20px',
-    width: '100%',
-    paddingLeft: isExpanded ? '20px' : '0',
-  }),
-  icon: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '13px',
-    cursor: 'pointer',
-    transition: 'background 0.3s ease',
-    color: '#fff',
-    fontSize: '16px',
-    fontWeight: 'normal',
-  },
-  activeIcon: {
-    backgroundColor: 'rgb(12, 62, 95)',
-    color: '#ffffff',
-    borderRadius: '10px',
-    padding: '15px',
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-  },
-  iconLabel: {
-    fontSize: '16px',
-    fontWeight: '500',
-    color: '#ffffff',
-  },
+  sidebar: { height: '87vh', background: 'linear-gradient(to bottom, #499cae,rgb(13, 135, 175))', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0', borderRadius: '20px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)', transition: 'width 0.3s ease', position: 'fixed', top: '20px', left: '20px', zIndex: 1000 },
+  toggleButton: { cursor: 'pointer', fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', backgroundColor: '#494cba', color: '#499cae', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', position: 'absolute', top: '20px', right: '-15px', zIndex: 1100 },
+  arrow: { fontSize: '20px', color: '#fff' },
+  iconWrapper: { backgroundColor: '#fff', borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '10px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)', flexDirection: 'row', marginTop: '30px', marginBottom: '20px', width: '100%' },
+  storeInfo: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' },
+  marqueeContainer: { display: 'flex', overflow: 'hidden', width: '120px', whiteSpace: 'nowrap', position: 'relative' },
+  marqueeContent: { display: 'inline-block', whiteSpace: 'nowrap', animation: 'marquee 5s linear infinite', color: '#499cae', fontSize: '16px', fontWeight: 'bold' },
+  storeName: { fontSize: '18px', fontWeight: 'bold', color: '#499cae', padding: '5px', display: 'flex', flexDirection: 'column' },
+  userName: { fontSize: '14px', fontWeight: 'bold', color: '#444' },
+  iconContainer: (isExpanded) => ({ display: 'flex', flexDirection: 'column', alignItems: isExpanded ? 'flex-start' : 'center', gap: '20px', width: '100%', paddingLeft: isExpanded ? '20px' : '0' }),
+  icon: { display: 'flex', alignItems: 'center', gap: '10px', padding: '13px', cursor: 'pointer', transition: 'background 0.3s ease', color: '#fff', fontSize: '16px', fontWeight: 'normal' },
+  activeIcon: { backgroundColor: 'rgb(12, 62, 95)', color: '#ffffff', borderRadius: '10px', padding: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)' },
+  iconLabel: { fontSize: '16px', fontWeight: '500', color: '#ffffff' },
 };
