@@ -57,11 +57,11 @@ function TableCard({ table, onClick }) {
             aria-label={`Table ${table.table_code}, ${isAvailable ? 'Available' : 'Occupied'}`}
         >
             <Image
-                src={isSpecialTable ? "/images/reception.png" : "/images/food-serving.png"} 
+                src={isSpecialTable ? "/images/box.png" : "/images/eat.png"} 
                 alt="Table Icon"
                 width={70}
                 height={70}
-                style={{ marginBottom: '10px' }}
+                style={{ marginBottom: '0px' }}
             />
             <p>{isSpecialTable ? 'หน้าขาย' :table.table_code }</p>
             {!isSpecialTable && (
