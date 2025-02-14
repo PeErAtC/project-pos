@@ -2,25 +2,13 @@
     import React, { useState, useEffect } from 'react';
     // นำเข้า axios สำหรับการดึงข้อมูล API
     import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
-
     import axios from 'axios';
     // นำเข้า BackendSidebar ซึ่งเป็น Component สำหรับ Sidebar
     import BackendSidebar from './components/backendsidebar';
     // นำเข้า SweetAlert2 สำหรับการแจ้งเตือนแบบ Popup
     import Swal from 'sweetalert2';
     // นำเข้าไอคอนต่าง ๆ จาก react-icons สำหรับตกแต่ง UI
-    import {
-        FaClipboardList,
-        FaTable,
-        FaCalendarAlt,
-        FaDollarSign,
-        FaTag,
-        FaPercentage,
-        FaMoneyBill,
-        FaCheckCircle,
-        FaTimesCircle,
-    } from 'react-icons/fa';
-
+    import {FaClipboardList,FaTable,FaCalendarAlt,FaDollarSign,FaTag,FaPercentage,FaMoneyBill,FaCheckCircle,FaTimesCircle,} from 'react-icons/fa';
     
     export default function SalesReport({ initialReportData, initialError }) {
         // การใช้ useState สำหรับสถานะของข้อมูล รายงาน, ข้อผิดพลาด และตัวกรองวันที่
@@ -29,14 +17,12 @@
         const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]); // Set initial date to current date
         const [currentItems, setCurrentItems] = useState([]);
 
-
         // ฟังก์ชันสำหรับแปลงวันที่และเวลาให้อยู่ในรูปแบบของประเทศไทย
         const formatDateTimeToThai = (utcDateTime) => {
             if (!utcDateTime) return 'N/A';
             const date = new Date(`${utcDateTime}T00:00:00Z`); // เพิ่มเวลาเริ่มต้น
             return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
         };
-    
 
         // ฟังก์ชันสำหรับดึงข้อมูลการชำระเงินตาม Order ID
             const fetchPaymentHistory = async (orderId) => {
@@ -46,13 +32,14 @@
                     const slug = localStorage.getItem('slug');
                     const authToken = localStorage.getItem('token');
                     //////////////////// ประกาศตัวแปร  END URL CALL 
+
                     const response = await axios.get(`${api_url}/${slug}/payments`, {
                         headers: {
                             Accept: 'application/json',
                             Authorization: `Bearer ${authToken}`,
                         },
                     });
-        
+
                     const payments = response.data || [];
                     return payments.filter(payment => payment.order_id === orderId);
                 } catch (error) {
@@ -64,6 +51,7 @@
             // ฟังก์ชันสำหรับคำนวณรายละเอียด VAT
         const calculateVatDetails = (item) => {
             if (!item || item.vat_per === null || item.vat_per === undefined || parseFloat(item.vat_per) === 0) {
+
                 // กรณีไม่มี VAT หรือ VAT เป็น 0%
                 return {
                     vatAmount: '0.00',
@@ -232,52 +220,52 @@
                 return [];
             }
         };        
+
         // ฟังก์ชันแสดงรายละเอียด Order พร้อม Popup
-        // ฟังก์ชันแสดงรายละเอียด Order พร้อม Popup
-const fetchOrderDetails = async (orderId) => {
-    try {
-        const api_url = localStorage.getItem('url_api');
-        const slug = localStorage.getItem('slug');
-        const authToken = localStorage.getItem('token');
+    const fetchOrderDetails = async (orderId) => {
+        try {
+            const api_url = localStorage.getItem('url_api');
+            const slug = localStorage.getItem('slug');
+            const authToken = localStorage.getItem('token');
 
-        // ดึงข้อมูลคำสั่งซื้อ
-        const orderResponse = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
-            headers: {
-                Accept: 'application/json',
-                Authorization: `Bearer ${authToken}`,
-            },
-        });
+            // ดึงข้อมูลคำสั่งซื้อ
+            const orderResponse = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
+            });
 
-        // ดึงข้อมูลการชำระเงินโดยใช้ API ใหม่ /payments/{order_id}/list
-        const paymentResponse = await axios.get(`${api_url}/${slug}/payments/${orderId}/list`, {
-            headers: {
-                Accept: 'application/json',
-                Authorization: `Bearer ${authToken}`,
-            },
-        });
+            // ดึงข้อมูลการชำระเงินโดยใช้ API ใหม่ /payments/{order_id}/list
+            const paymentResponse = await axios.get(`${api_url}/${slug}/payments/${orderId}/list`, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
+            });
 
-        console.log('Order Details:', orderResponse.data);
-        console.log('Payment Details:', paymentResponse.data);
+            console.log('Order Details:', orderResponse.data);
+            console.log('Payment Details:', paymentResponse.data);
 
-        if (orderResponse.data && orderResponse.data.items) {
-            return { order: orderResponse.data, payments: paymentResponse.data }; // ส่งข้อมูลคำสั่งซื้อและการชำระเงินกลับ
-        } else {
-            throw new Error('ไม่พบข้อมูลรายการสินค้าของออเดอร์นี้');
+            if (orderResponse.data && orderResponse.data.items) {
+                return { order: orderResponse.data, payments: paymentResponse.data }; // ส่งข้อมูลคำสั่งซื้อและการชำระเงินกลับ
+            } else {
+                throw new Error('ไม่พบข้อมูลรายการสินค้าของออเดอร์นี้');
+            }
+        } catch (error) {
+            console.error('Error fetching order details:', error);
+            Swal.fire({
+                title: 'เกิดข้อผิดพลาด',
+                text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
+                icon: 'error',
+                confirmButtonText: 'ปิด',
+            });
+            return null;
         }
-    } catch (error) {
-        console.error('Error fetching order details:', error);
-        Swal.fire({
-            title: 'เกิดข้อผิดพลาด',
-            text: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้',
-            icon: 'error',
-            confirmButtonText: 'ปิด',
-        });
-        return null;
-    }
-};
+    };
 
-// ฟังก์ชันแสดงรายละเอียดคำสั่งซื้อ
-const showOrderDetails = async (orderId) => {
+    // ฟังก์ชันแสดงรายละเอียดคำสั่งซื้อ
+    const showOrderDetails = async (orderId) => {
     if (!orderId) {
         Swal.fire({
             title: 'เกิดข้อผิดพลาด',
@@ -287,7 +275,6 @@ const showOrderDetails = async (orderId) => {
         });
         return;
     }
-
     try {
         const orderDetails = await fetchOrderDetails(orderId);
 
@@ -328,6 +315,7 @@ const showOrderDetails = async (orderId) => {
                     </tr>
                 </thead>
                 <tbody>
+                
                     ${orderDetails.order.items.map((item, index) => {
                     const price = parseFloat(item.price) || 0;
                     const quantity = parseInt(item.quantity) || 0;
@@ -347,23 +335,14 @@ const showOrderDetails = async (orderId) => {
                 </tbody>
                 <tfoot style="background-color: #f8f8f8; font-weight: bold; position: sticky; bottom: -1; z-index: 2;">
                     <tr>
-                        <td colspan="3" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
-                            สินค้าทั้งหมด:
-                        </td>
-                        <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">
-                            ${totalQuantity} ชิ้น
-                        </td>
-                        <td colspan="1" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
-                            รวมทั้งหมด:
-                        </td>
-                        <td style="padding: 5px; border: 1px solid #ddd;">
-                            ${totalAmount.toFixed(2)} ฿
-                        </td>
+                        <td colspan="3" style="padding: 5px; border: 1px solid #ddd; text-align: right;">สินค้าทั้งหมด:</td>
+                        <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">${totalQuantity} ชิ้น</td>
+                        <td colspan="1" style="padding: 5px; border: 1px solid #ddd; text-align: right;">รวมทั้งหมด:</td>
+                        <td style="padding: 5px; border: 1px solid #ddd;">${totalAmount.toFixed(2)} ฿</td>
                     </tr>
                 </tfoot>
             </table>
         `;
-
         // แสดงผลใน SweetAlert
         Swal.fire({
             html: `
@@ -390,8 +369,6 @@ const showOrderDetails = async (orderId) => {
         const totalAmountPaid = payments
             .map(p => p.amount ? parseFloat(p.amount) : 0)
             .reduce((sum, value) => sum + value, 0);
-
-
         const paymentHistoryTableHTML = `
             <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                 <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
@@ -423,28 +400,18 @@ const showOrderDetails = async (orderId) => {
                             }).join('')
                             : `
                                 <tr>
-                                    <td colspan="7" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">
-                                        ไม่มีข้อมูลการชำระเงิน
-                                    </td>
+                                    <td colspan="7" style="padding: 5px; border: 1px solid #ddd; text-align: center; color: #888;">ไม่มีข้อมูลการชำระเงิน</td>
                                 </tr>
                             `
                     }
                     </tbody>
                     <tfoot style="background-color: #f8f8f8; font-weight: bold; position: sticky; bottom: 0; z-index: 2;">
                     <tr>
-                        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
-                            รวมยอดแยกชำระ:
-                        </td>
-                        <td style="padding: 5px; border: 1px solid #ddd;">
-                            ${totalAmountPaid.toFixed(2)} ฿
-                        </td>
+                        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;"> รวมยอดแยกชำระ: </td>
+                        <td style="padding: 5px; border: 1px solid #ddd;">${totalAmountPaid.toFixed(2)} ฿ </td>
                         <td colspan="1" style="padding: 5px; border: 1px solid #ddd;"></td>
-                        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
-                            **เงินทอน:**
-                        </td>
-                        <td style="padding: 5px; border: 1px solid #ddd;">
-                            ${totalMoneyChanges.toFixed(2)} ฿
-                        </td>
+                        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">**เงินทอน:**</td>
+                        <td style="padding: 5px; border: 1px solid #ddd;">${totalMoneyChanges.toFixed(2)} ฿</td>
                     </tr>
                 </tfoot>
             </table>
@@ -454,13 +421,9 @@ const showOrderDetails = async (orderId) => {
                     html: `
                         <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
                             <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
-                            <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
-                                ${itemsTableHTML}
-                            </div>
+                            <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">${itemsTableHTML}</div>
                             <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
-                            <div style="max-height: 150px; overflow-y: auto;">
-                                ${paymentHistoryTableHTML}
-                            </div>
+                            <div style="max-height: 150px; overflow-y: auto;">${paymentHistoryTableHTML}</div>
                         </div>
                     `,
                     confirmButtonText: 'ปิด',
