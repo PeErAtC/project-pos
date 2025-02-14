@@ -1,0 +1,73 @@
+/* styles.css */
+
+/* Media Queries สำหรับหน้าจอขนาดใหญ่ */
+.tableGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 20px;
+    justify-content: center;
+    padding: 30px;
+    width: 100%;
+    max-width: 1000px;
+    border: 5px solid white;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    max-height: 470px;
+    overflow-y: auto;
+}
+
+/* Media Queries สำหรับหน้าจอขนาดกลาง */
+@media (max-width: 768px) {
+    .tableGrid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* ลดขนาดการ์ด */
+    }
+    .searchInput {
+        width: 80%; /* เพิ่มขนาดช่องค้นหาบนอุปกรณ์เล็ก */
+    }
+}
+
+/* Media Queries สำหรับหน้าจอมือถือ */
+@media (max-width: 480px) {
+    .title {
+        font-size: 24px;  /* ปรับขนาดข้อความสำหรับหน้าจอมือถือ */
+    }
+    .searchInput {
+        width: 90%; /* เพิ่มขนาดช่องค้นหาบนอุปกรณ์ที่มีหน้าจอเล็ก */
+    }
+    .card {
+        width: 100%; /* ปรับขนาดการ์ดให้เต็มหน้าจอ */
+    }
+}
+
+@keyframes marquee {
+    0% {
+      left: 250px;
+      opacity: 0;
+      transform: translateX(0); /* เริ่มจากที่ช่องค้นหา */
+    }
+    50% {
+      opacity: 1;
+      left: calc(100% - 250px);
+      transform: translateX(0); /* ยังคงอยู่ในจุดเดิม */
+    }
+    100% {
+      opacity: 0;
+      left: calc(100% - 250px); /* ไปถึงขอบสุดของจอ */
+      transform: translateX(0);
+    }
+  }
+  
+  .marquee-text {
+    margin-top:5px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #444;
+    white-space: nowrap;
+    overflow: hidden;
+    box-sizing: border-box;
+    animation: marquee 20s linear infinite;
+    padding: 10px;
+  }
+
+  
