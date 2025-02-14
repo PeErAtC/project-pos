@@ -1,9 +1,11 @@
     // นำเข้า React, useState, useEffect สำหรับการจัดการสถานะและ Lifecycle ของ Component
     import React, { useState, useEffect } from 'react';
     // นำเข้า axios สำหรับการดึงข้อมูล API
+    import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+
     import axios from 'axios';
     // นำเข้า BackendSidebar ซึ่งเป็น Component สำหรับ Sidebar
-    import BackendSidebar from './components/backendsideber';
+    import BackendSidebar from './components/backendsidebar';
     // นำเข้า SweetAlert2 สำหรับการแจ้งเตือนแบบ Popup
     import Swal from 'sweetalert2';
     // นำเข้าไอคอนต่าง ๆ จาก react-icons สำหรับตกแต่ง UI
@@ -27,12 +29,14 @@
         const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]); // Set initial date to current date
         const [currentItems, setCurrentItems] = useState([]);
 
+
         // ฟังก์ชันสำหรับแปลงวันที่และเวลาให้อยู่ในรูปแบบของประเทศไทย
         const formatDateTimeToThai = (utcDateTime) => {
             if (!utcDateTime) return 'N/A';
             const date = new Date(`${utcDateTime}T00:00:00Z`); // เพิ่มเวลาเริ่มต้น
             return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
         };
+    
 
         // ฟังก์ชันสำหรับดึงข้อมูลการชำระเงินตาม Order ID
             const fetchPaymentHistory = async (orderId) => {
@@ -296,19 +300,24 @@ const showOrderDetails = async (orderId) => {
             });
             return;
         }
+        // ฟังก์ชันคำนวณยอดรวมสินค้า
+        const calculateItemTotals = (items) => {
+            let totalQuantity = 0;
+            let totalAmount = 0; 
+            items.forEach(item => {
+                totalQuantity += item.quantity;
+                totalAmount += item.price * item.quantity;
+            });
+            return { totalQuantity, totalAmount }; 
+        };
 
-        // คำนวณราคารวมสินค้า
-        const totalPrice = orderDetails.order.items.reduce((sum, item) => {
-            const price = parseFloat(item.price) || 0;
-            const discount = parseFloat(item.discount) || 0;
-            const itemTotal = (price - discount) * item.quantity;
-            return sum + itemTotal;
-        }, 0);
+        // คำนวณยอดรวมสินค้า
+        const { totalQuantity, totalAmount } = calculateItemTotals(orderDetails.order.items);
 
         // สร้างตารางสินค้า
         const itemsTableHTML = `
             <table style="width: 100%; border-collapse: collapse;">
-                <thead style="position: sticky; top: 0; background-color: #499cae; color: #fff;">
+                <thead style="position: sticky; top: -2; background-color: #499cae; color: #fff;">
                     <tr>
                         <th style="padding: 5px; border: 1px solid #ddd;">ลำดับ</th>
                         <th style="padding: 5px; border: 1px solid #ddd;">เลขบิล</th>
@@ -320,26 +329,56 @@ const showOrderDetails = async (orderId) => {
                 </thead>
                 <tbody>
                     ${orderDetails.order.items.map((item, index) => {
-                        const price = parseFloat(item.price) || 0;
-                        const quantity = parseInt(item.quantity) || 0;
-                        const totalPrice = price * quantity;
+                    const price = parseFloat(item.price) || 0;
+                    const quantity = parseInt(item.quantity) || 0;
+                    const totalAmountPerItem = price * quantity;  
 
-                        return `
-                            <tr>
-                                <td style="padding: 5px; border: 1px solid #ddd;">${index + 1}</td>
-                                <td style="padding: 5px; border: 1px solid #ddd;">${item.order_id}</td>
-                                <td style="padding: 5px; border: 1px solid #ddd;">${item.p_name}</td>
-                                <td style="padding: 5px; border: 1px solid #ddd;">${quantity}</td>
-                                <td style="padding: 5px; border: 1px solid #ddd;">${price.toFixed(2)} ฿</td>
-                                <td style="padding: 5px; border: 1px solid #ddd;">${totalPrice.toFixed(2)} ฿</td>
-                            </tr>
-                        `;
+                    return `
+                        <tr>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${index + 1}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${item.order_id}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${item.p_name}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${quantity}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${price.toFixed(2)} ฿</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${totalAmountPerItem.toFixed(2)} ฿</td>
+                        </tr>
+                    `;
                     }).join('')}
                 </tbody>
+                <tfoot style="background-color: #f8f8f8; font-weight: bold; position: sticky; bottom: -1; z-index: 2;">
+                    <tr>
+                        <td colspan="3" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
+                            สินค้าทั้งหมด:
+                        </td>
+                        <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">
+                            ${totalQuantity} ชิ้น
+                        </td>
+                        <td colspan="1" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
+                            รวมทั้งหมด:
+                        </td>
+                        <td style="padding: 5px; border: 1px solid #ddd;">
+                            ${totalAmount.toFixed(2)} ฿
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         `;
-        
-        
+
+        // แสดงผลใน SweetAlert
+        Swal.fire({
+            html: `
+                <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
+                    <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
+                    <div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">
+                        ${itemsTableHTML}
+                    </div>
+                </div>
+            `,
+            confirmButtonText: 'ปิด',
+            width: '900px',
+            padding: '20px',
+            background: '#fff',
+        });
         // สร้างตารางประวัติการชำระเงิน
         const payments = orderDetails?.payments || [];
         // คำนวณยอดคงเหลือหลังจากการชำระเงินแต่ละครั้ง
@@ -390,31 +429,26 @@ const showOrderDetails = async (orderId) => {
                                 </tr>
                             `
                     }
-                </tbody>
+                    </tbody>
                     <tfoot style="background-color: #f8f8f8; font-weight: bold; position: sticky; bottom: 0; z-index: 2;">
-    <tr>
-        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
-            รวมยอดแยกชำระ:
-        </td>
-        <td style="padding: 5px; border: 1px solid #ddd;">
-            ${totalAmountPaid.toFixed(2)} ฿
-        </td>
-        <td colspan="1" style="padding: 5px; border: 1px solid #ddd;"></td>
-        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
-            **เงินทอน:**
-        </td>
-        <td style="padding: 5px; border: 1px solid #ddd;">
-            ${totalMoneyChanges.toFixed(2)} ฿
-        </td>
-    </tr>
-</tfoot>
-
+                    <tr>
+                        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
+                            รวมยอดแยกชำระ:
+                        </td>
+                        <td style="padding: 5px; border: 1px solid #ddd;">
+                            ${totalAmountPaid.toFixed(2)} ฿
+                        </td>
+                        <td colspan="1" style="padding: 5px; border: 1px solid #ddd;"></td>
+                        <td colspan="2" style="padding: 5px; border: 1px solid #ddd; text-align: right;">
+                            **เงินทอน:**
+                        </td>
+                        <td style="padding: 5px; border: 1px solid #ddd;">
+                            ${totalMoneyChanges.toFixed(2)} ฿
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         `;
-
-
-
-
                 // แสดงผลใน SweetAlert
                 Swal.fire({
                     html: `
@@ -422,9 +456,6 @@ const showOrderDetails = async (orderId) => {
                             <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
                             <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">
                                 ${itemsTableHTML}
-                            </div>
-                            <div style="font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px;">
-                                <p>ราคารวม: ${totalPrice.toFixed(2)} ฿</p>
                             </div>
                             <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
                             <div style="max-height: 150px; overflow-y: auto;">
