@@ -229,72 +229,15 @@ export default function MainTablePage() {
         </div>
     );
 }
-
 const styles = {
-    sidebar: {
-        height: '87vh',
-        backgroundColor: '#499cae',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '10px 0',
-        borderRadius: '20px',
-        boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
-        transition: 'width 0.3s ease',
-        position: 'absolute',  // เปลี่ยนจาก 'fixed' เป็น 'absolute'
-        top: '20px',
-        left: '20px',
-        zIndex: 1000,
-        width: '215px',
-      },
-    header: {
-        padding: '50px',
-        textAlign: 'center',
-        background_Color: '#f0f2f5',
-        width: '100%',
-        border:'2px solid white',
-    },
-    tableSelectionContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-    },
-    title: {
-        padding:'10px',
-        fontSize: '30px',
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: '30px',
-        fontFamily: '"Montserrat", sans-serif',
-        color: '#222',
-    },
-    searchInput: {
-        width: '65%',
-        padding: '10px',
-        fontSize: '16px',
-        marginBottom: '20px',
-        borderRadius: '5px',
-        border: '1px solid #ccc',
-    },
-    tableGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '20px',
-        justifyContent: 'center',
-        padding: '30px',
-        width: '100%',
-        maxWidth: '1000px',
-        border: '5px solid white', /* กรอบสีขาว */
-        borderRadius: '10px', /* มุมโค้ง */
-        backgroundColor: '#ffffff', // ทำให้พื้นหลังของกริดโต๊ะเป็นสีขาวทึบ
-        boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.2)', /* เพิ่มเงา */
-        maxHeight: '470px',  // จำกัดความสูงให้แสดงแค่ 2 แถว
-        overflowY: 'auto',  // เพิ่มเลื่อนลงหากโต๊ะเกิน 2 แถว
-    },
+    sidebar: { height: '87vh', backgroundColor: '#499cae', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0', borderRadius: '20px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)', transition: 'width 0.3s ease', position: 'absolute', top: '20px', left: '20px', zIndex: 1000, width: '215px' },
+    header: { padding: '50px', textAlign: 'center', background_Color: '#f0f2f5', width: '100%', border: '2px solid white' },
+    tableSelectionContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' },
+    title: { padding: '10px', fontSize: '30px', fontWeight: '600', textAlign: 'center', marginBottom: '30px', fontFamily: '"Montserrat", sans-serif', color: '#222' },
+    searchInput: { width: '65%', padding: '10px', fontSize: '16px', marginBottom: '20px', borderRadius: '5px', border: '1px solid #ccc' },
+    tableGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '30px', justifyContent: 'center', padding: '50px', width: '100%', maxWidth: '1000px', border: '5px solid white', borderRadius: '10px', backgroundColor: '#ffffff', boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.2)', maxHeight: '470px', overflowY: 'auto' },
     errorText: { color: 'red' },
     noTableText: { color: '#333' },
-    sale: {
-        color:'#000',
-    },
-};
+    sale: { color: '#000' }
+  };
+  
