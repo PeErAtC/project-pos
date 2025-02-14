@@ -1,10 +1,11 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  images: {
-    domains: ['easyapp.clinic'], // เพิ่มโดเมนที่มีรูปภาพ
+// next.config.js
+module.exports = {
+  output: 'export', // กำหนดให้เป็น static export
+  reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  /* config options here */
+  images: {
+    unoptimized: true, // ปิดการใช้งาน Image Optimization ในการ export
+  },
 };
-
-export default nextConfig;
