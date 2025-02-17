@@ -280,6 +280,5 @@ const styles = {
   errorText: { color: 'red' },
   noTableText: { color: '#333' },
   sale: { color: '#000' },
-  
 };
 
