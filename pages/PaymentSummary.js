@@ -462,9 +462,6 @@ export default function PaymentSummary() {
             ],
         };
     };
-    
-    
-    
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false, // ✅ ปิดการรักษาสัดส่วนของกราฟ
@@ -703,7 +700,6 @@ export default function PaymentSummary() {
                                     {yearlySales.toLocaleString()} ฿ (รวมปี)
                                 </p>
                             )}
-
                             {viewType === 'monthly' && (
                                 <p style={styles.totalSalesValue}>
                                     {yearlySales.toLocaleString()} ฿ (รวมปี)
@@ -867,7 +863,6 @@ export default function PaymentSummary() {
                             </button>
                         </div>
                     </div>
-
                     {/* 🔹 แสดงกราฟตามประเภทที่เลือก */}
                     <div id="salesChart" style={{ width: "100%", height: "auto", minHeight: "550px", maxWidth: "100%" }}>
                         {chartType === 'bar' ? (
@@ -878,13 +873,10 @@ export default function PaymentSummary() {
                     </div>
                 </div>
             </div>
-
                 )}
             </div>
         </div>
-    );
-    
-    ;
+    );;
 }
 
 const styles = { 
@@ -953,5 +945,12 @@ const styles = {
     button: { padding: "8px 16px", borderRadius: "5px", border: "1px solid #ccc", cursor: "pointer", backgroundColor: "#eee", fontSize: "14px", transition: "all 0.3s ease" }, 
     activeButton: { padding: "8px 16px", borderRadius: "5px", border: "none", cursor: "pointer", backgroundColor: "#3498db", color: "#fff", fontSize: "14px", transition: "all 0.3s ease", transform: "scale(1.1)" }, 
     downloadButton: { width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", background: "linear-gradient(135deg, #28a745, #1e7e34)", color: "#ffffff", fontSize: "16px", transition: "all 0.3s ease-in-out", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.15)" }, 
-    downloadButtonHover: { background: "linear-gradient(135deg, #1e7e34, #155d27)", transform: "scale(1.08)", boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.3)" } 
+    downloadButtonHover: { background: "linear-gradient(135deg, #1e7e34, #155d27)", transform: "scale(1.08)", boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.3)" },
+
+    /* Additional styles for smaller screens (media queries) */
+    '@media (max-width: 768px)': {
+        pageContainer: { flexDirection: 'column' },
+        content: { width: '100%', marginLeft: 0, marginRight: 0 },
+        chartContainer: { minHeight: '300px' },
+    },
 };
