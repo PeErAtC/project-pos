@@ -250,25 +250,8 @@ export default function MainTablePage() {
 }
 
 const styles = {
-    contentWrapper: { 
-    display: 'flex', 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    width: '100%',
-    maxWidth: '1300px',
-    marginTop: '5px',
-  },
-  statsContainer: { 
-    display: 'flex', 
-    flexDirection: 'column', 
-    gap: '15px', 
-    marginLeft: '20px',
-    minWidth: '200px',
-    padding: '15px',
-    backgroundColor: '#ffffff',
-    borderRadius: '10px',
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
-  },
+  contentWrapper: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '100%',maxWidth: '1300px',marginTop: '5px',},
+  statsContainer: { display: 'flex', flexDirection: 'column', gap: '15px', marginLeft: '20px',minWidth: '200px',padding: '15px',backgroundColor: '#ffffff',borderRadius: '10px',boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',},
   stat: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '16px', fontWeight: 'bold' },
   icon: { fontSize: '24px' },
   sidebar: { height: '87vh', backgroundColor: '#499cae', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0', borderRadius: '20px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)', transition: 'width 0.3s ease', position: 'absolute', top: '20px', left: '20px', zIndex: 1000, width: '215px' },
