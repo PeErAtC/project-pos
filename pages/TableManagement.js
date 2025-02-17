@@ -396,48 +396,31 @@
             </div>
         );
     }
-
-    const styles = {
-        pageContainer: { display: 'flex', minHeight: '10vh', backgroundColor: '#f4f6f8' },
-        contentContainer: { display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', justifyContent: 'space-between', alignItems: 'flex-start', fontFamily: 'Arial, sans-serif', width: 'calc(100% - 100px)', marginLeft: '100px' },
-        listContainer: { flex: 6, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', height: 'calc(90vh - 40px)' }, 
-        formContainer: { flex: 3, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', textAlign: 'center', height: 'calc(90vh - 40px)' },
-        title: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px' },
-        input: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
-        searchInput: { padding: '12px', marginBottom: '15px', width: '850px', borderRadius: '5px', border: '1px solid #ccc' },
-        itemCount: { fontSize: '16px', marginBottom: '15px', color: '#000' },
-        select: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
-        button: { width: '340px', padding: '12px', borderRadius: '5px', backgroundColor: '#499cae', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginBottom: '15px' },
-        cancelButton: { width: '340px', padding: '12px', borderRadius: '5px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
-        listTitle: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'center', marginRight: '800px' },
-        tableContainer: { overflowY: 'auto', maxHeight: 'calc(76vh - 120px)', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' },
-        table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
-        th: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
-        thActions: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'center', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
-        tr: { transition: 'background-color 0.2s' },
-        td: { padding: '10px 25px', textAlign: 'left' },
-        tdActions: { padding: '10px 25px', textAlign: 'center' },
-        menuButton:{
-            color:'#333',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '20px',
-            display: 'inline-block',  // จัดให้ปุ่มเรียงกันข้างๆ
-        },
-        menu: {
-            display: 'inline',  
-            flexDirection: 'row',  // จัดเรียงปุ่มในแนวนอน
-            alignItems: 'center',
-            marginLeft:'10px',
-        },
-        menuItemEdit:{
-            background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px'
-        },
-        menuItemDelete:{
-            background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer'
-        },
-        errorText: { color: 'red', fontWeight: 'bold' },
-        statusToggleContainer: { display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '15px' },
-        statusButton: { padding: '10px 73px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }
-    };
+const styles = {
+    pageContainer: { display: 'flex', minHeight: '10vh', backgroundColor: '#fff' },
+    contentContainer: { display: 'flex', flexDirection: 'row', gap: '20px', padding: '20px', justifyContent: 'space-between', alignItems: 'flex-start', fontFamily: 'Arial, sans-serif', width: 'calc(100% - 100px)', marginLeft: '100px' },
+    listContainer: { flex: 6, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', height: 'calc(90vh - 40px)' },
+    formContainer: { flex: 3, backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)', textAlign: 'center', height: 'calc(90vh - 40px)' },
+    title: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px' },
+    input: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
+    searchInput: { padding: '12px', marginBottom: '15px', width: '850px', borderRadius: '5px', border: '1px solid #ccc' },
+    itemCount: { fontSize: '16px', marginBottom: '15px', color: '#000' },
+    select: { padding: '12px', marginBottom: '15px', width: '320px', borderRadius: '5px', border: '1px solid #ccc' },
+    button: { width: '340px', padding: '12px', borderRadius: '5px', backgroundColor: '#499cae', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginBottom: '15px' },
+    cancelButton: { width: '340px', padding: '12px', borderRadius: '5px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+    listTitle: { fontSize: '24px', fontWeight: 'bold', color: '#000', marginBottom: '20px', textAlign: 'center', marginRight: '800px' },
+    tableContainer: { overflowY: 'auto', maxHeight: 'calc(76vh - 120px)', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
+    th: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
+    thActions: { padding: '10px 25px', backgroundColor: '#499cae', textAlign: 'center', fontWeight: 'bold', color: '#fff', position: 'sticky', top: 1 },
+    tr: { transition: 'background-color 0.2s' },
+    td: { padding: '10px 25px', textAlign: 'left' },
+    tdActions: { padding: '10px 25px', textAlign: 'center' },
+    menuButton: { color: '#333', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', display: 'inline-block' },
+    menu: { display: 'inline', flexDirection: 'row', alignItems: 'center', marginLeft: '10px' },
+    menuItemEdit: { background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px' },
+    menuItemDelete: { background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer' },
+    errorText: { color: 'red', fontWeight: 'bold' },
+    statusToggleContainer: { display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '15px' },
+    statusButton: { padding: '10px 73px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }
+};
