@@ -370,7 +370,7 @@ export default function EmployeeManagement() {
 }
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'row', height: '92vh', fontFamily: 'Kanit, sans-serif', backgroundColor: '#f9f9f9' },
+  container: { display: 'flex', flexDirection: 'row', height: '92vh', fontFamily: 'Kanit, sans-serif', backgroundColor: '#fff' },
   mainContent: { width: 'calc(100% - 100px)', marginLeft: '110px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '10px', backgroundColor: '#ffffff' },
   tableSection: { width: '80%', backgroundColor: '#ffffff', padding: '15px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
   tableContainer: { maxHeight: '400px', overflowY: 'scroll', border: '1px solid #ddd', borderRadius: '5px' },
@@ -388,26 +388,10 @@ const styles = {
   inactiveStatus: { padding: '10px', textAlign: 'center', fontSize: '14px', color: '#dc3545' },
   noData: { textAlign: 'center', padding: '20px', color: '#999999', fontStyle: 'italic' },
   form: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  menuButton:{
-    color:'#333',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '20px',
-    display: 'inline-block',  // จัดให้ปุ่มเรียงกันข้างๆ
-},
-menu: {
-    display: 'inline',  
-    flexDirection: 'row',  // จัดเรียงปุ่มในแนวนอน
-    alignItems: 'center',
-    marginLeft:'10px',
-},
-menuItemEdit:{
-    background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px'
-},
-menuItemDelete:{
-    background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer'
-},
+  menuButton: { color:'#333', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', display: 'inline-block' },
+  menu: { display: 'inline', flexDirection: 'row', alignItems: 'center', marginLeft:'10px' },
+  menuItemEdit: { background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px' },
+  menuItemDelete: { background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer' },
   input: { padding: '10px', fontSize: '15px', borderRadius: '5px', border: '1px solid #ddd', width: '80%', margin: '0 auto' },
   inputReadOnly: { padding: '10px', fontSize: '15px', borderRadius: '5px', border: '1px solid #ddd', width: '80%', margin: '0 auto', backgroundColor: '#e0e0e0', pointerEvents: 'none', color: '#999' },
   passwordContainer: { position: 'relative', display: 'flex', alignItems: 'center', width: '90%', margin: '0 auto' },
@@ -420,5 +404,6 @@ menuItemDelete:{
   statusTitle: { marginBottom: '10px', fontWeight: 'bold', color: '#000', textAlign: 'center' },
   editButton: { padding: '5px 10px', background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '5px', fontWeight: 'bold' },
   deleteButton: { padding: '5px 15px', background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
-  summaryText: { fontSize: '16px', marginBottom: '10px', color: '#000', textAlign: 'left' },
+  summaryText: { fontSize: '16px', marginBottom: '10px', color: '#000', textAlign: 'left' }
 };
+
