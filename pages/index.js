@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 
 export default function HomePage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [storeName, setStoreName] = useState(''); // เก็บชื่อร้าน
   const [owner, setOwner] = useState(null);
   const [clicked, setClicked] = useState(null);
   const soundRef = useRef(null);
@@ -18,14 +18,20 @@ export default function HomePage() {
     if (typeof window === 'undefined') return;
 
     const authToken = localStorage.getItem('token');
-    const loggedInUsername = localStorage.getItem('username');
     const isOwner = localStorage.getItem('owner');
 
+    // รับชื่อร้านจาก localStorage หรือค่าพื้นฐาน
+    const storedStoreName = localStorage.getItem('store');
+    if (storedStoreName) {
+      setStoreName(storedStoreName);
+    } else {
+      setStoreName('ร้านเริ่มต้น'); // ค่าเริ่มต้นถ้าไม่มีใน localStorage
+    }
+
     console.log('🔍 Token:', authToken);
-    console.log('👤 Username:', loggedInUsername);
     console.log('🏷 Owner:', isOwner);
 
-    if (!authToken || !loggedInUsername) {
+    if (!authToken) {
       Swal.fire({
         title: 'กรุณาเข้าสู่ระบบ',
         text: 'คุณยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนใช้งาน',
@@ -37,7 +43,6 @@ export default function HomePage() {
       return;
     }
 
-    setUsername(loggedInUsername);
     setOwner(isOwner);
   }, [router]);
 
@@ -71,7 +76,7 @@ export default function HomePage() {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.welcomeMessage}>ยินดีต้อนรับ: {username}</h2>
+      <h2 style={styles.welcomeMessage}> {storeName}</h2> {/* แสดงชื่อร้าน */}
       <div style={styles.cardContainer}>
         <div
           style={{
@@ -108,61 +113,20 @@ export default function HomePage() {
 }
 
 const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    background: 'linear-gradient(to right,rgb(196, 240, 246), #499cae)',
+  container: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'linear-gradient(to right, rgb(196, 240, 246), #499cae)', padding: '10px' },
+  welcomeMessage: { fontFamily: '"Montserrat", sans-serif', fontSize: '30px', fontWeight: 'bold', color: '#000', marginBottom: '20px' },
+  cardContainer: { display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' },
+  card: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '280px', height: '350px', backgroundColor: '#ffffff', borderRadius: '15px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
+  clicked: { transform: 'scale(0.95)', boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)' },
+  emojiContainer: { backgroundColor: '#e0f7fa', borderRadius: '50%', width: '150px', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' },
+  cardTitle: { fontSize: '18px', fontWeight: 'bold', color: '#333', marginBottom: '5px' },
+  cardSubtitle: { fontSize: '14px', color: '#777', textAlign: 'center' },
+  '@media (max-width: 768px)': {
+    welcomeMessage: { fontSize: '6vw' },
+    card: { width: '100%', height: '300px' }
   },
-  welcomeMessage: {
-    fontFamily: '"Montserrat", sans-serif',
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: '20px',
-  },
-  cardContainer: {
-    display: 'flex',
-    gap: '20px',
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '280px',
-    height: '350px',
-    backgroundColor: '#ffffff',
-    borderRadius: '15px',
-    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
-    cursor: 'pointer',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-  },
-  clicked: {
-    transform: 'scale(0.95)', // เอฟเฟกต์การกด ยุบลงเล็กน้อย
-    boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)', // เงาลดลง
-  },
-  emojiContainer: {
-    backgroundColor: '#e0f7fa',
-    borderRadius: '50%',
-    width: '150px',
-    height: '150px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '15px',
-  },
-  cardTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: '5px',
-  },
-  cardSubtitle: {
-    fontSize: '14px',
-    color: '#777',
-    textAlign: 'center',
-  },
+  '@media (max-width: 480px)': {
+    card: { width: '90%', height: '250px' }
+  }
 };
+
