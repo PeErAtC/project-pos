@@ -219,23 +219,10 @@ const styles = {
   loading: { color: '#499cae', fontSize: '16px' },
   error: { color: 'red', fontSize: '14px', marginBottom: '10px' },
   footer: { marginTop: '20px', fontSize: '12px', color: '#7f8c8d', textAlign: 'center' },
-  contactLink: {
-    fontSize: '14px', // ขนาดตัวอักษร
-    fontWeight: 'bold', // ทำให้ตัวอักษรหนา
-    color: '#3498db', // สีของลิงก์
-    cursor: 'pointer',
-  },
-  linkStyle: {
-    textDecoration: 'none', // ทำให้ไม่มีเส้นขีดใต้
-    color: '#3498db', // สีของลิงก์
-    transition: 'color 0.3s ease', // เพิ่มการเปลี่ยนสีเมื่อ hover
-  },
-  linkStyleHover: {
-    color: '#2980b9', // สีเมื่อ hover
-  },
-
-  keyboardContainer: { position: 'absolute', top:'380px' }
-};
+  contactLink: { fontSize: '14px', fontWeight: 'bold', color: '#3498db', cursor: 'pointer',},
+  linkStyle: { textDecoration: 'none', color: '#3498db', transition: 'color 0.3s ease', },
+  linkStyleHover: { color: '#2980b9', },
+  keyboardContainer: { position: 'absolute', top:'380px' }};
 
   // Add global CSS for animations
   if (typeof document !== 'undefined') {
