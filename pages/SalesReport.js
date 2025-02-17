@@ -315,12 +315,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                
+
                     ${orderDetails.order.items.map((item, index) => {
                     const price = parseFloat(item.price) || 0;
                     const quantity = parseInt(item.quantity) || 0;
                     const totalAmountPerItem = price * quantity;  
-
+                    
                     return `
                         <tr>
                             <td style="padding: 5px; border: 1px solid #ddd;">${index + 1}</td>
@@ -519,7 +519,7 @@
                                 ))
                             )}
                             </tbody>
-                            <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: 0, zIndex: 1 }}>
+                            <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: -1, zIndex: 1 }}>
                                 <tr>
                                     <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
                                     <td style={styles.totalValue}>{pendingOrders.length > 0 ? pendingTotals.totalAmount : "0.00"}</td>
@@ -607,22 +607,22 @@
         );
     }
 
-    const styles = {
-        pageContainer: { display: 'flex' },
-        content: { flex: 1, padding: '25px', backgroundColor: '#f9f9f9', marginLeft: '110px', overflowY: 'hidden' },
-        headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
-        title: { fontSize: '24px', fontWeight: 'bold', color: '#000' },
-        datePickerContainer: { display: 'flex', alignItems: 'center' },
-        dateLabel: { marginRight: '10px' },
-        dateInput: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px' },
-        subTitle: { fontSize: '20px', fontWeight: 'bold', color: '#333' },
-        itemCount: { fontSize: '16px', color: '#666', marginLeft: '10px' },
-        tableContainer: { backgroundColor: '#ffffff', borderRadius: '8px', padding: '0px', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', marginBottom: '20px', resize: 'vertical', overflowY: 'auto', maxHeight: '320px', height: '220px', minHeight: '220px' },
-        table: { width: '100%', borderCollapse: 'collapse' },
-        th: { padding: '5px', backgroundColor: '#499cae', color: '#fff', textAlign: 'center', position: 'sticky', top: 0 },
-        td: { padding: '5px', borderBottom: '1px solid #ddd', textAlign: 'center', color: '#333', fontSize: '14px' },
-        totalLabel: { textAlign: 'right', fontWeight: 'bold'  },
-        totalValue: { textAlign: 'center', fontWeight: 'bold' },
-        detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', flex: 1 },
-        tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fff', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
-    };
+const styles = {
+    pageContainer: { display: 'flex' },
+    content: { flex: 1, padding: '25px', backgroundColor: '#fff', marginLeft: '110px', overflowY: 'hidden' },
+    headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
+    title: { fontSize: '24px', fontWeight: 'bold', color: '#000' },
+    datePickerContainer: { display: 'flex', alignItems: 'center' },
+    dateLabel: { marginRight: '10px' },
+    dateInput: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px' },
+    subTitle: { fontSize: '20px', fontWeight: 'bold', color: '#333' },
+    itemCount: { fontSize: '16px', color: '#666', marginLeft: '10px' },
+    tableContainer: { backgroundColor: '#ffffff', borderRadius: '8px', padding: '0px', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)', marginBottom: '20px', resize: 'vertical', overflowY: 'auto', maxHeight: '320px', height: '220px', minHeight: '220px' },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    th: { padding: '5px', backgroundColor: '#499cae', color: '#fff', textAlign: 'center', position: 'sticky', top: 0 },
+    td: { padding: '5px', borderBottom: '1px solid #ddd', textAlign: 'center', color: '#333', fontSize: '14px' },
+    totalLabel: { textAlign: 'right', fontWeight: 'bold'  },
+    totalValue: { textAlign: 'center', fontWeight: 'bold' },
+    detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', flex: 1 },
+    tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fff', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
+};
