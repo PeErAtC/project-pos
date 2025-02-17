@@ -4,7 +4,8 @@ import Sidebar from './components/backendsidebar';
 import { FaCheckCircle, FaExclamationCircle, FaImage, FaPlusCircle, FaEllipsisH, FaEdit, FaTrashAlt  } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
-
+import './styles.css';  // เพิ่มไฟล์ CSS ที่คุณสร้างใหม่เข้ามา
+import html2canvas from 'html2canvas';
 
 export default function BackendPage() {
   const [items, setItems] = useState([]);
@@ -169,7 +170,6 @@ export default function BackendPage() {
             icon: 'success',
             title: 'แก้ไขเรียบร้อยแล้ว!',
             confirmButtonText: 'ตกลง',
-            confirmButtonColor: '#28a745'
           });
         } else {
           return;
@@ -185,7 +185,6 @@ export default function BackendPage() {
             icon: 'success',
             title: 'เพิ่มข้อมูลเรียบร้อยแล้ว!',
             confirmButtonText: 'ตกลง',
-            confirmButtonColor: '#28a745'
           });
 
         }
@@ -286,7 +285,6 @@ const handleSaveCategory = async () => {
         icon: 'success',
         title: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว!',
         confirmButtonText: 'ตกลง',
-        confirmButtonColor: '#28a745'
       });
       fetchCategories();  // โหลดหมวดหมู่ใหม่
       setShowCategoryModal(false);  // ปิด modal
@@ -300,7 +298,7 @@ const handleSaveCategory = async () => {
         icon: 'success',
         title: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว!',
         confirmButtonText: 'ตกลง',
-        confirmButtonColor: '#28a745'
+
       });
     } else if (categoryAction === 'delete' && selectedCategory) {
       const url = `${api_url}/${slug}/category/${selectedCategory}`;
@@ -311,7 +309,7 @@ const handleSaveCategory = async () => {
         icon: 'success',
         title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
         confirmButtonText: 'ตกลง',
-        confirmButtonColor: '#28a745'
+
       });
     }
 
@@ -426,7 +424,6 @@ const handleSaveCategory = async () => {
             icon: 'success',
             title: 'ลบข้อมูลเรียบร้อยแล้ว!',
             confirmButtonText: 'ตกลง',
-            confirmButtonColor: '#28a745'
           });
           await fetchItems();
         } catch (error) {
@@ -508,7 +505,6 @@ const handleSaveCategory = async () => {
         icon: 'success',
         title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
         confirmButtonText: 'ตกลง',
-        confirmButtonColor: '#28a745'
       });
       fetchCategories();
       setShowCategoryModal(false);
@@ -738,237 +734,48 @@ const handleSaveCategory = async () => {
     </div>
   );
 }
-
 const styles = {
   container: { display: 'flex', backgroundColor: '#ffffff' },
   contentContainer: { display: 'flex', flex: 1, padding: '25px 0 20px 130px', fontFamily: 'Arial, sans-serif' },
-  addCategoryButton: {backgroundColor: '#ccc',color: '#fff',border: 'none',borderRadius: '5px',cursor: 'pointer',width: '40px',  height:'42px',marginBottom: '1px',},
-  dropdownContainer: {display: 'flex',justifyContent: 'space-between', alignItems: 'center',width: '100%',maxWidth: '400px', },
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',  // สีมืดพื้นหลัง
-    backdropFilter: 'blur(5px)',  // เบลอพื้นหลัง
-    zIndex: 999,  // ให้ฟอร์มแสดงเหนือพื้นหลังที่เบลอ
-  },
-  modal: {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    backgroundColor: '#fff',
-    padding: '25px',
-    borderRadius: '8px',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)',
-    zIndex: 1000, // ฟอร์มต้องอยู่เหนือ overlay
-    width: '400px',
-    height: 'auto',
-  },
-  modalContent: {
-    width: '100%',
-    padding: '0px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // ฟิลด์ที่มีกรอบสีขาว
-  inputModal: {
-    padding: '12px',
-    borderRadius: '5px',
-    border: '1px solid #ccc', // กรอบสีขาว
-    marginBottom: '15px',
-    width: '320px',
-    
-  },
-  dropdown: {
-    padding: '12px',
-    borderRadius: '5px',
-    border: '1px solid #ccc', // กรอบสีขาว
-    width: '350px',
-    marginBottom: '5px',
-  },
-  saveButton: {
-    backgroundColor: '#499cae',
-    color: '#fff',
-    padding: '12px 20px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    width: '350px',
-    marginTop: '10px',
-    marginLeft:'20px',
-  },
-  cancelButtonModal: {
-    backgroundColor: '#ccc',
-    color: '#fff',
-    padding: '12px 20px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginTop: '10px',
-    width: '350px',
-    marginLeft:'20px',
-  },
-  DeleteButtonModal: {
-    backgroundColor: '#d9534f',
-    color: '#fff',
-    padding: '12px 20px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginTop: '10px',
-    width: '350px',
-    marginLeft:'20px',
-  },
-  notification: {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    display: 'flex',
-    alignItems: 'center',
-    padding: '15px 25px',
-    color: '#fff',
-    fontSize: '16px',
-    borderRadius: '15px',
-    zIndex: 1000,
-  },
-  formContainer: {
-    marginLeft:'40px',
-    backgroundColor: '#ffffff',
-    borderRadius: '10px',
-    alignItems: 'center',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    marginBottom: '20px',
-  },
-  searchContainer: {
-    display: 'flex',
-    gap: '10px',
-    marginBottom: '20px',
-  },
-  itemCount: {
-    fontSize: '16px',
-    marginBottom: '10px',
-  },
-  tableContainer: {
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    height: '510px',
-    borderRadius: '8px',
-    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
-    width: '1050px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    borderSpacing: '0',
-    fontSize: '14px',
-  },
-  th: {
-    padding: '10px 15px',
-    backgroundColor: '#499cae',
-    textAlign: 'left',
-    fontWeight: 'bold',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
-    color: '#fff',
-  },
+  addCategoryButton: { backgroundColor: '#ccc', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', width: '40px', height: '42px', marginBottom: '1px' },
+  dropdownContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '400px' },
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(5px)', zIndex: 999 },
+  modal: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#fff', padding: '25px', borderRadius: '8px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.2)', zIndex: 1000, width: '400px', height: 'auto' },
+  modalContent: { width: '100%', padding: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
+  inputModal: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', marginBottom: '15px', width: '320px' },
+  dropdown: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', width: '350px', marginBottom: '5px' },
+  saveButton: { backgroundColor: '#499cae', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', width: '350px', marginTop: '10px', marginLeft: '20px' },
+  cancelButtonModal: { backgroundColor: '#ccc', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', marginTop: '10px', width: '350px', marginLeft: '20px' },
+  DeleteButtonModal: { backgroundColor: '#d9534f', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', marginTop: '10px', width: '350px', marginLeft: '20px' },
+  notification: { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', padding: '15px 25px', color: '#fff', fontSize: '16px', borderRadius: '15px', zIndex: 1000 },
+  formContainer: { marginLeft: '40px', backgroundColor: '#ffffff', borderRadius: '10px', alignItems: 'center', display: 'flex', flexDirection: 'column' },
+  title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' },
+  searchContainer: { display: 'flex', gap: '10px', marginBottom: '20px' },
+  itemCount: { fontSize: '16px', marginBottom: '10px', },
+  tableContainer: { overflowY: 'auto', overflowX: 'hidden', height: '550px', borderRadius: '8px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)', width: '1050px' },
+  table: { width: '100%', borderCollapse: 'collapse', borderSpacing: '0', fontSize: '14px' },
+  th: { padding: '10px 15px', backgroundColor: '#499cae', textAlign: 'left', fontWeight: 'bold', position: 'sticky', top: 0, zIndex: 1, color: '#fff' },
   tdActions: { padding: '10px 25px', textAlign: 'center' },
-  td: {
-    padding: '10px 15px',
-    borderTop: '1px solid #e0e0e0',
-    width: '30px',
-    color: '#111',
-  },
-  row: (index) => ({
-    backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0',
-    transition: 'background-color 0.2s',
-  }),
-  input: {
-    padding: '14px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
-    width: '320px',
-    marginBottom: '15px',
-  },
-  fileInput: {
-    display: 'none',
-  },
-  imageContainer: {
-    height: '100px',
-    border: '1px dashed #ccc',
-    borderRadius: '5px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '15px',
-    color: '#888',
-  },
-  button: {
-    width: '305px',
-    padding: '12px',
-    borderRadius: '5px',
-    backgroundColor: '#499cae',
-    color: '#fff',
-    fontWeight: 'bold',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  // เพิ่มให้ปุ่มแสดงเรียงกันข้างล่าง
-  buttonGroup: {
-    display: 'flex',
-    flexDirection: 'column', // จัดเรียงปุ่มลง
-    gap: '10px',
-    width: '390px',
-    marginTop: '10px',
-  },
-  dropdown_all: { 
-    padding: '12px',
-    borderRadius: '5px',
-    border: '1px solid #ccc', // กรอบสีขาว
-    width: '350px',
-    marginBottom: '15px',
-  },
-    dropdown_out: {
-      padding: '12px',
-      borderRadius: '5px',
-      border: '1px solid #ccc', // กรอบสีขาว
-      width: '350px',
-      marginBottom: '15px',
-    },
-    menuButton: {
-      color:'#333',
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      fontSize: '20px',
-      padding:'5px',
-    },
-    menu: {
-      display: 'inline',  
-      alignItems: 'center',
-      marginRight:'40px',
-    },
-    menuItemEdit: {
-     background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px'
-    },
-    menuItemDelete: {
-      background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer',
-    },
+  td: { padding: '10px 15px', borderTop: '1px solid #e0e0e0', width: '30px', color: '#111' },
+  row: (index) => ({ backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#f0f2f0', transition: 'background-color 0.2s' }),
+  input: { padding: '14px', borderRadius: '5px', border: '1px solid #ccc', width: '320px', marginBottom: '15px' },
+  fileInput: { display: 'none' },
+  imageContainer: { height: '100px', border: '1px dashed #ccc', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px', color: '#888' },
+  button: { width: '305px', padding: '12px', borderRadius: '5px', backgroundColor: '#499cae', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+  buttonGroup: { display: 'flex', flexDirection: 'column', gap: '10px', width: '390px', marginTop: '10px' },
+  dropdown_all: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', width: '350px', marginBottom: '15px' },
+  dropdown_out: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', width: '350px', marginBottom: '15px' },
+  menuButton: { color: '#333', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '5px' },
+  menu: { display: 'inline', alignItems: 'center', marginRight: '40px' },
+  menuItemEdit: { background: 'linear-gradient(to right, #ffd700, #FFC137)', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginRight: '5px' },
+  menuItemDelete: { background: 'linear-gradient(to right, #ff7f7f, #d9534f)', color: '#fff', border: 'none', padding: '5px 17px', borderRadius: '5px', cursor: 'pointer' },
   searchInput: { padding: '12px', borderRadius: '5px', border: '1px solid #ccc', flex: 1, marginBottom: '15px' },
   cancelButton: { width: '305px', padding: '12px', borderRadius: '5px', backgroundColor: '#d9534f', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer', marginTop: '10px' },
   imageUpload: { border: '2px dashed #aaa', borderRadius: '10px', width: '350px', height: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888', marginBottom: '15px', textAlign: 'center' },
   imagePreview: { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' },
   statusToggle: { display: 'flex', gap: '10px', marginBottom: '15px' },
-  statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' }
+  statusButton: { padding: '10px', borderRadius: '5px', color: '#fff', border: 'none', cursor: 'pointer', width: '150px' },
+  '@media (max-width: 1200px)': { contentContainer: { padding: '25px 0 20px 50px' }, formContainer: { width: '90%' }, tableContainer: { width: '100%', height: 'auto' }, saveButton: { width: '100%' } },
+  '@media (max-width: 768px)': { contentContainer: { padding: '20px' }, formContainer: { width: '100%' }, tableContainer: { width: '100%', height: 'auto' }, dropdown_all: { width: '100%' }, input: { width: '100%' } },
+  '@media (max-width: 480px)': { container: { flexDirection: 'column' }, contentContainer: { padding: '10px' }, formContainer: { width: '100%', padding: '10px' }, tableContainer: { width: '100%', overflowX: 'scroll' }, imageContainer: { width: '100%' }, button: { width: '100%' }, statusToggle: { flexDirection: 'column', gap: '15px' } }
 };
