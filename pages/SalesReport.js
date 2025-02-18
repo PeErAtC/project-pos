@@ -1,21 +1,45 @@
-    // นำเข้า React, useState, useEffect สำหรับการจัดการสถานะและ Lifecycle ของ Component
-    import React, { useState, useEffect } from 'react';
-    // นำเข้า axios สำหรับการดึงข้อมูล API
-    import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
-    import axios from 'axios';
-    // นำเข้า BackendSidebar ซึ่งเป็น Component สำหรับ Sidebar
-    import BackendSidebar from './components/backendsidebar';
-    // นำเข้า SweetAlert2 สำหรับการแจ้งเตือนแบบ Popup
-    import Swal from 'sweetalert2';
-    // นำเข้าไอคอนต่าง ๆ จาก react-icons สำหรับตกแต่ง UI
-    import {FaClipboardList,FaTable,FaCalendarAlt,FaDollarSign,FaTag,FaPercentage,FaMoneyBill,FaCheckCircle,FaTimesCircle,} from 'react-icons/fa';
-    
+import React, { useState, useEffect } from 'react';
+import config from '../lib/config';  
+import axios from 'axios';
+import BackendSidebar from './components/backendsidebar';
+import Swal from 'sweetalert2';
+import {FaClipboardList,FaTable,FaCalendarAlt,FaDollarSign,FaTag,FaPercentage,FaMoneyBill,FaCheckCircle,FaTimesCircle,} from 'react-icons/fa';
+
     export default function SalesReport({ initialReportData, initialError }) {
         // การใช้ useState สำหรับสถานะของข้อมูล รายงาน, ข้อผิดพลาด และตัวกรองวันที่
         const [reportData, setReportData] = useState(initialReportData || []);
         const [error, setError] = useState(initialError || null);
         const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]); // Set initial date to current date
+        const [searchOrderNumber, setSearchOrderNumber] = useState(''); // New state for search input
         const [currentItems, setCurrentItems] = useState([]);
+
+        // ฟังก์ชันกรองข้อมูลตามเลขบิล (จะค้นหาทุกๆ บิลไม่สนใจวันที่)
+        const filterBySearchOrderNumber = (data, searchOrderNumber) => {
+            if (!searchOrderNumber) return data; // หากไม่มีการกรอกเลขบิล จะไม่กรอง
+            return data.filter(order => {
+                const orderNumber = order.order_number.trim();
+                return orderNumber.includes(searchOrderNumber.trim()); // ค้นหาตรงเลขบิล
+            });
+        };
+        
+                // ฟังก์ชันกรองข้อมูลตามวันที่ที่เลือก
+        const filterByDate = (data) => {
+            if (!dateFilter) return data; // หากไม่มีวันที่เลือก จะไม่กรอง
+            return data.filter(order =>
+                new Date(order.order_date).toLocaleDateString('en-CA') === dateFilter // กรองตามวันที่ที่เลือก
+            );
+        };
+
+        // ฟังก์ชันกรองข้อมูลที่รวมทั้งการกรองตามวันที่และเลขบิล
+        const filterData = (data) => {
+            // กรองตามเลขบิล
+            let filteredData = filterBySearchOrderNumber(data, searchOrderNumber);
+
+            // กรองตามวันที่
+            filteredData = filterByDate(filteredData);
+
+            return filteredData;
+        };  
 
         // ฟังก์ชันสำหรับแปลงวันที่และเวลาให้อยู่ในรูปแบบของประเทศไทย
         const formatDateTimeToThai = (utcDateTime) => {
@@ -168,20 +192,12 @@
             }
         };
         
-        // ใช้ useEffect สำหรับดึงข้อมูลรายงานครั้งแรกและตั้งค่า Refresh ทุก 15 วินาที
         useEffect(() => {
             fetchReportData();
-            const interval = setInterval(fetchReportData, 15000);
+            const interval = setInterval(fetchReportData, 30000);
             return () => clearInterval(interval);
         }, []);
-
-        // ฟังก์ชันกรองข้อมูลตามวันที่ที่เลือก
-        const filterByDate = (data) => {
-            if (!dateFilter) return data;
-            return data.filter(order =>
-                new Date(order.order_date).toLocaleDateString('en-CA') === dateFilter
-            );
-        };
+        
         const fetchPaymentHistoryByOrderId = async (orderId) => {
             try {
                 const api_url = localStorage.getItem('url_api'); 
@@ -422,7 +438,7 @@
                         <div style="font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; font-size: 14px;">
                             <h4 style="font-size: 20px; font-weight: bold;">รายการสินค้า</h4>
                             <div style="max-height: 208px; overflow-y: auto; margin-bottom: 15px;">${itemsTableHTML}</div>
-                            <h4 style="font-size: 20px; font-weight: bold; margin-top: 20px;">ประวัติการชำระเงิน</h4>
+                            <h4 style="font-size: 20px; font-weight: bold; margin-top: 10px;">ประวัติการชำระเงิน</h4>
                             <div style="max-height: 150px; overflow-y: auto;">${paymentHistoryTableHTML}</div>
                         </div>
                     `,
@@ -451,8 +467,14 @@
             return { totalAmount, totalDiscount, totalVat, totalNet };
         };
 
-        const pendingOrders = filterByDate(reportData).filter(order => order.status !== 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
-        const paidOrders = filterByDate(reportData).filter(order => order.status === 'Y').sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
+        // ใช้ใน `pendingOrders` และ `paidOrders`
+        const pendingOrders = filterData(reportData)
+            .filter(order => order.status !== 'Y')
+            .sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
+
+        const paidOrders = filterData(reportData)
+            .filter(order => order.status === 'Y')
+            .sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
         const pendingTotals = calculateTotals(pendingOrders);
         const paidTotals = calculateTotals(paidOrders);
@@ -463,16 +485,28 @@
                     <BackendSidebar />
                 </div>
                 <div style={styles.content}>
-                    <div style={styles.headerContainer}>
-                        <h1 style={styles.title}>รายงานการขาย</h1>
-                        <div style={styles.datePickerContainer}>
-                            <label style={styles.dateLabel}>เลือกวัน: </label>
-                            <input
+                <div style={styles.headerContainer}>
+                <h1 style={styles.title}>รายงานการขาย</h1>
+                        <div style={styles.dateSearchContainer}>
+                            <div style={styles.datePickerContainer}>
+                                <label style={styles.dateLabel}>เลือกวัน: </label>
+                                <input
                                     type="date"
-                                value={dateFilter}
-                                onChange={(e) => setDateFilter(e.target.value)}
-                                style={styles.dateInput}
-                            />
+                                    value={dateFilter}
+                                    onChange={(e) => setDateFilter(e.target.value)}
+                                    style={styles.dateInput}
+                                />
+                            </div>
+                            <div style={styles.searchContainer}>
+                                <label style={styles.searchLabel}>ค้นหาบิล: </label>
+                                <input
+                                    type="text"
+                                    value={searchOrderNumber}
+                                    onChange={(e) => setSearchOrderNumber(e.target.value)}
+                                    placeholder="กรอกหมายเลขบิล"
+                                    style={styles.searchInput}
+                                />
+                            </div>
                         </div>
                     </div>
                     {error && <p style={styles.error}>{error}</p>}
@@ -610,9 +644,10 @@
 const styles = {
     pageContainer: { display: 'flex' },
     content: { flex: 1, padding: '25px', backgroundColor: '#fff', marginLeft: '110px', overflowY: 'hidden' },
-    headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
+    headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', },
+    dateSearchContainer: { display: 'flex',flexDirection: 'column', alignItems: 'flex-end', },
     title: { fontSize: '24px', fontWeight: 'bold', color: '#000' },
-    datePickerContainer: { display: 'flex', alignItems: 'center' },
+    datePickerContainer: { display: 'flex', alignItems: 'center',  marginBottom: '10px', },
     dateLabel: { marginRight: '10px' },
     dateInput: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px' },
     subTitle: { fontSize: '20px', fontWeight: 'bold', color: '#333' },
@@ -625,4 +660,8 @@ const styles = {
     totalValue: { textAlign: 'center', fontWeight: 'bold' },
     detailsButton: { padding: '5px 10px', backgroundColor: '#FFA500', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', flex: 1 },
     tfoot: { position: 'sticky', bottom: 0, backgroundColor: '#fff', height: '40px', borderTop: '2px solid #ddd', zIndex: 10 },
+    searchContainer: { display: 'flex', alignItems: 'center', marginTop: '10px' },
+    searchLabel: { marginRight: '10px' },
+    searchInput: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px', width: '200px' },
+    subTitle: { fontSize: '20px', fontWeight: 'bold', color: '#333' },
 };
