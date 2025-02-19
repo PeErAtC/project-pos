@@ -119,7 +119,7 @@ export default function SalesPage() {
         if (typeof window !== "undefined") {
             fetchProducts();
             fetchCategories();
-            const interval = setInterval(fetchProducts, 5000);
+            const interval = setInterval(fetchProducts, 60000);
             return () => clearInterval(interval);
         }
     }, []);
