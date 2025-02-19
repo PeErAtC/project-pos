@@ -3279,7 +3279,7 @@ const styles = {
     headerContainer: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', position: 'sticky', top: '0', backgroundColor: '#f5f5f5', zIndex: 10, padding: '10px 0', width: '100%' },
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
-    productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', paddingTop: '0px' },
+    productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto',overflowX: 'hidden', marginLeft: '20px', paddingTop: '0px' },
     pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
     tableCode: { fontSize: '15px', color: '#333' },
     receiveOrderButton: { flex: '1',padding: '10px',backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer',borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},    
