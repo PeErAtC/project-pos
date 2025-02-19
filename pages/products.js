@@ -141,7 +141,7 @@ const fetchTableLastOrder = async (tableId) => {
             api_url += "/api";
         }
 
-        const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
+        const response = await axios.get(`${api_url}/${slug}/orders/${tableId}/table_lastorder`, {
             headers: {
                 Accept: "application/json",
                 Authorization: `Bearer ${authToken}`,
@@ -268,9 +268,12 @@ const loadTableLastOrder = async (tableCode) => {
             },
         });
 
+        // ตรวจสอบข้อมูลใน response และสถานะของออเดอร์
         if (response.data && response.data.order) {
             const lastOrder = response.data.order;
+
             if (lastOrder.status === 'N') {  // ตรวจสอบว่าออเดอร์ยังไม่ชำระ
+                console.log("ออเดอร์ล่าสุด:", lastOrder);
                 loadOrderDetails(lastOrder.id); // เรียกฟังก์ชันเพื่อดึงข้อมูลออเดอร์มาแสดง
             } else {
                 console.warn("ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
@@ -285,6 +288,7 @@ const loadTableLastOrder = async (tableCode) => {
         setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
     }
 };
+
 const handleInputFocus = (field, itemId = null) => {
     setActiveField({ field, itemId });
     setShowKeyboard(true);
@@ -348,6 +352,7 @@ const fetchOrderDetails = async (orderId) => {
     useEffect(() => {
         if (orderId) {
             fetchOrderDetails(orderId);
+            localStorage.removeItem(`cart_${tableCode}`); // ลบตะกร้าเก่า
         }
     }, [orderId]);  // ✅ ตรวจสอบเฉพาะ orderId เท่านั้น ไม่ดึง API ซ้ำเมื่อ state อื่นเปลี่ยน
     
@@ -500,72 +505,219 @@ const fetchOrderDetails = async (orderId) => {
         }
     };
 
-    const updateOrderInDatabase = async (orderId, newItems, retry = 2) => {
-        const api_url = localStorage.getItem('url_api');
-        const slug = localStorage.getItem('slug');
-        const authToken = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
-    
-        if (!api_url || !slug) {
-            console.error("❌ API URL หรือ Slug ไม่ถูกต้อง");
-            return;
+    const updateOrderItems = async () => {
+        if (!orderId) {
+            console.warn("⚠️ Order ID ไม่ถูกต้อง กำลังสร้างออเดอร์ใหม่...");
+            await receiveOrder();
+            if (!orderId) return; // หากไม่สามารถสร้าง Order ID ได้
         }
     
-        const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
-        console.log("📡 กำลังอัปเดตออเดอร์ที่:", endpoint);
+        const userId = localStorage.getItem('userId') || "1";
+        console.log("📌 User ID ที่ใช้ส่งไปยัง API:", userId);
+    
+        let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
+    
+        if (!apiUrl.endsWith('/api')) apiUrl += '/api';
+    
+        const endpoint = `${apiUrl}/${slug}/orders/${orderId}`;
     
         try {
+            // ดึงข้อมูลสินค้าที่มีอยู่ในออเดอร์ก่อน
             const existingResponse = await axios.get(endpoint, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
     
-            console.log("📦 ออเดอร์ปัจจุบัน:", existingResponse.data);
+            // สร้าง Map ของสินค้าที่มีอยู่ในออเดอร์
+            const existingItemsMap = new Map(
+                existingResponse.data.items.map(item => [item.product_id, item.quantity])
+            );
     
-            if (!existingResponse.data.items || !Array.isArray(existingResponse.data.items)) {
-                console.warn("⚠️ ไม่มีข้อมูลสินค้าเดิมในออเดอร์");
-                return;
-            }
-    
-            const existingItems = existingResponse.data.items.reduce((acc, item) => {
-                acc[item.product_id] = item.quantity;
+            // รวมสินค้าซ้ำในตะกร้า
+            const cartItemsMap = cart.reduce((acc, item) => {
+                if (acc.has(item.id)) {
+                    acc.get(item.id).quantity += item.quantity; // รวมจำนวนสินค้าหากมีสินค้าเดียวกัน
+                } else {
+                    acc.set(item.id, {
+                        ...item,
+                    });
+                }
                 return acc;
-            }, {});
+            }, new Map());
     
-            // ✅ อัปเดตจำนวนสินค้าโดยไม่เพิ่มรายการซ้ำ
-            const updatedItems = newItems.map((item) => ({
-                ...item,
-                quantity: (existingItems[item.product_id] || 0) + item.quantity,
-            }));
+            const itemsToAdd = [];
     
-            console.log("📤 สินค้าที่อัปเดต:", updatedItems);
-    
-            const dataPayload = { 
-                items: updatedItems, 
-                updated_by: userId 
-            };
-    
-            const response = await axios.put(endpoint, dataPayload, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
+            // ตรวจสอบสินค้าที่มีอยู่ในตะกร้าและอัปเดต
+            cartItemsMap.forEach((item, productId) => {
+                // ตรวจสอบว่ามีสินค้านี้ในฐานข้อมูลหรือไม่
+                if (!existingItemsMap.has(productId)) {
+                    // เพิ่มสินค้าลงฐานข้อมูล
+                    itemsToAdd.push({
+                        product_id: item.id,
+                        p_name: item.p_name || 'ไม่มีชื่อสินค้า',
+                        quantity: item.quantity,
+                        price: item.price || 0,
+                        created_by: userId,
+                        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity,
+                    });
+                } else {
+                    console.log(`รายการสินค้า ${item.p_name} มีอยู่แล้วในออเดอร์และไม่ต้องเพิ่มซ้ำ.`);
+                }
             });
     
-            console.log("✅ API Response:", response);
-    
-            if (response.status === 200) {
-                console.log("✅ อัปเดตข้อมูลคำสั่งซื้อสำเร็จ", response.data);
-                await fetchOrderDetails(orderId); // ✅ โหลดข้อมูลใหม่เพื่ออัปเดตตะกร้า
-                return response.data;
-            } else {
-                throw new Error(`API Response ไม่สำเร็จ (Status ${response.status})`);
+            // บันทึกการเพิ่มสินค้าหากมี
+            if (itemsToAdd.length > 0) {
+                await addItemsToDatabase(orderId, itemsToAdd);
             }
+    
+            // รีเฟรชข้อมูลออเดอร์ใหม่และเคลียร์ตะกร้า
+            setTimeout(async () => {
+                await fetchOrderDetails(orderId); // ดึงข้อมูลใหม่
+                setCart([]); // เคลียร์ตะกร้าหลังการดึงข้อมูล
+            }, 500);
+    
+            Swal.fire({
+                icon: 'success',
+                title: 'อัปเดตออเดอร์สำเร็จ!',
+                text: 'รายการอาหารถูกอัปเดตเรียบร้อยแล้ว',
+            });
+    
         } catch (error) {
-            if (retry > 0) {
-                console.warn(`⚠️ ลองส่ง API อีกครั้ง... เหลือ ${retry} ครั้ง`);
-                return updateOrderInDatabase(orderId, newItems, retry - 1);
-            }
-    
-            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตคำสั่งซื้อ:", error);
+            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตออเดอร์:", error);
+            Swal.fire('ผิดพลาด', 'ไม่สามารถอัปเดตออเดอร์ได้', 'error');
         }
     };
+    
+    // ฟังก์ชันอัปเดตข้อมูลในฐานข้อมูล
+    // const updateOrderItemsInDatabase = async (orderId, items) => {
+    //     const apiUrl = localStorage.getItem('url_api');
+    //     const slug = localStorage.getItem('slug');
+    //     const authToken = localStorage.getItem('token');
+    
+    //     const endpoint = `${apiUrl}/${slug}/orders/${orderId}/items`;
+    
+    //     try {
+    //         const response = await axios.put(endpoint, { items }, {
+    //             headers: { 'Authorization': `Bearer ${authToken}` }
+    //         });
+    
+    //         console.log("✅ อัปเดตรายการสินค้าในออเดอร์สำเร็จ:", response.data);
+    //     } catch (error) {
+    //         console.error("❌ เกิดข้อผิดพลาดในการอัปเดตรายการสินค้าในออเดอร์:", error);
+    //     }
+    // };
+    
+    
+    
+    const updateItemsInDatabase = async (orderId, itemsToUpdate) => {
+        try {
+            let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            if (!apiUrl.endsWith('/api')) apiUrl += '/api'; // ตรวจสอบให้ api_url มี '/api' อยู่ที่ท้าย URL
+    
+            const url = `${apiUrl}/${slug}/order-items`; // ปรับ URL ให้ถูกต้อง
+    
+            const response = await axios.put(url, { orderId, items: itemsToUpdate }, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+    
+            console.log("Items updated in database:", response.data);
+            return response.data;
+    
+        } catch (error) {
+            console.error('Error while updating items in database:', error.response?.data || error.message);
+            throw error;  // ข้อผิดพลาดจะถูกโยนออกไป
+        }
+    };
+    
+    
+    
+    
+    // const updateOrderInDatabase = async (orderId, newItems, retry = 2) => {
+    //     const api_url = localStorage.getItem('url_api');
+    //     const slug = localStorage.getItem('slug');
+    //     const authToken = localStorage.getItem('token');
+    //     const userId = localStorage.getItem('userId');
+    
+    //     if (!api_url || !slug) {
+    //         console.error("❌ API URL หรือ Slug ไม่ถูกต้อง");
+    //         return;
+    //     }
+    
+    //     const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
+    //     console.log("📡 กำลังอัปเดตออเดอร์ที่:", endpoint);
+    
+    //     try {
+    //         const existingResponse = await axios.get(endpoint, {
+    //             headers: { 'Authorization': `Bearer ${authToken}` }
+    //         });
+    
+    //         console.log("📦 ออเดอร์ปัจจุบัน:", existingResponse.data);
+    
+    //         if (!existingResponse.data.items || !Array.isArray(existingResponse.data.items)) {
+    //             console.warn("⚠️ ไม่มีข้อมูลสินค้าเดิมในออเดอร์");
+    //             return;
+    //         }
+    
+    //         // ✅ แปลงข้อมูลสินค้าเดิมให้เป็น object เพื่อเปรียบเทียบ
+    //         const existingItemsMap = existingResponse.data.items.reduce((acc, item) => {
+    //             acc[item.product_id] = item.quantity;  // เก็บ quantity ของสินค้าเดิม
+    //             return acc;
+    //         }, {});
+    
+    //         // ✅ คัดกรองเฉพาะสินค้าที่ไม่มีอยู่ในออเดอร์เดิม (เฉพาะสินค้าใหม่)
+    //         const itemsToAdd = newItems.filter(item => !existingItemsMap[item.product_id]);
+    
+    //         // ✅ คัดกรองสินค้าที่มีอยู่แล้วและต้องเพิ่มจำนวน (`quantity`)
+    //         const itemsToUpdate = newItems.filter(item => existingItemsMap[item.product_id]);
+    
+    //         // ✅ หากไม่มีสินค้าใหม่หรือสินค้าที่ต้องอัปเดต ไม่ต้องเรียก API
+    //         if (itemsToAdd.length === 0 && itemsToUpdate.length === 0) {
+    //             console.log("✅ ไม่มีสินค้าใหม่หรือสินค้าที่ต้องอัปเดต");
+    //             return;
+    //         }
+    
+    //         console.log("📤 กำลังอัปเดตเฉพาะสินค้าใหม่:", itemsToAdd);
+    //         console.log("📤 กำลังเพิ่มจำนวนสินค้าเดิม:", itemsToUpdate);
+    
+    //         const dataPayload = { 
+    //             items: [...itemsToAdd, ...itemsToUpdate.map(item => ({
+    //                 product_id: item.product_id,
+    //                 quantity: existingItemsMap[item.product_id] + item.quantity, // ✅ อัปเดตจำนวน
+    //             }))],
+    //             updated_by: userId 
+    //         };
+    
+    //         const response = await axios.put(endpoint, dataPayload, {
+    //             headers: { 'Authorization': `Bearer ${authToken}` }
+    //         });
+    
+    //         console.log("✅ API Response:", response);
+    
+    //         if (response.status === 200) {
+    //             console.log("✅ อัปเดตข้อมูลคำสั่งซื้อสำเร็จ", response.data);
+    //             await fetchOrderDetails(orderId); // ✅ โหลดข้อมูลใหม่เพื่ออัปเดตตะกร้า
+    //             return response.data;
+    //         } else {
+    //             throw new Error(`API Response ไม่สำเร็จ (Status ${response.status})`);
+    //         }
+    //     } catch (error) {
+    //         if (retry > 0) {
+    //             console.warn(`⚠️ ลองส่ง API อีกครั้ง... เหลือ ${retry} ครั้ง`);
+    //             return updateOrderInDatabase(orderId, newItems, retry - 1);
+    //         }
+    
+    //         console.error("❌ เกิดข้อผิดพลาดในการอัปเดตคำสั่งซื้อ:", error);
+    //     }
+    // };
+    
+    
     
     
     
@@ -586,88 +738,104 @@ const fetchOrderDetails = async (orderId) => {
             });
         }
     
-        // เพิ่มสินค้าในตะกร้า (local state)
-        setCart((prevCart) => {
-            const existingItem = prevCart.find((item) => item.id === product.id);
-            if (existingItem) {
-                return prevCart.map((item) =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-                );
-            } else {
-                return [
-                    ...prevCart,
-                    {
-                        ...product,
-                        quantity: 1,
-                        discount: product.discount || 0, // กำหนดส่วนลดเริ่มต้น (ถ้ามี)
-                        discountType: product.discountType || "THB", // กำหนดประเภทส่วนลดเริ่มต้น
-                    },
-                ];
-            }
-        });
+        // ตรวจสอบว่ามีสินค้าซ้ำในตะกร้าหรือไม่
+        const isProductInCart = cart.some((item) => item.id === product.id);
     
-        // ส่งข้อมูลสินค้าไปที่ฐานข้อมูล
+        if (isProductInCart) {
+            console.log("สินค้าในตะกร้ามีอยู่แล้ว, ไม่สามารถเพิ่มซ้ำ");
+            return;  // ถ้ามีสินค้านี้อยู่ในตะกร้าแล้ว ให้หยุดทำงาน
+        }
+    
+        // เพิ่มสินค้าในตะกร้า (local state) โดยไม่ส่งไปยังฐานข้อมูล
+        setCart((prevCart) => [
+            ...prevCart,
+            {
+                ...product,
+                quantity: 1,
+                discount: product.discount || 0, // กำหนดส่วนลดเริ่มต้น (ถ้ามี)
+                discountType: product.discountType || "THB", // กำหนดประเภทส่วนลดเริ่มต้น
+            },
+        ]);
+    
+        console.log("อาหารถูกเพิ่มลงในตะกร้า:", product);
+    };
+    
+    
+    // ฟังก์ชันนี้จะถูกใช้สำหรับส่งข้อมูลสินค้าใหม่ไปยังฐานข้อมูล
+    const sendNewItemToDatabase = async (newItem) => {
         try {
-            await addItemToDatabase(product);
+            const { api_url, slug, authToken } = getApiConfig();
+            const url = `${api_url}/${slug}/orders/${orderId}`;  // ใช้ URL สำหรับดึงข้อมูลออเดอร์และตะกร้า
+    
+            const response = await axios.post(url, { items: [newItem] }, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+    
+            console.log("Items added to database:", response.data);
+            // หลังจากที่เพิ่มข้อมูลในฐานข้อมูลแล้ว ให้ดึงข้อมูลตะกร้ามาแสดง
+            fetchUpdatedCart();
         } catch (error) {
             console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
         }
     };
     
-    // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
-    const addItemToDatabase = async (product) => {
+    
+    
+    // ฟังก์ชันดึงข้อมูลตะกร้าหลังจากอัปเดต
+    const fetchUpdatedCart = async () => {
         try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
+            const { api_url, slug, authToken } = getApiConfig();
+            const url = `${api_url}/${slug}/orders/${orderId}`;  // ใช้ URL สำหรับดึงข้อมูลออเดอร์และตะกร้า
     
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-    
-            // ตรวจสอบค่า product ก่อนใช้
-            if (!product || !product.id || !product.price) {
-                console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
-                throw new Error('ข้อมูลสินค้าไม่ครบถ้วน');
-            }
-    
-            // สร้างข้อมูลที่จะส่ง
-            const orderData = {
-                product_id: product.id,
-                quantity: 1, // กำหนดจำนวนสินค้าเริ่มต้นเป็น 1
-                price: Number(product.price), // ตรวจสอบให้เป็นตัวเลข
-                total: Number(product.price), // ตรวจสอบให้เป็นตัวเลข
-            };
-    
-            console.log('Preparing to send orderData:', orderData);
-    
-            // ส่งข้อมูลไปยัง API
-            const response = await axios.post(`${api_url}/api/${slug}/order-items`, orderData, {
+            const response = await axios.get(url, {
                 headers: {
-                    'Accept': 'application/json',
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
     
-            // ตรวจสอบการตอบกลับ
-            if (response.data && response.data.success) {
-                console.log('สินค้าถูกเพิ่มในฐานข้อมูลออร์เดอร์ไอเท็มเรียบร้อยแล้ว:', response.data);
-            } else {
-                console.error('เกิดข้อผิดพลาดในการเพิ่มสินค้าในฐานข้อมูล:', response.data?.message || 'Unknown error');
+            if (response.data && Array.isArray(response.data.items)) {
+                setCart(response.data.items);  // อัปเดตตะกร้าด้วยข้อมูลที่ดึงมาจากฐานข้อมูล
             }
         } catch (error) {
-            // Handle error อย่างละเอียด
-            if (error.response) {
-                console.error('API Error:', error.response.status, error.response.data);
-                console.error('URL:', `${api_url}/api/${slug}/order-items`);
-            } else {
-                console.error('Network Error:', error.message);
-            }
+            console.error('Error fetching updated cart:', error.message);
         }
     };
+    
+    
+    
+    
+    
+    
+    // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
+    const addItemToDatabase = async (orderId, items) => {
+        try {
+            let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
+            const slug = localStorage.getItem('slug') || 'default_slug';
+            const authToken = localStorage.getItem('token') || 'default_token';
+    
+            if (!apiUrl.endsWith('/api')) apiUrl += '/api'; // ตรวจสอบให้ api_url มี '/api' อยู่ที่ท้าย URL
+    
+            const url = `${apiUrl}/${slug}/order-items`; // ปรับ URL ให้ถูกต้อง
+    
+            const response = await axios.post(url, { items }, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+    
+            console.log("Items added to database:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Error while adding items to database:', error.response?.data || error.message);
+            throw error;  // ข้อผิดพลาดจะถูกโยนออกไป
+        }
+    };
+    
+    
       
     useEffect(() => {
         if (paymentMethod === 'qr') {
@@ -1209,7 +1377,10 @@ const fetchOrderDetails = async (orderId) => {
             return;
         }
     
-        const endpoint = `${apiUrl}/api/${slug}/orders/${orderId}/items`;
+        // ✅ แก้ปัญหา URL ซ้ำ `/api/api/`
+        let endpoint = `${apiUrl}/api/${slug}/orders/${orderId}`;
+        endpoint = endpoint.replace(/\/api\/api\//, "/api/");
+    
         console.log("📡 กำลังส่งข้อมูลไปยัง API:", endpoint);
     
         try {
@@ -1229,58 +1400,128 @@ const fetchOrderDetails = async (orderId) => {
         }
     };
     
+    
     const addOrderItems = async () => {
         if (!orderId) {
             console.warn("⚠️ Order ID ไม่ถูกต้อง กำลังสร้างออเดอร์ใหม่...");
             await receiveOrder();
-        }
-    
-        if (!orderId) {
-            console.error("❌ ไม่สามารถสร้าง Order ID ได้");
-            return;
+            if (!orderId) return; // หากไม่สามารถสร้าง Order ID ได้
         }
     
         const userId = localStorage.getItem('userId') || "1";
         console.log("📌 User ID ที่ใช้ส่งไปยัง API:", userId);
     
-        // ✅ ตรวจสอบว่าสินค้าใหม่ซ้ำกับสินค้าเดิมหรือไม่
-        const existingItems = cart.reduce((acc, item) => {
-            acc[item.id] = item.quantity;
-            return acc;
-        }, {});
+        let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
     
-        const newItems = cart
-            .filter((item) => item.id > 0)
-            .map((item) => ({
-                product_id: item.id,
-                p_name: item.p_name || 'ไม่มีชื่อสินค้า',
-                quantity: (existingItems[item.id] || 0) + (item.quantity || 1), // ✅ รวมจำนวนสินค้าเดิม
-                price: item.price || 0,
-                created_by: userId,
-                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
-            }));
+        if (!apiUrl.endsWith('/api')) apiUrl += '/api';
     
-        if (newItems.length === 0) {
-            console.warn("⚠️ ไม่มีสินค้าให้เพิ่ม (product_id เป็น 0 ทั้งหมด)");
-            return;
-        }
-    
-        console.log("🛒 รายการสินค้าที่จะเพิ่ม:", newItems);
+        const endpoint = `${apiUrl}/${slug}/orders/${orderId}`; // API สำหรับอัปเดทข้อมูลในตาราง order_items
     
         try {
-            await addItemsToDatabase(orderId, newItems);
-            await updateOrderInDatabase(orderId, newItems); 
-            
-            // ✅ รีเซ็ตตะกร้าแล้วโหลดข้อมูลใหม่
-            await fetchOrderDetails(orderId);
-            
+            // เคลียร์รายการที่แสดงในตระกร้าทั้งหมดก่อน
+            setCart([]); // เคลียร์ตะกร้าก่อนการอัพเดท
+    
+            // ดึงข้อมูลสินค้าที่มีอยู่ในออเดอร์ก่อน
+            const existingResponse = await axios.get(endpoint, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+    
+            // สร้าง Map ของสินค้าที่มีอยู่ในออเดอร์
+            const existingItemsMap = new Map(
+                existingResponse.data.items.map(item => [item.product_id, item.quantity])
+            );
+    
+            // รวมสินค้าซ้ำในตะกร้า
+            const cartItemsMap = cart.reduce((acc, item) => {
+                if (acc.has(item.id)) {
+                    acc.get(item.id).quantity += item.quantity; // รวมจำนวนสินค้าหากมีสินค้าเดียวกัน
+                } else {
+                    acc.set(item.id, {
+                        ...item,
+                    });
+                }
+                return acc;
+            }, new Map());
+    
+            const itemsToUpdate = [];
+            const itemsToAdd = [];
+    
+            // ตรวจสอบสินค้าที่มีอยู่ในตะกร้าและอัปเดต
+            cartItemsMap.forEach((item, productId) => {
+                if (existingItemsMap.has(productId)) {
+                    // อัปเดตข้อมูลที่มีอยู่แล้ว
+                    itemsToUpdate.push({
+                        product_id: productId,
+                        quantity: existingItemsMap.get(productId) + item.quantity, // อัปเดตจำนวน
+                        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * (existingItemsMap.get(productId) + item.quantity),
+                    });
+                } else {
+                    // เพิ่มสินค้าลงฐานข้อมูล
+                    itemsToAdd.push({
+                        product_id: item.id,
+                        p_name: item.p_name || 'ไม่มีชื่อสินค้า',
+                        quantity: item.quantity,
+                        price: item.price || 0,
+                        created_by: userId,
+                        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity,
+                    });
+                }
+            });
+    
+            // อัปเดตรายการที่มีอยู่แล้ว (ใช้ PUT สำหรับอัปเดต)
+            if (itemsToUpdate.length > 0) {
+                await axios.put(endpoint, { items: itemsToUpdate }, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+            }
+    
+            // บันทึกการเพิ่มสินค้าหากมี
+            if (itemsToAdd.length > 0) {
+                await axios.post(endpoint, { items: itemsToAdd }, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+            }
+    
+            // รีเฟรชข้อมูลออเดอร์ใหม่หลังจากอัปเดทเสร็จ
+            await fetchOrderDetails(orderId); // ดึงข้อมูลใหม่จากฐานข้อมูล
+    
+            Swal.fire({
+                icon: 'success',
+                title: 'อัปเดตออเดอร์สำเร็จ!',
+                text: 'รายการอาหารถูกอัปเดตเรียบร้อยแล้ว',
+            });
+    
         } catch (error) {
-            console.error("❌ ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
+            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตออเดอร์:", error);
+            Swal.fire('ผิดพลาด', 'ไม่สามารถอัปเดตออเดอร์ได้', 'error');
         }
     };
     
     
+  
     
+    
+    
+    
+    // ฟังก์ชั่น updateOrderItemsInDatabase
+    const updateOrderItemsInDatabase = async (orderId, itemsToUpdate) => {
+        const apiUrl = localStorage.getItem('url_api');
+        const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+    
+        const endpoint = `${apiUrl}/${slug}/orders/${orderId}/items`;
+    
+        try {
+            const response = await axios.put(endpoint, { items: itemsToUpdate }, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            console.log("✅ อัปเดตสินค้าสำเร็จ:", response.data);
+        } catch (error) {
+            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตรายการสินค้า:", error);
+        }
+    };
     
     
     
@@ -1979,19 +2220,21 @@ const fetchOrderDetails = async (orderId) => {
                                 <div key={String(item.product_id)} style={styles.cartItem}>  
                                     {/* ✅ ตรวจสอบว่ามีภาพหรือไม่ */}
                                     {item.image ? (
-                                        <Image
-                                            src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${item.image}`}
-                                            alt={item.p_name ?? "ไม่มีชื่อสินค้า"}
-                                            width={100}
-                                            height={100}
-                                            quality={100}
-                                            style={styles.cartItemImage}
-                                        />
-                                    ) : (
-                                        <div style={styles.noImage}>
-                                            <span style={styles.noImageText}>ไม่มีภาพ</span>
-                                        </div>
-                                    )}
+                    <Image
+                        src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${item.image}`}
+                        alt={item.p_name ?? "ไม่มีชื่อสินค้า"}
+                        width={100}
+                        height={100}
+                        quality={100}
+                        style={styles.cartItemImage}
+                    />
+                ) : (
+                    <div style={styles.noImage}>
+                        <span style={styles.noImageText}>ไม่มีภาพ</span>
+                    </div>
+                )}
+
+
 
                                     <div style={styles.cartItemDetails}>
                                         <p style={styles.cartItemName}>{item.p_name ?? "ไม่มีชื่อสินค้า"}</p>
@@ -2353,11 +2596,12 @@ const fetchOrderDetails = async (orderId) => {
                         ...styles.receiveOrderButton,
                         ...(cart.length === 0 ? styles.buttonDisabled : {}),
                     }}
-                    onClick={addOrderItems}
-                    disabled={cart.length === 0}
+                    onClick={addOrderItems} // เรียกฟังก์ชัน addOrderItems
+                    disabled={cart.length === 0} // ปิดปุ่มถ้าตะกร้าว่าง
                 >
-                    อัพเดทอาหาร
+                    เพิ่มอาหารลงในออเดอร์
                 </button>
+            
             ) : (
                 <button
                     style={{
@@ -2689,8 +2933,8 @@ const styles = {
     popupTitle: { fontSize: '28px', fontWeight: 'bold', marginBottom: '20px', color: '#333', margin: '0px' },
     icon: { margin: '20px 0', cursor: 'pointer', borderRadius: '12px', padding: '5px', width: '10px', height: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' },
     categoryRow: { display: 'flex', justifyContent: 'center', gap: '10px', margin: '0 auto', flexWrap: 'wrap', alignItems: 'center', width: '100%',},
-    searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '990px', padding: '10px', },
-    pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden',},
+    searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px', },
+    pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden', },
     sidebarContainer: { flex: '0 0 100px' },
     cart: {width: '400px',overflowY: 'auto',overflowX: 'hidden',backgroundColor: '#f8f9fa',padding: '15px',borderRadius: '12px',marginTop: '-8px',display: 'flex',flexDirection: 'column',justifyContent: 'flex-start',boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',},    
     discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
@@ -2717,7 +2961,7 @@ const styles = {
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer', borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},
     buttonDisabled: {backgroundColor: '#bbbbd6',color: '#666666',cursor: 'not-allowed', pointerEvents: 'none'},
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, marginLeft: '100px' },
-    searchInput: { width: 'calc(930px - 150px)', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' },
+    searchInput: { width: 'calc(940px - 150px)', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', },
     productCard: {width: '120px',height: '100px',border: '1px solid #ddd',borderRadius: '8px',   cursor: 'pointer',   backgroundColor: '#ffffff',  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column',alignItems: 'center',padding: '15px',transition: 'transform 0.3s ease, box-shadow 0.3s ease',overflow: 'hidden',':hover': {transform: 'scale(1.05)',boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',},},
     productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
