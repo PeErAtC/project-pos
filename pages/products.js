@@ -63,6 +63,7 @@ export default function SalesPage() {
     });
     const [showAddItemPopup, setShowAddItemPopup] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
+    const [orderDetails, setOrderDetails] = useState(null);
 
     
     // const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
@@ -383,17 +384,21 @@ const handleInputFocus = (field, itemId = null) => {
             console.log("📦 API Response:", response.data);
     
             if (response.data && Array.isArray(response.data.items)) {
-                setCart([]);  // เคลียร์ตะกร้าก่อนอัปเดต
-                setTimeout(() => {
-                    setCart(response.data.items);  // อัปเดตตะกร้าด้วยรายการสินค้าใหม่
-                }, 100);  // ใช้ `setTimeout` เพื่อหลีกเลี่ยงการซ้อนข้อมูล
+                // ตรวจสอบและเพิ่ม URL รูปภาพให้กับสินค้าที่อยู่ในตะกร้า
+                setCart(response.data.items.map(item => {
+                    const productData = products.find(prod => prod.id === item.product_id);
+                    return {
+                        ...item,
+                        image: productData ? productData.image : null // ใช้ URL รูปภาพจากสินค้า
+                    };
+                }));
             } else {
                 console.warn("⚠️ ไม่มีข้อมูลสินค้าในออเดอร์");
                 setCart([]);  // ล้างตะกร้าหากไม่มีรายการสินค้า
             }
-    
         } catch (error) {
             console.error("❌ Error fetching order details:", error);
+            setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
         }
     };
     
@@ -676,16 +681,31 @@ const handleInputFocus = (field, itemId = null) => {
             fetchPaymentChanels(); // ดึง URL QR Code
         }
     }, [paymentMethod]);
+
+
+    
+    useEffect(() => {
+        console.log("📦 ตะกร้าสินค้า:", cart);
+    }, [cart]);
+    
     
     const updateQuantity = (productId, delta) => {
-        setCart((prevCart) =>
-            prevCart
-                .map((item) =>
-                    item.id === productId ? { ...item, quantity: item.quantity + delta } : item
-                )
-                .filter(item => item.quantity > 0)
+        if (!productId) {
+            console.error("❌ ไม่พบ productId");
+            return;
+        }
+    
+        setCart(prevCart =>
+            prevCart.map(item =>
+                item.product_id === productId
+                    ? { ...item, quantity: Math.max(1, (item.quantity ?? 0) + delta) }
+                    : item
+            )
         );
     };
+   
+    
+    
     
     const handlePaymentChange = (selectedMethod) => {
         setPaymentMethod(selectedMethod); // บันทึกวิธีการชำระเงินที่เลือก
@@ -1101,7 +1121,6 @@ const handleInputFocus = (field, itemId = null) => {
     const receiveOrder = async () => {
         try {
             const { api_url, slug, authToken } = getApiConfig(); // ดึงค่าจากฟังก์ชัน getApiConfig
-    
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
             const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0;
             console.log("Total Amount with VAT (ยอดรวม):", totalAmountWithVAT);
@@ -1130,7 +1149,7 @@ const handleInputFocus = (field, itemId = null) => {
                 net_amount: totalAmountWithVAT.toFixed(2),
                 status: 'N',
                 tables_id: tableCode || null,
-                created_by:localStorage.getItem('userId'),
+                created_by: localStorage.getItem('userId'),
                 vatType,
                 items: cart.map((item) => ({
                     product_id: item.id || 0,
@@ -1152,6 +1171,13 @@ const handleInputFocus = (field, itemId = null) => {
     
             // ส่งคำขอสร้างออเดอร์
             const newOrder = await sendOrder(orderData, api_url, slug, authToken); 
+    
+            // ✅ เคลียร์ตะกร้าหลังจากรับออเดอร์สำเร็จ
+            setCart([]); 
+    
+            // ✅ โหลดข้อมูลออเดอร์ที่เพิ่งสร้าง
+            fetchOrderData(newOrder.id); 
+    
             setOrderNumber(newOrder.order_number);
             setOrderId(newOrder.id);
             setOrderReceived(true);
@@ -1193,6 +1219,29 @@ const handleInputFocus = (field, itemId = null) => {
             }
     
             Swal.fire('Error', `Could not receive order: ${error.message}`, 'error');
+        }
+    };
+    
+
+    const fetchOrderData = async (orderId) => {
+        try {
+            const { api_url, slug, authToken } = getApiConfig();
+            const response = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
+            });
+    
+            if (response.status === 200) {
+                console.log("Order Data:", response.data);
+                setOrderDetails(response.data); // สมมติว่ามี state `setOrderDetails`
+            } else {
+                throw new Error(`Unexpected response status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error("Error fetching order data:", error);
+            Swal.fire('Error', `Could not load order data: ${error.message}`, 'error');
         }
     };
     useEffect(() => {
@@ -1706,17 +1755,27 @@ const refreshOrderData = async (orderId) => {
         console.log("📦 API Response:", response.data);
 
         if (response.data && Array.isArray(response.data.items)) {
-            setCart(response.data.items);  // อัปเดตตะกร้าด้วยรายการสินค้าใหม่
+            // ✅ อัปเดตรายการสินค้าและเติม URL รูปภาพ
+            const updatedCart = response.data.items.map(item => {
+                const productData = products.find(prod => prod.id === item.product_id);
+                return {
+                    ...item,
+                    image: productData ? productData.image : `${api_url}/storage/app/public/product/${slug}/${item.product_id}.jpg`, // ดึงจาก API ถ้าไม่มี
+                };
+            });
+
+            setCart(updatedCart);  // ✅ อัปเดตตะกร้าให้มีรูปภาพ
         } else {
             console.warn("⚠️ ไม่มีข้อมูลสินค้าในออเดอร์");
-            setCart([]);  // ล้างตะกร้าหากไม่มีรายการสินค้า
+            setCart([]);  // ✅ ล้างตะกร้าหากไม่มีสินค้า
         }
 
     } catch (error) {
         console.error("❌ Error fetching order details:", error);
-        setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
+        setCart([]); // ✅ ล้างตะกร้าหากเกิดข้อผิดพลาด
     }
 };
+
 
 // ✅ 7. ฟังก์ชันยกเลิกการเพิ่มสินค้า
 const handleCancel = () => {
@@ -2297,22 +2356,19 @@ useEffect(() => {
                                 <div key={String(item.product_id)} style={styles.cartItem}>  
                                     {/* ✅ ตรวจสอบว่ามีภาพหรือไม่ */}
                                     {item.image ? (
-                    <Image
-                        src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${item.image}`}
-                        alt={item.p_name ?? "ไม่มีชื่อสินค้า"}
-                        width={100}
-                        height={100}
-                        quality={100}
-                        style={styles.cartItemImage}
-                    />
-                ) : (
-                    <div style={styles.noImage}>
-                        <span style={styles.noImageText}>ไม่มีภาพ</span>
-                    </div>
-                )}
-
-
-
+                                        <Image
+                                        src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${item.image}`}
+                                        alt={item.p_name ?? "ไม่มีชื่อสินค้า"}
+                                            width={100}
+                                            height={100}
+                                            quality={100}
+                                            style={styles.cartItemImage}
+                                        />
+                                    ) : (
+                                        <div style={styles.noImage}>
+                                            <span style={styles.noImageText}>ไม่มีภาพ</span>
+                                        </div>
+                                    )}
                                     <div style={styles.cartItemDetails}>
                                         <p style={styles.cartItemName}>{item.p_name ?? "ไม่มีชื่อสินค้า"}</p>
                                         <div style={styles.cartItemPriceDiscountRow}>
@@ -2331,14 +2387,14 @@ useEffect(() => {
                                                             item.discountType
                                                         )
                                                     }
-                                                    style={{ flex: '1', width: '60px' }}
+                                                    style={{ width: '60px' }}
                                                 />
                                                 <select
                                                     value={item.discountType ?? "THB"}
                                                     onChange={(e) =>
                                                         handleItemDiscountChange(item.product_id, item.discount, e.target.value)
                                                     }
-                                                    style={{ flex: '1', width: '50px' }}
+                                                    style={{ width: '50px' }}
                                                 >
                                                     <option value="THB">บาท (฿)</option>
                                                     <option value="%">%</option>
@@ -2347,20 +2403,9 @@ useEffect(() => {
                                         </div>
                                     </div>
 
-                                    <div style={styles.quantityControls}>
-                                        <button
-                                            onClick={() => updateQuantity(item.product_id, -1)}
-                                            style={styles.quantityButton}
-                                        >
-                                            -
-                                        </button>
-                                        <span style={styles.quantityDisplay}>{item.quantity ?? 1}</span>
-                                        <button
-                                            onClick={() => updateQuantity(item.product_id, 1)}
-                                            style={styles.quantityButton}
-                                        >
-                                            +
-                                        </button>
+                                    {/* จัดให้อยู่ในบรรทัดเดียวกัน */}
+                                    <div style={{ display: "flex", alignItems: "center", fontWeight: "bold", gap: "4px" }}>
+                                        <span style={{ whiteSpace: "nowrap" }}>x {item.quantity ?? 1}</span>
                                     </div>
                                 </div>
                             ))
