@@ -729,29 +729,94 @@ const handleInputFocus = (field, itemId = null) => {
     };
     
     
-
     const clearCart = () => {
         Swal.fire({
             title: 'คุณแน่ใจหรือไม่?',
-            text: "คุณต้องการเคลียเมนูทั้งหมดออกหรือไม่",
+            text: "คุณต้องการยกเลิกออเดอร์และเคลียร์เมนูทั้งหมดออกหรือไม่?",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'ใช่, เคลีย!',
+            confirmButtonText: 'ใช่, ยกเลิกออเดอร์!',
             cancelButtonText: 'ยกเลิก',
         }).then((result) => {
             if (result.isConfirmed) {
-                setCart([]);
-                setReceivedAmount(0);
-                setBillDiscount(0);
-                setBillDiscountType("THB");
-                setOrderReceived(false);
-                setIsBillPaused(false);
-                Swal.fire('เคลียแล้ว!', 'เมนูทั้งหมดถูกเคลียเรียบร้อยแล้ว', 'success');
+                // เปลี่ยนสถานะเป็น 'C' เมื่อยกเลิกออเดอร์
+                updateOrderStatus(orderNumber, "C")
+                    .then(() => {
+                        // รีเซ็ตค่าต่าง ๆ ในตะกร้า
+                        setCart([]);
+                        setReceivedAmount(0);
+                        setBillDiscount(0);
+                        setBillDiscountType("THB");
+                        setOrderReceived(false);
+                        setIsBillPaused(false);
+                        setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
+                        
+                        Swal.fire({
+                            title: 'ออเดอร์ถูกยกเลิก!',
+                            text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    })
+                    .catch((error) => {
+                        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                        console.error("Error cancelling order:", error);
+                    });
             }
         });
     };
+    
+    
+    // ✅ ฟังก์ชันอัปเดตสถานะออเดอร์
+    const updateOrderStatus = async (orderId, status) => {
+        try {
+            const { api_url, slug, authToken } = getApiConfig();
+    
+            // คำนวณค่า totalDue และ moneyChanges ก่อนการอัปเดตสถานะ
+            const totalDue = parseFloat(calculateTotalWithBillDiscountAndVAT());
+            const amountToPay = receivedAmount ? parseFloat(receivedAmount) : parseFloat(calculateTotalPaid());
+            const moneyChanges = amountToPay > totalDue ? amountToPay - totalDue : 0;
+    
+            console.log("📌 ยืนยันการอัปเดตสถานะออเดอร์:", orderId, "เป็นสถานะ:", status);
+    
+            const response = await axios.put(
+                `${api_url}/${slug}/orders/${orderId}`, 
+                {
+                    status: status, 
+                    net_amount: totalDue,
+                    vat_amt: vatType.includes('exclude') ? calculateVAT() : 0,
+                    payment_method: paymentMethod,
+                    money_changes: moneyChanges.toFixed(2), // ส่งเงินทอนที่คำนวณ
+                    updated_by: 1
+                },
+                {
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}` 
+                    }
+                }
+            );
+    
+            if (response.status === 200) {
+                console.log(`✅ อัปเดตสถานะของออเดอร์ ${orderId} เป็น ${status}`);
+                return true;
+            } else {
+                console.error('❌ ข้อผิดพลาดในการอัปเดตสถานะ:', response.data);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการอัปเดตสถานะ:', error.response ? error.response.data : error.message);
+            return false;
+        }
+    };
+    
+    
+    
+    
+    
+    
     const calculateTotalPaid = () => {
         const totalPaid = payments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดการชำระทั้งหมดจากประวัติการชำระ
         return totalPaid;
@@ -2772,7 +2837,11 @@ useEffect(() => {
                         handlePartialPayment(); // ✅ ดำเนินการแยกชำระ
                     }
                 }}
-                disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)}
+                disabled={
+                    !orderReceived || 
+                    !paymentMethod || 
+                    ((receivedAmount <= 0 && calculateRemainingDue() !== 0) && calculateRemainingDue() > 0)
+                }
             >
                 {orderReceived && calculateRemainingDue() === 0
                     ? 'แสดงบิล'
@@ -2782,6 +2851,7 @@ useEffect(() => {
                     ? 'ชำระด้วยบัตรเครดิต'
                     : 'ชำระเงิน'}
             </button>
+
 
 
 
