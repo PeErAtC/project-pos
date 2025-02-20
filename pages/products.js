@@ -6,6 +6,7 @@ import Sidebar from './components/sidebar';
 import Image from 'next/image';
 import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css'; // โหลด CSS ของ SweetAlert2
 import { useRouter } from 'next/router';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa"; // ✅ เพิ่มไอคอน
 import Keyboard from './keyboard'; 
@@ -25,6 +26,7 @@ export default function SalesPage() {
     const [billDiscountType, setBillDiscountType] = useState("THB");
     const [showReceipt, setShowReceipt] = useState(false);
     const [orderReceived, setOrderReceived] = useState(false);
+    const [selectedQuantity, setSelectedQuantity] = useState(1); // เก็บค่าจำนวนที่เลือก
     const [isBillPaused, setIsBillPaused] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [orderNumber, setOrderNumber] = useState("");
@@ -626,138 +628,6 @@ const handleInputFocus = (field, itemId = null) => {
         }
     };
     
-    // ฟังก์ชันอัปเดตข้อมูลในฐานข้อมูล
-    // const updateOrderItemsInDatabase = async (orderId, items) => {
-    //     const apiUrl = localStorage.getItem('url_api');
-    //     const slug = localStorage.getItem('slug');
-    //     const authToken = localStorage.getItem('token');
-    
-    //     const endpoint = `${apiUrl}/${slug}/orders/${orderId}/items`;
-    
-    //     try {
-    //         const response = await axios.put(endpoint, { items }, {
-    //             headers: { 'Authorization': `Bearer ${authToken}` }
-    //         });
-    
-    //         console.log("✅ อัปเดตรายการสินค้าในออเดอร์สำเร็จ:", response.data);
-    //     } catch (error) {
-    //         console.error("❌ เกิดข้อผิดพลาดในการอัปเดตรายการสินค้าในออเดอร์:", error);
-    //     }
-    // };
-    
-    
-    
-    const updateItemsInDatabase = async (orderId, itemsToUpdate) => {
-        try {
-            let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            if (!apiUrl.endsWith('/api')) apiUrl += '/api'; // ตรวจสอบให้ api_url มี '/api' อยู่ที่ท้าย URL
-    
-            const url = `${apiUrl}/${slug}/order-items`; // ปรับ URL ให้ถูกต้อง
-    
-            const response = await axios.put(url, { orderId, items: itemsToUpdate }, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-    
-            console.log("Items updated in database:", response.data);
-            return response.data;
-    
-        } catch (error) {
-            console.error('Error while updating items in database:', error.response?.data || error.message);
-            throw error;  // ข้อผิดพลาดจะถูกโยนออกไป
-        }
-    };
-    
-    
-    
-    
-    // const updateOrderInDatabase = async (orderId, newItems, retry = 2) => {
-    //     const api_url = localStorage.getItem('url_api');
-    //     const slug = localStorage.getItem('slug');
-    //     const authToken = localStorage.getItem('token');
-    //     const userId = localStorage.getItem('userId');
-    
-    //     if (!api_url || !slug) {
-    //         console.error("❌ API URL หรือ Slug ไม่ถูกต้อง");
-    //         return;
-    //     }
-    
-    //     const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
-    //     console.log("📡 กำลังอัปเดตออเดอร์ที่:", endpoint);
-    
-    //     try {
-    //         const existingResponse = await axios.get(endpoint, {
-    //             headers: { 'Authorization': `Bearer ${authToken}` }
-    //         });
-    
-    //         console.log("📦 ออเดอร์ปัจจุบัน:", existingResponse.data);
-    
-    //         if (!existingResponse.data.items || !Array.isArray(existingResponse.data.items)) {
-    //             console.warn("⚠️ ไม่มีข้อมูลสินค้าเดิมในออเดอร์");
-    //             return;
-    //         }
-    
-    //         // ✅ แปลงข้อมูลสินค้าเดิมให้เป็น object เพื่อเปรียบเทียบ
-    //         const existingItemsMap = existingResponse.data.items.reduce((acc, item) => {
-    //             acc[item.product_id] = item.quantity;  // เก็บ quantity ของสินค้าเดิม
-    //             return acc;
-    //         }, {});
-    
-    //         // ✅ คัดกรองเฉพาะสินค้าที่ไม่มีอยู่ในออเดอร์เดิม (เฉพาะสินค้าใหม่)
-    //         const itemsToAdd = newItems.filter(item => !existingItemsMap[item.product_id]);
-    
-    //         // ✅ คัดกรองสินค้าที่มีอยู่แล้วและต้องเพิ่มจำนวน (`quantity`)
-    //         const itemsToUpdate = newItems.filter(item => existingItemsMap[item.product_id]);
-    
-    //         // ✅ หากไม่มีสินค้าใหม่หรือสินค้าที่ต้องอัปเดต ไม่ต้องเรียก API
-    //         if (itemsToAdd.length === 0 && itemsToUpdate.length === 0) {
-    //             console.log("✅ ไม่มีสินค้าใหม่หรือสินค้าที่ต้องอัปเดต");
-    //             return;
-    //         }
-    
-    //         console.log("📤 กำลังอัปเดตเฉพาะสินค้าใหม่:", itemsToAdd);
-    //         console.log("📤 กำลังเพิ่มจำนวนสินค้าเดิม:", itemsToUpdate);
-    
-    //         const dataPayload = { 
-    //             items: [...itemsToAdd, ...itemsToUpdate.map(item => ({
-    //                 product_id: item.product_id,
-    //                 quantity: existingItemsMap[item.product_id] + item.quantity, // ✅ อัปเดตจำนวน
-    //             }))],
-    //             updated_by: userId 
-    //         };
-    
-    //         const response = await axios.put(endpoint, dataPayload, {
-    //             headers: { 'Authorization': `Bearer ${authToken}` }
-    //         });
-    
-    //         console.log("✅ API Response:", response);
-    
-    //         if (response.status === 200) {
-    //             console.log("✅ อัปเดตข้อมูลคำสั่งซื้อสำเร็จ", response.data);
-    //             await fetchOrderDetails(orderId); // ✅ โหลดข้อมูลใหม่เพื่ออัปเดตตะกร้า
-    //             return response.data;
-    //         } else {
-    //             throw new Error(`API Response ไม่สำเร็จ (Status ${response.status})`);
-    //         }
-    //     } catch (error) {
-    //         if (retry > 0) {
-    //             console.warn(`⚠️ ลองส่ง API อีกครั้ง... เหลือ ${retry} ครั้ง`);
-    //             return updateOrderInDatabase(orderId, newItems, retry - 1);
-    //         }
-    
-    //         console.error("❌ เกิดข้อผิดพลาดในการอัปเดตคำสั่งซื้อ:", error);
-    //     }
-    // };
-    
-    
-    
-    
-    
     
     const handleCategorySelect = (categoryId) => {
         console.log("Selected category:", categoryId);  // ตรวจสอบว่า categoryId ที่เลือกมีค่า
@@ -775,105 +645,32 @@ const handleInputFocus = (field, itemId = null) => {
             });
         }
     
-        // ตรวจสอบว่ามีสินค้าซ้ำในตะกร้าหรือไม่
-        const isProductInCart = cart.some((item) => item.id === product.id);
+        setCart((prevCart) => {
+            // ค้นหาสินค้าว่ามีอยู่ในตะกร้าหรือไม่
+            const existingItem = prevCart.find((item) => item.id === product.id);
     
-        if (isProductInCart) {
-            console.log("สินค้าในตะกร้ามีอยู่แล้ว, ไม่สามารถเพิ่มซ้ำ");
-            return;  // ถ้ามีสินค้านี้อยู่ในตะกร้าแล้ว ให้หยุดทำงาน
-        }
-    
-        // เพิ่มสินค้าในตะกร้า (local state) โดยไม่ส่งไปยังฐานข้อมูล
-        setCart((prevCart) => [
-            ...prevCart,
-            {
-                ...product,
-                quantity: 1,
-                discount: product.discount || 0, // กำหนดส่วนลดเริ่มต้น (ถ้ามี)
-                discountType: product.discountType || "THB", // กำหนดประเภทส่วนลดเริ่มต้น
-            },
-        ]);
+            if (existingItem) {
+                // ถ้ามีอยู่แล้ว ให้เพิ่มจำนวน
+                return prevCart.map((item) =>
+                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                );
+            } else {
+                // ถ้ายังไม่มี ให้เพิ่มใหม่
+                return [
+                    ...prevCart,
+                    {
+                        ...product,
+                        quantity: 1,
+                        discount: product.discount || 0,
+                        discountType: product.discountType || "THB",
+                    },
+                ];
+            }
+        });
     
         console.log("อาหารถูกเพิ่มลงในตะกร้า:", product);
     };
     
-    
-    // ฟังก์ชันนี้จะถูกใช้สำหรับส่งข้อมูลสินค้าใหม่ไปยังฐานข้อมูล
-    const sendNewItemToDatabase = async (newItem) => {
-        try {
-            const { api_url, slug, authToken } = getApiConfig();
-            const url = `${api_url}/${slug}/orders/${orderId}`;  // ใช้ URL สำหรับดึงข้อมูลออเดอร์และตะกร้า
-    
-            const response = await axios.post(url, { items: [newItem] }, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-    
-            console.log("Items added to database:", response.data);
-            // หลังจากที่เพิ่มข้อมูลในฐานข้อมูลแล้ว ให้ดึงข้อมูลตะกร้ามาแสดง
-            fetchUpdatedCart();
-        } catch (error) {
-            console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
-        }
-    };
-    
-    
-    
-    // ฟังก์ชันดึงข้อมูลตะกร้าหลังจากอัปเดต
-    const fetchUpdatedCart = async () => {
-        try {
-            const { api_url, slug, authToken } = getApiConfig();
-            const url = `${api_url}/${slug}/orders/${orderId}`;  // ใช้ URL สำหรับดึงข้อมูลออเดอร์และตะกร้า
-    
-            const response = await axios.get(url, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-    
-            if (response.data && Array.isArray(response.data.items)) {
-                setCart(response.data.items);  // อัปเดตตะกร้าด้วยข้อมูลที่ดึงมาจากฐานข้อมูล
-            }
-        } catch (error) {
-            console.error('Error fetching updated cart:', error.message);
-        }
-    };
-    
-    
-    
-    
-    
-    
-    // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
-    const addItemToDatabase = async (orderId, items) => {
-        try {
-            let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            if (!apiUrl.endsWith('/api')) apiUrl += '/api'; // ตรวจสอบให้ api_url มี '/api' อยู่ที่ท้าย URL
-    
-            const url = `${apiUrl}/${slug}/order-items`; // ปรับ URL ให้ถูกต้อง
-    
-            const response = await axios.post(url, { items }, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-    
-            console.log("Items added to database:", response.data);
-            return response.data;
-        } catch (error) {
-            console.error('Error while adding items to database:', error.response?.data || error.message);
-            throw error;  // ข้อผิดพลาดจะถูกโยนออกไป
-        }
-    };
-    
-    
-      
     useEffect(() => {
         if (paymentMethod === 'qr') {
             fetchPaymentChanels(); // ดึง URL QR Code
@@ -1435,133 +1232,6 @@ const handleInputFocus = (field, itemId = null) => {
             }
         }
     };
-    
-    
-    const addOrderItems = async () => {
-        if (!orderId) {
-            console.warn("⚠️ Order ID ไม่ถูกต้อง กำลังสร้างออเดอร์ใหม่...");
-            await receiveOrder();
-            if (!orderId) return; // หากไม่สามารถสร้าง Order ID ได้
-        }
-    
-        const userId = localStorage.getItem('userId') || "1";
-        console.log("📌 User ID ที่ใช้ส่งไปยัง API:", userId);
-    
-        let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
-        const slug = localStorage.getItem('slug') || 'default_slug';
-        const authToken = localStorage.getItem('token') || 'default_token';
-    
-        if (!apiUrl.endsWith('/api')) apiUrl += '/api';
-    
-        const endpoint = `${apiUrl}/${slug}/orders/${orderId}`; // API สำหรับอัปเดทข้อมูลในตาราง order_items
-    
-        try {
-            // เคลียร์รายการที่แสดงในตระกร้าทั้งหมดก่อน
-            setCart([]); // เคลียร์ตะกร้าก่อนการอัพเดท
-    
-            // ดึงข้อมูลสินค้าที่มีอยู่ในออเดอร์ก่อน
-            const existingResponse = await axios.get(endpoint, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-    
-            // สร้าง Map ของสินค้าที่มีอยู่ในออเดอร์
-            const existingItemsMap = new Map(
-                existingResponse.data.items.map(item => [item.product_id, item.quantity])
-            );
-    
-            // รวมสินค้าซ้ำในตะกร้า
-            const cartItemsMap = cart.reduce((acc, item) => {
-                if (acc.has(item.id)) {
-                    acc.get(item.id).quantity += item.quantity; // รวมจำนวนสินค้าหากมีสินค้าเดียวกัน
-                } else {
-                    acc.set(item.id, {
-                        ...item,
-                    });
-                }
-                return acc;
-            }, new Map());
-    
-            const itemsToUpdate = [];
-            const itemsToAdd = [];
-    
-            // ตรวจสอบสินค้าที่มีอยู่ในตะกร้าและอัปเดต
-            cartItemsMap.forEach((item, productId) => {
-                if (existingItemsMap.has(productId)) {
-                    // อัปเดตข้อมูลที่มีอยู่แล้ว
-                    itemsToUpdate.push({
-                        product_id: productId,
-                        quantity: existingItemsMap.get(productId) + item.quantity, // อัปเดตจำนวน
-                        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * (existingItemsMap.get(productId) + item.quantity),
-                    });
-                } else {
-                    // เพิ่มสินค้าลงฐานข้อมูล
-                    itemsToAdd.push({
-                        product_id: item.id,
-                        p_name: item.p_name || 'ไม่มีชื่อสินค้า',
-                        quantity: item.quantity,
-                        price: item.price || 0,
-                        created_by: userId,
-                        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity,
-                    });
-                }
-            });
-    
-            // อัปเดตรายการที่มีอยู่แล้ว (ใช้ PUT สำหรับอัปเดต)
-            if (itemsToUpdate.length > 0) {
-                await axios.put(endpoint, { items: itemsToUpdate }, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-            }
-    
-            // บันทึกการเพิ่มสินค้าหากมี
-            if (itemsToAdd.length > 0) {
-                await axios.post(endpoint, { items: itemsToAdd }, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-            }
-    
-            // รีเฟรชข้อมูลออเดอร์ใหม่หลังจากอัปเดทเสร็จ
-            await fetchOrderDetails(orderId); // ดึงข้อมูลใหม่จากฐานข้อมูล
-    
-            Swal.fire({
-                icon: 'success',
-                title: 'อัปเดตออเดอร์สำเร็จ!',
-                text: 'รายการอาหารถูกอัปเดตเรียบร้อยแล้ว',
-            });
-    
-        } catch (error) {
-            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตออเดอร์:", error);
-            Swal.fire('ผิดพลาด', 'ไม่สามารถอัปเดตออเดอร์ได้', 'error');
-        }
-    };
-    
-    
-  
-    
-    
-    
-    
-    // ฟังก์ชั่น updateOrderItemsInDatabase
-    const updateOrderItemsInDatabase = async (orderId, itemsToUpdate) => {
-        const apiUrl = localStorage.getItem('url_api');
-        const slug = localStorage.getItem('slug');
-        const authToken = localStorage.getItem('token');
-    
-        const endpoint = `${apiUrl}/${slug}/orders/${orderId}/items`;
-    
-        try {
-            const response = await axios.put(endpoint, { items: itemsToUpdate }, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            console.log("✅ อัปเดตสินค้าสำเร็จ:", response.data);
-        } catch (error) {
-            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตรายการสินค้า:", error);
-        }
-    };
-    
-    
-    
-    
 
         // ฟังก์ชันอัปเดตจำนวนเงินด้วยปุ่ม
         const handleAmountButton = (amount) => {
@@ -1704,12 +1374,7 @@ const handleInputFocus = (field, itemId = null) => {
     
     
     const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
-    // ฟังก์ชันคำนวณยอดสุทธิ
-    // const calculateNetAmount = (totalDue, billDiscount) => {
-    //     return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
-    // };
 
-    // ฟังก์ชันรีเซ็ตสถานะหลังชำระเงินสำเร็จ
     const resetStateAfterSuccess = () => {
         setTemporaryPayments([]); // ล้างข้อมูลการแยกชำระเงิน
         setShowReceipt(false);
@@ -1893,100 +1558,128 @@ const handleInputFocus = (field, itemId = null) => {
     };
     
     // ฟังก์ชันสำหรับเปิดป๊อบอัพเพิ่มรายการอาหาร
-    const handleAddOrderItemsPopup = () => {
-        setShowAddItemPopup(true);
-    };
+ // ✅ 1. ฟังก์ชันเปิด Popup เพิ่มสินค้า
+const handleAddOrderItemsPopup = () => {
+    setShowAddItemPopup(true);
+};
 
-
-    // ฟังก์ชันสำหรับเพิ่มสินค้าในออเดอร์
-    const handleAddToOrder = (product) => {
-        const exists = selectedItems.find(item => item.id === product.id);
+// ✅ 2. ฟังก์ชันเพิ่มสินค้าเข้าไปในออเดอร์
+const handleAddToOrder = (product, selectedQuantity) => {
+    setSelectedItems(prevItems => {
+        const exists = prevItems.find(item => item.id === product.id);
         if (exists) {
-            setSelectedItems(selectedItems.map(item =>
-                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-            ));
+            return prevItems.map(item =>
+                item.id === product.id 
+                    ? { ...item, quantity: item.quantity + selectedQuantity } 
+                    : item
+            );
         } else {
-            setSelectedItems([...selectedItems, { ...product, quantity: 1 }]);
+            return [...prevItems, { ...product, quantity: selectedQuantity }];
         }
-    };
-    // ฟังก์ชันลบสินค้าออกจากรายการ
-    const handleRemoveItem = (productId) => {
-        setSelectedItems(selectedItems.filter(item => item.id !== productId));
-    };
-    // const resetCart = () => {
-    //     setCart([]); // รีเซ็ตตะกร้าให้เป็นค่าว่าง
-    // };
+    });
+};
 
-   // ฟังก์ชันยืนยันการเพิ่มสินค้า
+// ✅ 3. ฟังก์ชันลบสินค้าออกจากออเดอร์
+const handleRemoveItem = (productId) => {
+    setSelectedItems(selectedItems.filter(item => item.id !== productId));
+};
 
-   const handleConfirm = async () => {
+// ✅ 4. ฟังก์ชันดึงรายการสินค้าในออเดอร์ที่มีอยู่แล้ว
+const fetchExistingOrderItems = async () => {
     try {
-        // ตรวจสอบข้อมูลที่ถูกเลือก
+        const { api_url, slug, authToken } = getApiConfig();
+        const response = await axios.get(
+            `${api_url}/${slug}/orders/${orderId}`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } }
+        );
+        return response.data.items || [];
+    } catch (error) {
+        console.error("Error fetching existing order items:", error);
+        return [];
+    }
+};
+
+// ✅ 5. ฟังก์ชันยืนยันการเพิ่มสินค้า
+const handleConfirm = async () => {
+    try {
+        console.log('handleConfirm ถูกเรียก!');
         console.log('Selected Items:', selectedItems);
 
-        // ตรวจสอบว่าทุก ๆ item ใน selectedItems มี key 'p_name'
+        const result = await Swal.fire({
+            title: 'ยืนยันการเพิ่มอาหาร?',
+            text: 'ต้องการเพิ่มรายการนี้หรือไม่?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยัน',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isDismissed) {
+            console.log("❌ ผู้ใช้กดยกเลิก");
+            return;
+        }
+
+        console.log("✅ ผู้ใช้กดยืนยัน");
+
+        const existingOrderItems = await fetchExistingOrderItems();
+
         const updatedItems = selectedItems.map(item => {
-            if (!item.p_name) {
-                throw new Error(`Missing 'p_name' for product id: ${item.id}`);
-            }
+            const existingItem = existingOrderItems.find(orderItem => orderItem.product_id === item.id);
+            const newQuantity = existingItem ? existingItem.quantity + item.quantity : item.quantity;
             return {
                 product_id: item.id,
-                p_name: item.p_name, // ชื่อสินค้าถูกส่งไปในข้อมูล
-                quantity: item.quantity || 1,
+                p_name: item.p_name,
+                quantity: newQuantity,
                 price: item.price || 0,
-                total: item.total || 0,
+                total: newQuantity * (item.price || 0),
             };
         });
 
-        const { api_url, slug, authToken } = getApiConfig();  // ดึงข้อมูลจาก getApiConfig
-        const dataToSend = {
-            items: updatedItems
-        };
+        const { api_url, slug, authToken } = getApiConfig();
+        const dataToSend = { items: updatedItems };
 
-        // ส่งข้อมูลไปยัง API เพื่ออัพเดทข้อมูลในฐานข้อมูล
+        console.log("Sending data to API:", dataToSend);
+
         const response = await axios.post(
             `${api_url}/${slug}/orders/${orderId}`,
-            dataToSend, // ส่งข้อมูลที่เตรียมไว้
+            dataToSend,
             { 
                 headers: { 
                     'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json' // ระบุประเภทข้อมูลที่ส่งไป
+                    'Content-Type': 'application/json'
                 } 
             }
         );
 
-        // ตรวจสอบการตอบกลับจาก API
         if (response.status === 200) {
-            // ใช้ SweetAlert2 แสดงข้อความสำเร็จ
             await Swal.fire({
                 icon: 'success',
                 title: 'เพิ่มรายการสำเร็จ!',
-                text: 'รายการของคุณได้รับการเพิ่มเรียบร้อยแล้ว',
-                confirmButtonColor: '#2ecc71', // สีของปุ่มยืนยัน
+                text: 'รายการของคุณได้รับการอัปเดตเรียบร้อยแล้ว',
+                confirmButtonColor: '#2ecc71',
             });
 
-            // รีเซ็ต selectedItems และปิดป๊อบอัพ
-            setSelectedItems([]); // รีเซ็ตข้อมูลที่เลือกทั้งหมด
-            setShowAddItemPopup(false); // ปิดป๊อบอัพเมื่อเพิ่มสำเร็จ
+            setSelectedItems([]); 
+            setShowAddItemPopup(false);
 
-            // รีเฟรชข้อมูลตะกร้า
-            await loadTableLastOrder(tableCode); // ดึงข้อมูลออเดอร์ล่าสุดและอัปเดตตะกร้า
-            setOrderId(response.data.order.id); // อัปเดต `orderId` หลังจากเพิ่มสำเร็จ
-
-            // เรียกฟังก์ชันดึงข้อมูลออเดอร์หลังจากบันทึกสำเร็จ
+            await loadTableLastOrder(tableCode);
             await refreshOrderData(response.data.order.id);
         }
     } catch (error) {
-        // ใช้ SweetAlert2 แสดงข้อผิดพลาด
         await Swal.fire({
             icon: 'error',
             title: 'เกิดข้อผิดพลาด',
             text: error.message || 'ไม่สามารถเพิ่มรายการได้ กรุณาลองใหม่',
-            confirmButtonColor: '#e74c3c', // สีของปุ่มยืนยัน
+            confirmButtonColor: '#e74c3c',
         });
     }
 };
-// ฟังก์ชันสำหรับดึงข้อมูลออเดอร์ล่าสุดหลังจากบันทึกสำเร็จ
+
+
+
+
+
+// ✅ 6. ฟังก์ชันดึงข้อมูลออเดอร์ล่าสุดหลังจากบันทึกสำเร็จ
 const refreshOrderData = async (orderId) => {
     if (!orderId) {
         console.error("❌ Order ID ไม่ถูกต้อง");
@@ -2025,20 +1718,27 @@ const refreshOrderData = async (orderId) => {
     }
 };
 
+// ✅ 7. ฟังก์ชันยกเลิกการเพิ่มสินค้า
+const handleCancel = () => {
+    Swal.fire({
+        icon: 'info',
+        title: 'ปิดหน้าเพิ่มอาหาร',
+        text: 'ไม่มีการเพิ่มรายการ',
+        confirmButtonColor: '#f39c12',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            setShowPopup(false); // ปิดป๊อบอัพหลักหลังจากกด "OK"
+        }
+    });
+};
 
-    const handleCancel = () => {
-        Swal.fire({
-            icon: 'info',
-            title: 'ปิดหน้าเพิ่มอาหาร',
-            text: 'ไม่มีการเพิ่มรายการ',
-            confirmButtonColor: '#f39c12', // สีของปุ่มยืนยัน
-        }).then((result) => {
-            if (result.isConfirmed) {
-                setShowPopup(false); // ปิดป๊อบอัพหลักหลังจากกด "OK"
-            }
-        });
-    };
-    
+// ✅ 8. ใช้ useEffect ปิด Popup เมื่อไม่มีสินค้าใน selectedItems
+useEffect(() => {
+    if (selectedItems.length === 0) {
+        setShowAddItemPopup(false);
+    }
+}, [selectedItems]);
+                   
     
 
 
@@ -2067,9 +1767,7 @@ const refreshOrderData = async (orderId) => {
         fetchProducts();  // เรียกฟังก์ชัน fetchProducts
     
     }, []);  // ใช้ [] เป็นการ run ฟังก์ชันนี้แค่ครั้งเดียวตอน component mount
-    const togglePopup = () => {
-        setShowPopup(!showPopup); // สลับค่าระหว่าง true และ false
-    };
+    // 
 
     return (
         <div style={styles.pageContainer}>
@@ -2077,7 +1775,7 @@ const refreshOrderData = async (orderId) => {
                 <div style={{
                     position: 'fixed', top: '0', left: '0', width: '100%', height: '100vh', // ขยายป๊อบอัพเต็มความสูง
                     backgroundColor: 'rgba(0, 0, 0, 0.5)', // สีพื้นหลังเบลอ
-                    zIndex: 99999, // กำหนดให้ป๊อบอัพอยู่ด้านบน
+                    zIndex: 999, // กำหนดให้ป๊อบอัพอยู่ด้านบน
                     backdropFilter: 'blur(10px)', // เบลอพื้นหลัง
                     display: 'flex', justifyContent: 'center', alignItems: 'center'
                 }}>
@@ -2088,34 +1786,39 @@ const refreshOrderData = async (orderId) => {
                     }}>
                         {/* ฝั่งซ้าย: รายการอาหารทั้งหมด */}
                         <div style={{
-                            flex: 1, overflowY: 'auto', maxHeight: '400px', paddingRight: '20px',
+                            flex: 1, overflowY: 'auto', maxHeight: '400px', paddingRight: '20px', padding: '0 50px',
                             display: 'flex', flexDirection: 'column', gap: '1px'
                         }}>
                             <h3 style={{
-                                fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '15px', textAlign: 'center',
+                                fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '1px', textAlign: 'center',
                                 position: 'sticky', top: '0', backgroundColor: '#fff', zIndex: 2
                             }}>เลือกอาหาร</h3>
-                            {products.map((product) => (
-                                <div key={product.id} style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #eee',
-                                    transition: 'all 0.3s ease',
-                                }}>
-                                    <p style={{ fontSize: '16px', color: '#555', flex: 1 }}>{product.p_name}</p>
-                                    <p style={{ fontSize: '16px', color: '#333', marginRight: '10px' }}>{product.price} บาท</p>
-                                    <button
-                                        onClick={() => handleAddToOrder(product)}
-                                        style={{
-                                            backgroundColor: '#0c9fa9', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '5px',
-                                            cursor: 'pointer', transition: 'background-color 0.3s ease',
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f7b82'}
-                                    >
-                                        เพิ่ม
-                                    </button>
-                                </div>
-                            ))}
+
+                            {products
+                                .filter(product => product.p_name) // กรองเฉพาะรายการที่มีชื่อ
+                                .map((product) => (
+                                    <div key={product.id} style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #eee',
+                                        transition: 'all 0.3s ease',
+                                    }}>
+                                        <p style={{ fontSize: '16px', color: '#000000', flex: 1 }}>{product.p_name}</p>
+                                        <p style={{ fontSize: '16px', color: '#000000', marginRight: '20px' }}>{product.price} บาท</p>
+                                        <button
+                                            onClick={() => handleAddToOrder(product, selectedQuantity)}
+                                            style={{
+                                                backgroundColor: '#0c9fa9', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '5px',
+                                                cursor: 'pointer', transition: 'background-color 0.3s ease',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f7b82'}
+                                        >
+                                            เพิ่ม
+                                        </button>
+                                    </div>
+                                ))
+                            }
                         </div>
+
 
                         {/* ฝั่งขวา: อาหารที่เลือก และปุ่ม */}
                         <div style={{
@@ -2133,23 +1836,51 @@ const refreshOrderData = async (orderId) => {
                                 overflowX: 'hidden', // ป้องกันการเลื่อนแบบแนวนอน
                                 paddingRight: '100px', // เว้นระยะจากขอบด้านขวา
                             }}>
-                                {selectedItems.map((item) => (
+                                 {selectedItems.map((item) => (
                                     <div key={item.id} style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '5px solid #ffffff',
-                                        width: '120%', backgroundColor: '#ececec4b', transition: 'all 0.3s ease'
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'space-between',
+                                        borderBottom: '5px solid #ffffff',
+                                        width: '120%', 
+                                        backgroundColor: '#ececec4b', 
+                                        transition: 'all 0.3s ease'
                                     }}>
-                                        <p style={{ fontSize: '16px', color: '#000000', flex: 1 }}>
-                                            {item.p_name} <span style={{ fontSize: '0.9em', marginLeft: '5px' }}>x {item.quantity}</span> ชิ้น
-                                        </p>
-                                        <p style={{ fontSize: '16px', color: '#333', marginRight: '10px' }}>{item.price} บาท</p>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            alignItems: 'flex-start' 
+                                        }}>
+                                            <p style={{ 
+                                                fontSize: '16px', 
+                                                color: '#000000', 
+                                                marginBottom: '5px' 
+                                            }}>{item.p_name}</p>
+                                            <p style={{ 
+                                                fontSize: '0.9em', 
+                                                color: '#555', 
+                                                marginTop: '0',
+                                                marginRight: '230px' 
+ 
+                                            }}>x {item.quantity} ชิ้น</p>
+                                        </div>
+                                        <p style={{ 
+                                            fontSize: '16px', 
+                                            color: '#333', 
+                                        }}>{item.price} บาท</p>
                                         <button
                                             onClick={() => handleRemoveItem(item.id)}
                                             style={{
-                                                backgroundColor: '#e30d11', color: 'white', padding: '5px 10px', border: 'none', borderRadius: '5px',
-                                                cursor: 'pointer', transition: 'background-color 0.3s ease',
+                                                backgroundColor: '#e30d11', 
+                                                color: 'white', 
+                                                padding: '5px 10px', 
+                                                border: 'none', 
+                                                borderRadius: '5px',
+                                                cursor: 'pointer', 
+                                                transition: 'background-color 0.3s ease',
                                             }}
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e74c3c'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
                                         >
                                             ลบ
                                         </button>
@@ -2169,7 +1900,7 @@ const refreshOrderData = async (orderId) => {
                                         backgroundColor: '#0c9fa9', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
                                         fontSize: '16px', transition: 'background-color 0.3s ease',
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#74d79d'}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
                                 >
                                     ยืนยัน
@@ -2183,8 +1914,8 @@ const refreshOrderData = async (orderId) => {
                                         backgroundColor: '#f39c12', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
                                         fontSize: '16px', transition: 'background-color 0.3s ease',
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e67e22'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f39c12'}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
                                 >
                                     ยกเลิก
                                 </button>
@@ -2463,58 +2194,71 @@ const refreshOrderData = async (orderId) => {
                         </div>
                     </div>
                     <div style={styles.products}>
-                        {filteredProducts.map((product) => (
-                            <div
-                                key={product.id}
-                                id={`product-${product.id}`} // เพิ่ม ID สำหรับ Animation
-                                style={{
-                                    ...styles.productCard,
-                                    position: 'relative',
-                                    cursor: product.status === 'Y' ? 'pointer' : 'not-allowed',
-                                }}
-                                onClick={() => addToCart(product)} // เรียกฟังก์ชันเมื่อคลิก
-                            >
-                                {product.status === 'N' && (
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            height: '100%',
-                                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#fff',
-                                            fontSize: '1.5em',
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        หมด
-                                    </div>
-                                )}
-                                {product.image ? (
-                                    <Image
-                                        src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${product.image}`}
-                                        alt={product.p_name}
-                                        width={100}
-                                        height={100}
-                                        quality={100}
-                                        style={styles.productImage}
-                                    />
-                                ) : (
-                                    <div style={styles.noImage}>
-                                        <span style={styles.noImageText}>ไม่มีภาพ</span>
-                                    </div>
-                                )}
-                                <div style={styles.productDetails}>
-                                    <p style={styles.productName}>{product.p_name}</p>
-                                    <p style={styles.productPrice}>{product.price.toFixed(2)}</p>
+                    {filteredProducts.map((product) => (
+                        <div
+                            key={product.id}
+                            id={`product-${product.id}`} // เพิ่ม ID สำหรับ Animation
+                            style={{
+                                ...styles.productCard,
+                                position: 'relative',
+                                cursor: orderReceived ? 'not-allowed' : (product.status === 'Y' ? 'pointer' : 'not-allowed'),
+                                opacity: orderReceived ? 0.5 : 1, // ลดความชัดเจนเมื่อถูกล็อก
+                            }}
+                            onClick={() => {
+                                if (orderReceived) {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'ไม่สามารถเลือกสินค้าได้',
+                                        text: 'ออเดอร์นี้ได้รับการยืนยันแล้ว กรุณากด "เพิ่มรายการอาหาร" หากต้องการเพิ่ม',
+                                        confirmButtonColor: '#f39c12',
+                                    });
+                                    return; // หยุดทำงาน
+                                }
+                                addToCart(product); // ถ้าไม่ถูกล็อก ให้เพิ่มสินค้าได้
+                            }}
+                        >
+                            {product.status === 'N' && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff',
+                                        fontSize: '1.5em',
+                                        fontWeight: 'bold',
+                                    }}
+                                >
+                                    หมด
                                 </div>
+                            )}
+                            {product.image ? (
+                                <Image
+                                    src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${product.image}`}
+                                    alt={product.p_name}
+                                    width={100}
+                                    height={100}
+                                    quality={100}
+                                    style={styles.productImage}
+                                />
+                            ) : (
+                                <div style={styles.noImage}>
+                                    <span style={styles.noImageText}>ไม่มีภาพ</span>
+                                </div>
+                            )}
+                            <div style={styles.productDetails}>
+                                <p style={styles.productName}>{product.p_name}</p>
+                                <p style={styles.productPrice}>{product.price.toFixed(2)}</p>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
+                </div>
+
                 </div>
             </div>
                 <div style={styles.cart}>
@@ -3264,7 +3008,7 @@ const styles = {
     categoryRow: { display: 'flex', justifyContent: 'center', gap: '10px', margin: '0 auto', flexWrap: 'wrap', alignItems: 'center', width: '100%',},
     searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px', },
     pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden', },
-    sidebarContainer: { flex: '0 0 100px' },
+    sidebarContainer: { flex: '0 0 100px', zIndex: 800  },
     cart: {width: '400px',overflowY: 'auto',overflowX: 'hidden',backgroundColor: '#f8f9fa',padding: '15px',borderRadius: '12px',marginTop: '-8px',display: 'flex',flexDirection: 'column',justifyContent: 'flex-start',boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',},    
     discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
     totalText: { fontSize: '1.1rem',fontWeight: '400', textAlign: 'left', marginTop: '2px', color: '#444', paddingLeft: '5px', lineHeight: '1', fontFamily: '   Impact, sans-serif ', textTransform: 'uppercase', paddingBottom: '5px', letterSpacing: '2px', },
