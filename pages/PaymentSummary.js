@@ -452,7 +452,7 @@
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 3,
                         pointHoverRadius: 9, // ✅ ขยายขนาดจุดเมื่อโฮเวอร์
-                        pointHoverBorderWidth: 6,
+                        pointHoverBorderWidth: 6,   
                         pointStyle: 'circle', // ✅ ให้จุดเป็นวงกลม
                         animation: {
                             duration: 2000, // ✅ ทำให้กราฟโหลดช้าๆ
@@ -869,7 +869,7 @@
                             </div>
                         </div>
                         {/* 🔹 แสดงกราฟตามประเภทที่เลือก */}
-                        <div id="salesChart" style={{ width: "100%", height: "auto", minHeight: "550px", maxWidth: "100%" }}>
+                        <div id="salesChart" style={{ width: "100%", height: "auto", minHeight: "600px", maxWidth: "100%" }}>
                             {chartType === 'bar' ? (
                                 <Bar data={viewType === 'daily' ? prepareDailyChartData() : prepareMonthlyChartData()} options={chartOptions} />
                             ) : (
@@ -893,7 +893,7 @@ const styles = {
     select: { padding: '12px', border: '1px solid #eefeff', borderRadius: '8px' }, 
     circleButtonContainer: { display: 'flex', gap: '10px' }, 
     circleButton: { padding: '8px 16px', fontSize: '14px', borderRadius: '30px', border: 'none', color: '#fff', cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)', transform: 'scale(1)' }, 
-    topSellingBox: { flex: 1, backgroundColor: "#fff", borderRadius: "15px", padding: "15px", paddingTop: "1px", minWidth: "280px", maxWidth: "100%", maxHeight: "auto", display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "center", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)", overflow: "hidden", resize: "both" }, 
+    topSellingBox: { flex: 1, backgroundColor: "#fff", borderRadius: "15px", padding: "15px", paddingTop: "1px", minWidth: "330px", maxWidth: "100%", maxHeight: "auto", display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "center", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)", resize: "both" }, 
     loadingText: { fontSize: '24px', color: '#888' }, 
     error: { color: 'red', marginBottom: '10px' }, 
     summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', gap: '20px' }, 
@@ -905,8 +905,7 @@ const styles = {
     salesCountValue: { fontSize: '18px', fontWeight: 'bold', color: '#3498db', margin: '5px 0', paddingLeft: '15px', textAlign: 'left' }, 
     salesCountValueMonth: { fontSize: '18px', fontWeight: 'bold', color: '#3498db', margin: '5px 0', paddingLeft: '15px', textAlign: 'left' }, 
     salesCountTitle: { fontSize: '20px', fontWeight: 'bold', color: '#18373f', textAlign: 'left', marginLeft: '10px' }, 
-    chartBox: { flex: 3, backgroundColor: '#ffffff', padding: '20px', borderRadius: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', textAlign: 'center', minHeight: '300px', maxHeight: '400px' }, 
-    chartTitle: { fontSize: '16px', color: '#201f1f', marginBottom: '15px', fontWeight: 'bold' }, 
+    chartTitle: { fontSize: '16px', color: '#201f1f', marginBottom: '0px', fontWeight: 'bold' }, 
     summaryTitle: { fontSize: "20px", fontWeight: "bold", color: "#18373f", textAlign: "left", marginBottom: "25px" }, 
     summaryChartContainer: { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px', width: '100%', flexWrap: "wrap" }, 
     buttonContainer: { display: "flex", justifyContent: "center", gap: "15px", flexWrap: "wrap", marginBottom: "10px" }, 
@@ -915,7 +914,7 @@ const styles = {
     button: { width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", backgroundColor: "#eee", fontSize: "14px", transition: "transform 0.2s ease, box-shadow 0.2s ease" }, 
     raisedButton: { transform: "translateY(-4px)", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)" }, 
     raisedIcon: { transform: "translateY(-4px)", boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.2)", cursor: "pointer" }, 
-    chartTypeSelector: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "12px", width: "100%", paddingRight: "10px" }, 
+    chartTypeSelector: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "12px", width: "100%", paddingRight: "0px" }, 
     iconButtonActive: { background: "linear-gradient(135deg, #007bff, #0056b3)", transform: "scale(1.08)", boxShadow: "0px 6px 12px rgba(0, 0, 0, 0.3)" }, 
     iconButton: { width: "42px", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", background: "linear-gradient(135deg, #cccccc, #999999)", color: "#ffffff", fontSize: "16px", transition: "all 0.3s ease-in-out", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.15)" }, 
     activeButton: { width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", border: "none", cursor: "pointer", backgroundColor: "#3498db", color: "#fff", fontSize: "14px" }, 
@@ -935,7 +934,7 @@ const styles = {
     button: { padding: '8px 16px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: '#ccc', fontSize: '14px' }, 
     activeButton: { padding: '8px 16px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: '#3498db', color: '#fff', fontSize: '14px' }, 
     chartContainer: { width: '80%', height: '300px', margin: 'auto' }, 
-    topSellingHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "60px" }, 
+    topSellingHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "0px" }, 
     chartText: { cursor: "pointer", color: "#777", transition: "color 0.2s ease" }, 
     selectedChartText: { cursor: "pointer", color: "#000", fontWeight: "bold", textDecoration: "underline" }, 
     customLegend: { display: "flex", flexWrap: "wrap", justifyContent: "center", marginTop: "10px" }, 
@@ -943,8 +942,8 @@ const styles = {
     legendItem: { display: "flex", alignItems: "center", gap: "8px" }, 
     legendColor: { width: "12px", height: "12px", borderRadius: "50%", display: "inline-block" }, 
     legendText: { fontSize: "14px", color: "#333" }, 
-    chartBox: { flex: 3, backgroundColor: "#ffffff", padding: "20px", borderRadius: "15px", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)", display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "space-between", minHeight: "660px", height: "auto", maxHeight: "800px" }, 
-    chartHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }, 
+    chartBox: { flex: 3, backgroundColor: "#ffffff", padding: "20px", borderRadius: "15px", boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)", display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "space-between", minHeight: "600px", height: "auto", maxHeight: "600px" }, 
+    chartHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0px" }, 
     chartTitle: { fontSize: "16px", color: "#000", fontWeight: "bold" }, 
     chartTypeSelector: { display: "flex", gap: "10px" }, 
     button: { padding: "8px 16px", borderRadius: "5px", border: "1px solid #ccc", cursor: "pointer", backgroundColor: "#eee", fontSize: "14px", transition: "all 0.3s ease" }, 
