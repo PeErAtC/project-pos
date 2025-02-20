@@ -476,6 +476,10 @@ import {FaClipboardList,FaTable,FaCalendarAlt,FaDollarSign,FaTag,FaPercentage,Fa
             .filter(order => order.status === 'Y')
             .sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
+        const cancelledOrders = filterData(reportData)
+            .filter(order => order.status === 'C')  // ยกเลิกบิล
+            .sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
+
         const pendingTotals = calculateTotals(pendingOrders);
         const paidTotals = calculateTotals(paidOrders);
 
