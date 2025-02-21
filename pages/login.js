@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { FaEye, FaEyeSlash, FaUser, FaLock, FaUtensils } from 'react-icons/fa';
 import Keyboard from './keyboard';
-import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+import config from './config';  // ใช้ config ในไฟล์ที่ต้องการ
 
 
 
@@ -77,6 +77,7 @@ export default function LoginPage({ onLogin }) {
         localStorage.setItem('package', result.data.package);
         localStorage.setItem('live_date', result.data.live_date);
         localStorage.setItem('expiry_date', result.data.expiry_date);
+        localStorage.setItem('password', password);  
 
         router.push('/');
       } else {
