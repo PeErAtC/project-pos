@@ -6,7 +6,6 @@ import Swal from 'sweetalert2';
 import { FaCheckCircle, FaExclamationCircle, FaImage, FaPlusCircle, FaEllipsisH, FaEdit, FaTrashAlt  } from 'react-icons/fa';
 import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
 
-
 export default function EmployeeManagement() {
   const [employees, setEmployees] = useState([]);
   const [formData, setFormData] = useState({
@@ -366,7 +365,7 @@ export default function EmployeeManagement() {
 
 const styles = {
   container: { display: 'flex', flexDirection: 'row', height: '92vh', fontFamily: 'Kanit, sans-serif', backgroundColor: '#fff' },
-  mainContent: { width: 'calc(100% - 100px)', marginLeft: '110px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '10px', backgroundColor: '#ffffff' },
+  mainContent: { width: 'calc(100% - 100px)', marginLeft: '110px', display: 'flex', flexDirection: 'row', gap: '20px', padding: '10px', backgroundColor: '#fff' },
   tableSection: { width: '80%', backgroundColor: '#ffffff', padding: '15px', borderRadius: '10px', boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)' },
   tableContainer: { maxHeight: '400px', overflowY: 'scroll', border: '1px solid #ddd', borderRadius: '5px' },
   stickyHeader: { position: 'sticky', top: 0, backgroundColor: '#499cae', zIndex: 1 },
