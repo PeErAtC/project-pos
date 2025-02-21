@@ -744,26 +744,34 @@ const handleInputFocus = (field, itemId = null) => {
                 // ตรวจสอบว่า orderNumber หรือ orderId มีค่าหรือไม่
                 if (orderId) {  // ตอนนี้ใช้ orderId ที่ได้จาก API แทน orderNumber
                     console.log("Order ID:", orderId); // ตรวจสอบค่า orderId
-    
+        
                     // ส่งคำขอ PUT เพื่ออัปเดตสถานะ
                     updateOrderStatus(orderId, 'C')  // ใช้ orderId แทน orderNumber
                         .then(() => {
-                            // รีเซ็ตค่าต่าง ๆ ในตะกร้า
-                            setCart([]);
-                            setReceivedAmount(0);
-                            setBillDiscount(0);
-                            setBillDiscountType("THB");
-                            setOrderReceived(false);
-                            setIsBillPaused(false);
-                            setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
-                            
-                            Swal.fire({
-                                title: 'ออเดอร์ถูกยกเลิก!',
-                                text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
-                                icon: 'success',
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
+                            // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1) และ set status เป็น 'Y'
+                            updateTableStatus(tableCode, 1, 'Y')  // ใช้ tableCode และส่งสถานะ Y
+                                .then(() => {
+                                    // รีเซ็ตค่าต่าง ๆ ในตะกร้า
+                                    setCart([]);
+                                    setReceivedAmount(0);
+                                    setBillDiscount(0);
+                                    setBillDiscountType("THB");
+                                    setOrderReceived(false);
+                                    setIsBillPaused(false);
+                                    setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
+                                    
+                                    Swal.fire({
+                                        title: 'ออเดอร์ถูกยกเลิก!',
+                                        text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
+                                        icon: 'success',
+                                        timer: 2000,
+                                        showConfirmButton: false
+                                    });
+                                })
+                                .catch((error) => {
+                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดตสถานะโต๊ะได้', 'error');
+                                    console.error("Error updating table status:", error);
+                                });
                         })
                         .catch((error) => {
                             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
@@ -814,6 +822,47 @@ const handleInputFocus = (field, itemId = null) => {
             return false;
         }
     };
+    
+    // ฟังก์ชันอัปเดตสถานะโต๊ะ
+    const updateTableStatus = async (tableCode, tableFreeStatus, tableStatus) => {
+        if (!tableCode) {
+            console.error("Table code is missing");
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขโต๊ะ กรุณาลองอีกครั้ง', 'error');
+            return false;
+        }
+    
+        try {
+            const { api_url, slug, authToken } = getApiConfig();
+    
+            // ตรวจสอบว่า tableCode และ status ถูกส่งไปในคำขอ
+            console.log("Table Code:", tableCode, "Table Free Status:", tableFreeStatus, "Table Status:", tableStatus);
+    
+            const response = await axios.put(
+                `${api_url}/${slug}/table_codes/${tableCode}`,
+                { 
+                    tableFree: tableFreeStatus,  // ส่งสถานะ tableFree เป็น 1
+                    status: tableStatus  // ส่งสถานะของโต๊ะเป็น 'Y'
+                },
+                {
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}` 
+                    }
+                }
+            );
+    
+            if (response.status === 200) {
+                console.log(`✅ อัปเดตสถานะของโต๊ะ ${tableCode} เป็น tableFree: ${tableFreeStatus}, status: ${tableStatus}`);
+                return true;
+            } else {
+                console.error('❌ ข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', response.data);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', error.response ? error.response.data : error.message);
+            return false;
+        }
+    };
+    
     
     
     
