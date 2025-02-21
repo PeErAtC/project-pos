@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import config from './config';  
+//import config from './config';  
 import axios from 'axios';
-import BackendSidebar from './components/backendsideber';
+import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 
     export default function SalesReport({ initialReportData, initialError }) {
@@ -655,7 +655,7 @@ import Swal from 'sweetalert2';
 
 const styles = {
     pageContainer: { display: 'flex' },
-    content: { flex: 1, padding: '25px', backgroundColor: '#fff', marginLeft: '110px', overflowY: 'hidden' },
+    content: { flex: 1, padding: '25px', backgroundColor: '#fff', marginLeft: '110px', overflowY: 'hidden',height:'800px' },
     headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', },
     dateSearchContainer: { display: 'flex',flexDirection: 'column', alignItems: 'flex-end', },
     title: { fontSize: '24px', fontWeight: 'bold', color: '#000' },
