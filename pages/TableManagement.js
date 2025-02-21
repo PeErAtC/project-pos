@@ -7,7 +7,6 @@
     import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
     import { FaEllipsisH, FaEdit, FaTrashAlt  } from 'react-icons/fa';
 
-
     export default function TableManagement() {
         const [tables, setTables] = useState([]);
         const [tableCode, setTableCode] = useState('');
@@ -71,14 +70,15 @@
 
         const handleAddOrUpdateTable = async () => {
             if (!tableCode || seats < 1) {
-            Swal.fire({
-            icon: 'question',    
-            title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
-            confirmButtonText: 'ตกลง',     
-            });
-                
+                Swal.fire({
+                    icon: 'question',
+                    title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+                    confirmButtonText: 'ตกลง',
+                });
                 return;
             }
+        
+            // ตรวจสอบว่าเป็นโหมดแก้ไขและการตรวจสอบรหัสโต๊ะ CT001
             if (editMode && editTableId) {
                 const tableToEdit = tables.find(table => table.id === editTableId);
                 if (tableToEdit && tableToEdit.table_code === 'CT001' && tableCode !== 'CT001') {
@@ -91,10 +91,10 @@
                     return;
                 }
             }
-            // ตรวจสอบว่า tableCode ซ้ำหรือไม่
+        
+            // ตรวจสอบรหัสโต๊ะที่ซ้ำ
             const isTableCodeExist = tables.some((table) => table.table_code.toLowerCase() === tableCode.toLowerCase());
         
-            // ถ้าเป็นการเพิ่มโต๊ะ และมีรหัสโต๊ะซ้ำ
             if (isTableCodeExist && !(editMode && tables.some(table => table.id === editTableId))) {
                 Swal.fire('รหัสโต๊ะนี้มีอยู่แล้ว กรุณากรอกรหัสโต๊ะใหม่');
                 return;
@@ -103,76 +103,46 @@
             const tableData = { table_code: tableCode, seats, status };
         
             try {
-                //////////////////// ประกาศตัวแปร URL CALL   
                 const api_url = localStorage.getItem('url_api');
                 const slug = localStorage.getItem('slug');
                 const authToken = localStorage.getItem('token');
-                //////////////////// ประกาศตัวแปร  END URL CALL 
-
+        
                 if (!api_url || !slug || !authToken) {
-
-                    // ตรวจสอบการแก้ไขโต๊ะ ถ้ารหัสโต๊ะที่แก้ไขมีอยู่แล้ว จะไม่สามารถแก้ไขได้
-                    const isTableCodeExistForEdit = tables.some(
-                        (table) => table.table_code.toLowerCase() === tableCode.toLowerCase() && table.id !== editTableId
-                    );
-        
-                    if (isTableCodeExistForEdit) {
-                        Swal.fire('รหัสโต๊ะนี้มีอยู่แล้ว กรุณากรอกรหัสโต๊ะใหม่');
-                        return;
-                    }
-        
-                    const result = await Swal.fire({
-                        title: 'ยืนยันการแก้ไข',
-                        text: "คุณต้องการบันทึกการแก้ไขนี้หรือไม่?",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'บันทึก',
-                        cancelButtonText: 'ยกเลิก',
-                    });
-        
-                    if (!result.isConfirmed) return;
-        
-                    const url = `${api_url}/${slug}/table_codes/${editTableId}`;
-                    await axios.put(url, tableData, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Authorization': `Bearer ${authToken}`,
-                        },
-                    });
                     Swal.fire({
-                        title: 'เพิ่มโต๊ะเรียบร้อยแล้ว',
-                        icon: 'success',
-                        confirmButtonText: 'ตกลง',   
-                    });
-                } else {
-                    const result = await Swal.fire({
-                        title: 'ยืนยันการเพิ่มโต๊ะ',
-                        text: "คุณต้องการเพิ่มโต๊ะนี้หรือไม่?",
+                        title: 'กรุณาเข้าสู่ระบบ',
+                        text: 'คุณยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนใช้งาน',
                         icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'เพิ่ม',
-                        cancelButtonText: 'ยกเลิก',
+                        confirmButtonText: 'เข้าสู่ระบบ',
+                    }).then(() => {
+                        router.push('/login');
                     });
-        
-                    if (!result.isConfirmed) return;
-        
-                    const url = `${api_url}/${slug}/table_codes`;
-                    await axios.post(url, tableData, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Authorization': `Bearer ${authToken}`,
-                        },
-                    });
-                    Swal.fire({
-                        title: 'เพิ่มโต๊ะเรียบร้อยแล้ว',
-                        icon: 'success',
-                        confirmButtonText: 'ตกลง',   
-                    });
+                    return;
                 }
+        
+                const url = editMode
+                    ? `${api_url}/${slug}/table_codes/${editTableId}`  // ใช้ URL สำหรับการแก้ไขโต๊ะ
+                    : `${api_url}/${slug}/table_codes`;  // ใช้ URL สำหรับการเพิ่มโต๊ะใหม่
+        
+                const method = editMode ? 'put' : 'post';  // ใช้ PUT สำหรับการแก้ไข และ POST สำหรับการเพิ่ม
+        
+                // ส่งคำขอ API เพื่อเพิ่มหรือแก้ไขโต๊ะ
+                await axios({
+                    method,
+                    url,
+                    data: tableData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                });
+        
+                Swal.fire({
+                    title: editMode ? 'แก้ไขโต๊ะเรียบร้อยแล้ว' : 'เพิ่มโต๊ะเรียบร้อยแล้ว',
+                    icon: 'success',
+                    confirmButtonText: 'ตกลง',
+                });
+        
+                // เรียกฟังก์ชัน fetchTables เพื่อล้างข้อมูลและดึงข้อมูลใหม่
                 fetchTables();
                 resetForm();
             } catch (error) {
@@ -181,7 +151,7 @@
                 setSnackbarSeverity('error');
                 setSnackbarOpen(true);
             }
-        };      
+        };
         
         const handleDeleteTable = async (id) => {
             // ตรวจสอบว่าโต๊ะคือ CT001 หรือไม่
@@ -256,6 +226,7 @@
         };
 
         const handleEditTable = (table) => {
+            // ตั้งค่าเมื่อคลิกแก้ไข
             setEditMode(true);
             setEditTableId(table.id);
             setTableCode(table.table_code);
