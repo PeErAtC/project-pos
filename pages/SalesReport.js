@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import config from '../lib/config';  
+import config from './config';  
 import axios from 'axios';
-import BackendSidebar from './components/backendsidebar';
+import BackendSidebar from './components/backendsideber';
 import Swal from 'sweetalert2';
-import {FaClipboardList,FaTable,FaCalendarAlt,FaDollarSign,FaTag,FaPercentage,FaMoneyBill,FaCheckCircle,FaTimesCircle,} from 'react-icons/fa';
 
     export default function SalesReport({ initialReportData, initialError }) {
         // การใช้ useState สำหรับสถานะของข้อมูล รายงาน, ข้อผิดพลาด และตัวกรองวันที่
@@ -534,12 +533,12 @@ import {FaClipboardList,FaTable,FaCalendarAlt,FaDollarSign,FaTag,FaPercentage,Fa
                                 </tr>
                             </thead>
                             <tbody>
-                            {pendingOrders.length === 0 ? (
-                                <tr>
+                                {pendingOrders.length === 0 ? (
+                                    <tr>
                                     <td colSpan="10" style={{ textAlign: 'center', color: '#999' }}>ไม่มีบิลที่ตรงกับวันที่ที่เลือก</td>
-                                </tr>
-                            ) : (
-                                pendingOrders.map((order, index) => (
+                                    </tr>
+                                ) : (
+                                    pendingOrders.map((order, index) => (
                                     <tr key={index}>
                                         <td style={styles.td}>{order.order_number}</td>
                                         <td style={styles.td}>{order.table_code === 'CT001' ? 'หน้าขาย' : order.table_code || 'N/A'}</td>
@@ -549,14 +548,23 @@ import {FaClipboardList,FaTable,FaCalendarAlt,FaDollarSign,FaTag,FaPercentage,Fa
                                         <td style={styles.td}>{calculateVatDetails(order).vatLabel}</td>
                                         <td style={styles.td}>{order.net_amount} ฿</td>
                                         <td style={styles.td}>{order.payment_method || 'N/A'}</td>
-                                        <td style={{ ...styles.td, color: '#FF0000', fontWeight: 'bold' }}>{order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}</td>
+                                        <td
+                                        style={{
+                                            ...styles.td,
+                                            color: order.status === 'C' ? '#000' : order.status === 'Y' ? '#008000' : '#FF0000',
+                                            fontWeight: 'bold',
+                                        }}
+                                        >
+                                        {order.status === 'C' ? 'ยกเลิก' : order.status === 'Y' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
+                                        </td>
                                         <td style={styles.td}>
-                                            <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
+                                        <button style={styles.detailsButton} onClick={() => showOrderDetails(order.id)}>ดูรายละเอียด</button>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                    ))
+                                )}
                             </tbody>
+
                             <tfoot style={{ ...styles.tfoot, position: 'sticky', bottom: -1, zIndex: 1 }}>
                                 <tr>
                                     <td colSpan="4" style={styles.totalLabel}>รวมยอด:</td>
