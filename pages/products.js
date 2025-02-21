@@ -741,56 +741,59 @@ const handleInputFocus = (field, itemId = null) => {
             cancelButtonText: 'ยกเลิก',
         }).then((result) => {
             if (result.isConfirmed) {
-                // เปลี่ยนสถานะเป็น 'C' เมื่อยกเลิกออเดอร์
-                updateOrderStatus(orderNumber, "C")
-                    .then(() => {
-                        // รีเซ็ตค่าต่าง ๆ ในตะกร้า
-                        setCart([]);
-                        setReceivedAmount(0);
-                        setBillDiscount(0);
-                        setBillDiscountType("THB");
-                        setOrderReceived(false);
-                        setIsBillPaused(false);
-                        setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
-                        
-                        Swal.fire({
-                            title: 'ออเดอร์ถูกยกเลิก!',
-                            text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
-                            icon: 'success',
-                            timer: 2000,
-                            showConfirmButton: false
+                // ตรวจสอบว่า orderNumber หรือ orderId มีค่าหรือไม่
+                if (orderId) {  // ตอนนี้ใช้ orderId ที่ได้จาก API แทน orderNumber
+                    console.log("Order ID:", orderId); // ตรวจสอบค่า orderId
+    
+                    // ส่งคำขอ PUT เพื่ออัปเดตสถานะ
+                    updateOrderStatus(orderId, 'C')  // ใช้ orderId แทน orderNumber
+                        .then(() => {
+                            // รีเซ็ตค่าต่าง ๆ ในตะกร้า
+                            setCart([]);
+                            setReceivedAmount(0);
+                            setBillDiscount(0);
+                            setBillDiscountType("THB");
+                            setOrderReceived(false);
+                            setIsBillPaused(false);
+                            setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
+                            
+                            Swal.fire({
+                                title: 'ออเดอร์ถูกยกเลิก!',
+                                text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        })
+                        .catch((error) => {
+                            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                            console.error("Error cancelling order:", error);
                         });
-                    })
-                    .catch((error) => {
-                        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
-                        console.error("Error cancelling order:", error);
-                    });
+                } else {
+                    Swal.fire('ไม่พบหมายเลขออเดอร์', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                }
             }
         });
     };
     
-    
-    // ✅ ฟังก์ชันอัปเดตสถานะออเดอร์
+    // ฟังก์ชันอัปเดตสถานะออเดอร์
     const updateOrderStatus = async (orderId, status) => {
+        if (!orderId) {
+            console.error("Order ID is missing");
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขออเดอร์ กรุณาลองอีกครั้ง', 'error');
+            return false;
+        }
+    
         try {
             const { api_url, slug, authToken } = getApiConfig();
     
-            // คำนวณค่า totalDue และ moneyChanges ก่อนการอัปเดตสถานะ
-            const totalDue = parseFloat(calculateTotalWithBillDiscountAndVAT());
-            const amountToPay = receivedAmount ? parseFloat(receivedAmount) : parseFloat(calculateTotalPaid());
-            const moneyChanges = amountToPay > totalDue ? amountToPay - totalDue : 0;
-    
-            console.log("📌 ยืนยันการอัปเดตสถานะออเดอร์:", orderId, "เป็นสถานะ:", status);
+            // ตรวจสอบว่า orderId และ status ถูกส่งไปในคำขอ
+            console.log("Order ID:", orderId, "Status:", status);
     
             const response = await axios.put(
                 `${api_url}/${slug}/orders/${orderId}`, 
                 {
-                    status: status, 
-                    net_amount: totalDue,
-                    vat_amt: vatType.includes('exclude') ? calculateVAT() : 0,
-                    payment_method: paymentMethod,
-                    money_changes: moneyChanges.toFixed(2), // ส่งเงินทอนที่คำนวณ
-                    updated_by: 1
+                    status: status,  // ส่งแค่สถานะ
                 },
                 {
                     headers: { 
@@ -817,6 +820,14 @@ const handleInputFocus = (field, itemId = null) => {
     
     
     
+    
+    
+    
+    
+    
+    
+    
+    
     const calculateTotalPaid = () => {
         const totalPaid = payments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดการชำระทั้งหมดจากประวัติการชำระ
         return totalPaid;
@@ -837,35 +848,32 @@ const handleInputFocus = (field, itemId = null) => {
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
-    
+        
             // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
             if (!api_url.endsWith('/api')) api_url += '/api';
-    
+        
             // ใช้เส้นทาง /payments แทน /payments/{order_id}/list
             const url = `${api_url}/${slug}/payments`;
-    
+        
             // ตรวจสอบข้อมูลที่จำเป็น
             if (!orderId || !paymentMethod || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
                 console.error('❌ ข้อมูลไม่ถูกต้อง:', { orderId, paymentMethod, amount });
                 throw new Error('ข้อมูลชำระเงินไม่ถูกต้อง');
             }
-    
+        
             const paymentData = {
                 order_id: orderId,
-                pay_channel_id: paymentMethod, // ไม่ต้องกำหนดเอง ให้ใช้ค่าที่เลือกจาก dropdown
-                payment_date: new Date().toISOString(),
-                amount: parseFloat(amount),
-                icome: parseFloat(receivedAmount),
-                balances: balances,
-                money_changes: moneyChanges.toFixed(2),
-                status: 'PARTIAL',
+                pay_channel_id: paymentMethod, // ใช้ค่าที่เลือกจาก dropdown
+                payment_date: new Date().toISOString(), // บันทึกวันที่และเวลาปัจจุบัน
+                amount: parseFloat(amount), // ตรวจสอบว่าเป็นจำนวนจริง
+                icome: parseFloat(receivedAmount), // จำนวนที่ได้รับจากลูกค้า
+                balances: balances, // ยอดคงเหลือที่ต้องชำระ
+                money_changes: moneyChanges.toFixed(2), // เงินทอนที่ต้องคืนให้ลูกค้า
+                status: 'PARTIAL', // สถานะการชำระเงิน
             };
-            
-            console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
-            
     
             console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
-    
+        
             // ส่งข้อมูลการชำระเงินไปยัง API
             const response = await axios.post(url, paymentData, {
                 headers: {
@@ -873,9 +881,15 @@ const handleInputFocus = (field, itemId = null) => {
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-    
+        
+            // ตรวจสอบการตอบกลับจาก API
             if (response.data && response.data.success) {
                 console.log('✅ บันทึกข้อมูลการแยกชำระสำเร็จ:', response.data);
+                Swal.fire({
+                    title: 'สำเร็จ',
+                    text: 'ข้อมูลการแยกชำระถูกบันทึกแล้ว',
+                    icon: 'success',
+                });
             } else {
                 throw new Error('API ไม่สามารถบันทึกข้อมูลการแยกชำระได้');
             }
@@ -884,6 +898,7 @@ const handleInputFocus = (field, itemId = null) => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลการแยกชำระได้', 'error');
         }
     };
+    
     
     const paymentDate = new Date('2025-02-06T03:33:15.615Z');  // ใช้เวลา UTC
 
