@@ -81,62 +81,62 @@ export default function EmployeeManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
-    // ตรวจสอบว่าไม่มีการจำกัดสิทธิ์แก้ไขแล้ว
+
+    // ตรวจสอบว่ามี slug และข้อมูลที่จำเป็นหรือไม่
     if (!formData.slug) {
-      Swal.fire('ข้อผิดพลาด', 'กรุณากรอกค่า slug', 'error');
-      return; // ไม่ส่งข้อมูลหากไม่มี slug
+        Swal.fire('ข้อผิดพลาด', 'กรุณากรอกค่า slug', 'error');
+        return;
     }
 
     try {
-      const authToken = localStorage.getItem('token');
-      const api_url = localStorage.getItem('url_api');
-      const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+        const api_url = localStorage.getItem('url_api');
+        const slug = localStorage.getItem('slug');
 
-      const url =
-        editIndex !== null
-          ? `${api_url}/${slug}/users/${employees[editIndex].id}` // ใช้ PUT ในกรณีแก้ไข
-          : `${api_url}/${slug}/users`; // ใช้ POST ในกรณีเพิ่มพนักงาน
+        const url =
+            editIndex !== null
+                ? `${api_url}/${slug}/users/${employees[editIndex].id}` // ใช้ PUT ในกรณีแก้ไข
+                : `${api_url}/${slug}/users`; // ใช้ POST ในกรณีเพิ่มพนักงาน
 
-      const method = editIndex !== null ? 'PUT' : 'POST';
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify(formData), // ส่งข้อมูล formData
-      });
+        const method = editIndex !== null ? 'PUT' : 'POST';
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify(formData), // ส่งข้อมูล formData รวมถึงสถานะ
+        });
 
-      if (!response.ok) {
-        const errorDetails = await response.json();
-        throw new Error(`Error: ${response.status} - ${errorDetails.message}`);
-      }
+        if (!response.ok) {
+            const errorDetails = await response.json();
+            throw new Error(`Error: ${response.status} - ${errorDetails.message}`);
+        }
 
-      const result = await response.json();
-      if (editIndex !== null) {
-        const updatedEmployees = [...employees];
-        updatedEmployees[editIndex] = result;
-        setEmployees(updatedEmployees);
-      } else {
-        setEmployees([...employees, result]);
-      }
+        const result = await response.json();
+        if (editIndex !== null) {
+            const updatedEmployees = [...employees];
+            updatedEmployees[editIndex] = result;
+            setEmployees(updatedEmployees);
+        } else {
+            setEmployees([...employees, result]);
+        }
 
-      Swal.fire('สำเร็จ!', 'การดำเนินการเสร็จสมบูรณ์', 'success');
-      setEditIndex(null);
-      setFormData({
-        username: '',
-        name: '',
-        email: '',
-        password: '',
-        slug: '', // เคลียร์ slug หลังจากการส่งข้อมูล
-        owner: 'N',
-        status: 'active',
-      });
+        Swal.fire('สำเร็จ!', 'การดำเนินการเสร็จสมบูรณ์', 'success');
+        setEditIndex(null);
+        setFormData({
+            username: '',
+            name: '',
+            email: '',
+            password: '',
+            slug: '',
+            owner: 'N',
+            status: 'active', // รีเซ็ตสถานะหลังจากการบันทึก
+        });
     } catch (error) {
-      Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
     }
-  };
+};
 
   const handleDelete = async (index) => {
     Swal.fire({
@@ -181,8 +181,9 @@ export default function EmployeeManagement() {
   };
 
   const handleStatusChange = (status) => {
-    setFormData({ ...formData, status });
-  };
+    setFormData({ ...formData, status }); // อัปเดตสถานะใน formData
+};
+
 
   const filteredEmployees = employees.filter((employee) =>
     employee.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -223,9 +224,7 @@ export default function EmployeeManagement() {
                   <th style={styles.tableHeader}>Username</th>
                   <th style={styles.tableHeader}>ชื่อ</th>
                   <th style={styles.tableHeader}>อีเมล</th>
-                  <th style={styles.tableHeader}>Slug</th>
                   <th style={styles.tableHeader}>Owner</th>
-                  <th style={styles.tableHeader}>สถานะ</th>
                   <th style={styles.tableHeader}>ดำเนินการ</th>
                 </tr>
               </thead>
@@ -243,13 +242,7 @@ export default function EmployeeManagement() {
                       <td style={styles.tableCellNoBorder}>{employee.username}</td>
                       <td style={styles.tableCellNoBorder}>{employee.name}</td>
                       <td style={styles.tableCellNoBorder}>{employee.email}</td>
-                      <td style={styles.tableCellNoBorder}>{employee.slug}</td>
                       <td style={styles.tableCellNoBorder}>{employee.owner}</td>
-                      <td
-                            style={employee.status === 'Y' ? styles.activeStatus : styles.inactiveStatus}
-                          >
-                            {employee.status === 'Y' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-                          </td>
 
                           <td style={styles.tableCellNoBorder}>
                           <button onClick={() => handleMenuToggle(index)} style={styles.menuButton}>
@@ -278,89 +271,91 @@ export default function EmployeeManagement() {
           <h2 style={styles.title}>{editIndex !== null ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'}</h2>
           <form onSubmit={handleSubmit} style={styles.form}>
             <input
-              type="text"
-              name="username"
-              placeholder="Username"
-              value={formData.username}
-              onChange={handleInputChange}
-              required
-              style={styles.input}
-            />
-            <input
-              type="text"
-              name="name"
-              placeholder="ชื่อพนักงาน"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              style={styles.input}
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="อีเมล"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              style={styles.input}
-            />
-            <input
-              type="text"
-              name="slug"
-              placeholder="Slug"
-              value={formData.slug}
-              readOnly
-              style={styles.inputReadOnly}
-            />
-            <div style={styles.passwordContainer}>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="รหัสผ่าน"
-                value={formData.password}
+                type="text"
+                name="username"
+                placeholder="Username"
+                value={formData.username}
                 onChange={handleInputChange}
                 required
-                style={{ ...styles.input, paddingRight: '40px' }}
-              />
-              <span
-                onClick={() => setShowPassword(!showPassword)}
-                style={styles.passwordToggle}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </span>
+                style={styles.input}
+            />
+            <input
+                type="text"
+                name="name"
+                placeholder="ชื่อพนักงาน"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                style={styles.input}
+            />
+            <input
+                type="email"
+                name="email"
+                placeholder="อีเมล"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                style={styles.input}
+            />
+            <input
+                type="text"
+                name="slug"
+                placeholder="Slug"
+                value={formData.slug}
+                readOnly
+                style={styles.inputReadOnly}
+            />
+            <div style={styles.passwordContainer}>
+                <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="รหัสผ่าน"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    style={{ ...styles.input, paddingRight: '40px' }}
+                />
+                <span
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={styles.passwordToggle}
+                >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
             </div>
-            <p style={styles.statusTitle}>สถานะพนักงาน</p>
-            <div style={styles.statusButtonsRow}>
-              <button
-                type="button"
-                onClick={() => handleStatusChange('active')}
-                style={formData.status === 'active' ? styles.activeButton : styles.inactiveButton}
-              >
-                เปิด
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStatusChange('inactive')}
-                style={formData.status === 'inactive' ? { ...styles.inactiveButton, backgroundColor: '#ff6b6b', color: '#fff' } : styles.inactiveButton}
-              >
-                ปิด
-              </button>
+
+            {/* เพิ่มช่องกรอกยืนยันรหัสผ่าน */}
+            <div style={styles.passwordContainer}>
+                <input
+                    type={showPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    placeholder="ยืนยันรหัสผ่าน"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                    style={{ ...styles.input, paddingRight: '40px' }}
+                />
             </div>
+
+            {/* แสดงข้อความเตือนหากรหัสผ่านไม่ตรงกัน */}
+            {formData.password !== formData.confirmPassword && formData.confirmPassword && (
+                <p style={{ color: 'red', textAlign: 'center'}}>รหัสผ่านไม่ตรงกัน</p>
+            )}
+
             <button type="submit" style={styles.button}>
-              {editIndex !== null ? 'บันทึกการแก้ไข' : 'เพิ่มพนักงาน'}
+                {editIndex !== null ? 'บันทึกการแก้ไข' : 'เพิ่มพนักงาน'}
             </button>
 
             {editIndex !== null && (
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ username: '', name: '', email: '', password: '', slug: '', owner: 'N', status: 'active' });
-                  setEditIndex(null);
-                }}
-                style={styles.cancelButton}
-              >
-                ยกเลิก
-              </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setFormData({ username: '', name: '', email: '', password: '', slug: '', owner: 'N', status: 'active' });
+                        setEditIndex(null);
+                    }}
+                    style={styles.cancelButton}
+                >
+                    ยกเลิก
+                </button>
             )}
           </form>
         </div>
@@ -396,7 +391,7 @@ const styles = {
   inputReadOnly: { padding: '10px', fontSize: '15px', borderRadius: '5px', border: '1px solid #ddd', width: '80%', margin: '0 auto', backgroundColor: '#e0e0e0', pointerEvents: 'none', color: '#999' },
   passwordContainer: { position: 'relative', display: 'flex', alignItems: 'center', width: '90%', margin: '0 auto' },
   passwordToggle: { position: 'absolute', right: '30px', cursor: 'pointer', color: '#555555' },
-  button: { padding: '10px', fontSize: '16px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', width: '80%', margin: '0 auto' },
+  button: { padding: '10px', fontSize: '16px', backgroundColor: '#499cae', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', width: '83%', margin: '0 auto', },
   cancelButton: { padding: '10px', fontSize: '16px', backgroundColor: '#ff6b6b', color: '#ffffff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px', width: '80%', margin: '0 auto' },
   activeButton: { backgroundColor: '#499cae', color: '#fff', padding: '10px', width: '100%', border: 'none', borderRadius: '5px', cursor: 'pointer', textAlign: 'center' },
   inactiveButton: { backgroundColor: '#ddd', color: '#888', padding: '10px', width: '100%', border: 'none', borderRadius: '5px', cursor: 'pointer', textAlign: 'center' },
