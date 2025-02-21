@@ -731,57 +731,89 @@ const handleInputFocus = (field, itemId = null) => {
     
     const clearCart = () => {
         Swal.fire({
-            title: 'คุณแน่ใจหรือไม่?',
-            text: "คุณต้องการยกเลิกออเดอร์และเคลียร์เมนูทั้งหมดออกหรือไม่?",
-            icon: 'warning',
+            title: 'กรุณากรอกรหัสผ่านเพื่อยืนยันการยกเลิกออเดอร์',
+            input: 'password',  // ใช้ช่องกรอกรหัสผ่าน
+            inputPlaceholder: 'กรอกรหัสผ่านของคุณ',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'ใช่, ยกเลิกออเดอร์!',
+            confirmButtonText: 'ยืนยันการยกเลิก',
             cancelButtonText: 'ยกเลิก',
+            showLoaderOnConfirm: true,  // แสดงการโหลดเมื่อกดปุ่มยืนยัน
+            preConfirm: (password) => {
+                return new Promise((resolve, reject) => {
+                    // ตรวจสอบรหัสผ่าน
+                    const storedPassword = localStorage.getItem('password'); // รหัสผ่านที่เก็บไว้ใน localStorage
+                    if (password === storedPassword) {
+                        resolve(); // ถ้ารหัสผ่านถูกต้องให้ดำเนินการ
+                    } else {
+                        reject('รหัสผ่านไม่ถูกต้อง');
+                    }
+                });
+            }
         }).then((result) => {
             if (result.isConfirmed) {
-                // ตรวจสอบว่า orderNumber หรือ orderId มีค่าหรือไม่
-                if (orderId) {  // ตอนนี้ใช้ orderId ที่ได้จาก API แทน orderNumber
-                    console.log("Order ID:", orderId); // ตรวจสอบค่า orderId
-        
-                    // ส่งคำขอ PUT เพื่ออัปเดตสถานะ
-                    updateOrderStatus(orderId, 'C')  // ใช้ orderId แทน orderNumber
-                        .then(() => {
-                            // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1) และ set status เป็น 'Y'
-                            updateTableStatus(tableCode, 1, 'Y')  // ใช้ tableCode และส่งสถานะ Y
+                Swal.fire({
+                    title: 'คุณแน่ใจหรือไม่?',
+                    text: "คุณต้องการยกเลิกออเดอร์และเคลียร์เมนูทั้งหมดออกหรือไม่?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'ใช่, ยกเลิกออเดอร์!',
+                    cancelButtonText: 'ยกเลิก',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // ตรวจสอบว่า orderId มีค่าหรือไม่
+                        if (orderId) {
+                            console.log("Order ID:", orderId);
+    
+                            // เปลี่ยนสถานะเป็น 'C' เมื่อยกเลิกออเดอร์
+                            updateOrderStatus(orderId, 'C')
                                 .then(() => {
-                                    // รีเซ็ตค่าต่าง ๆ ในตะกร้า
-                                    setCart([]);
-                                    setReceivedAmount(0);
-                                    setBillDiscount(0);
-                                    setBillDiscountType("THB");
-                                    setOrderReceived(false);
-                                    setIsBillPaused(false);
-                                    setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
-                                    
-                                    Swal.fire({
-                                        title: 'ออเดอร์ถูกยกเลิก!',
-                                        text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
-                                        icon: 'success',
-                                        timer: 2000,
-                                        showConfirmButton: false
-                                    });
+                                    // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1)
+                                    updateTableStatus(tableCode, 1, 'Y')  // ใช้ tableCode ที่ได้จาก API
+                                        .then(() => {
+                                            // รีเซ็ตค่าต่าง ๆ ในตะกร้า
+                                            setCart([]);
+                                            setReceivedAmount(0);
+                                            setBillDiscount(0);
+                                            setBillDiscountType("THB");
+                                            setOrderReceived(false);
+                                            setIsBillPaused(false);
+                                            setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
+    
+                                            Swal.fire({
+                                                title: 'ออเดอร์ถูกยกเลิก!',
+                                                text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
+                                                icon: 'success',
+                                                timer: 2000,
+                                                showConfirmButton: false
+                                            });
+                                        })
+                                        .catch((error) => {
+                                            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดตสถานะโต๊ะได้', 'error');
+                                            console.error("Error updating table status:", error);
+                                        });
                                 })
                                 .catch((error) => {
-                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดตสถานะโต๊ะได้', 'error');
-                                    console.error("Error updating table status:", error);
+                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                                    console.error("Error cancelling order:", error);
                                 });
-                        })
-                        .catch((error) => {
-                            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
-                            console.error("Error cancelling order:", error);
-                        });
-                } else {
-                    Swal.fire('ไม่พบหมายเลขออเดอร์', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
-                }
+                        } else {
+                            Swal.fire('ไม่พบหมายเลขออเดอร์', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                        }
+                    }
+                });
             }
+        }).catch((error) => {
+            Swal.fire('เกิดข้อผิดพลาด', error, 'error');
         });
+    };
+    
+    
+    // ฟังก์ชันตรวจสอบรหัสผ่าน
+    const getStoredPassword = () => {
+        // สมมุติว่าเก็บรหัสผ่านใน localStorage หรือ sessionStorage
+        return localStorage.getItem('userPassword');  // สามารถดึงจากระบบเก็บข้อมูลได้
     };
     
     // ฟังก์ชันอัปเดตสถานะออเดอร์
@@ -794,9 +826,6 @@ const handleInputFocus = (field, itemId = null) => {
     
         try {
             const { api_url, slug, authToken } = getApiConfig();
-    
-            // ตรวจสอบว่า orderId และ status ถูกส่งไปในคำขอ
-            console.log("Order ID:", orderId, "Status:", status);
     
             const response = await axios.put(
                 `${api_url}/${slug}/orders/${orderId}`, 
@@ -833,9 +862,6 @@ const handleInputFocus = (field, itemId = null) => {
     
         try {
             const { api_url, slug, authToken } = getApiConfig();
-    
-            // ตรวจสอบว่า tableCode และ status ถูกส่งไปในคำขอ
-            console.log("Table Code:", tableCode, "Table Free Status:", tableFreeStatus, "Table Status:", tableStatus);
     
             const response = await axios.put(
                 `${api_url}/${slug}/table_codes/${tableCode}`,
