@@ -1,20 +1,23 @@
 "use client";
+
 import { useEffect, useState, useRef ,useMemo} from 'react';
 import axios from 'axios';
 import Sidebar from './components/sidebar';
 import Image from 'next/image';
 import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css'; // โหลด CSS ของ SweetAlert2
 import { useRouter } from 'next/router';
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa"; // ✅ เพิ่มไอคอน
 import Keyboard from './keyboard'; 
-import { create } from 'domain';
+
 
 
 export default function SalesPage() {
     const [products, setProducts] = useState([]);
     const router = useRouter();
-    const { tableCode } = router.query;  // รับค่า tableCode จาก URL
+    const [showPopup, setShowPopup] = useState(false); // สำหรับแสดงป๊อบอัพ
+    const { tableCode } = router.query;
     const [cart, setCart] = useState([]);
     const [order, setOrder] = useState(null); // เก็บข้อมูลออเดอร์
     const [receivedAmount, setReceivedAmount] = useState(0);
@@ -23,6 +26,7 @@ export default function SalesPage() {
     const [billDiscountType, setBillDiscountType] = useState("THB");
     const [showReceipt, setShowReceipt] = useState(false);
     const [orderReceived, setOrderReceived] = useState(false);
+    const [selectedQuantity, setSelectedQuantity] = useState(1); // เก็บค่าจำนวนที่เลือก
     const [isBillPaused, setIsBillPaused] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [orderNumber, setOrderNumber] = useState("");
@@ -52,13 +56,15 @@ export default function SalesPage() {
     const [promptPayAcc, setPromptPayAcc] = useState("");
     const [showKeyboard, setShowKeyboard] = useState(false);
     const [activeField, setActiveField] = useState('');
-
-    const [keyboardPosition, setKeyboardPosition] = useState({ 
+    const [keyboardPosition, setKeyboardPosition] = useState({
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)'
     });
-    
+    const [showAddItemPopup, setShowAddItemPopup] = useState(false);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [orderDetails, setOrderDetails] = useState(null);
+
     
     // const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
 
@@ -111,11 +117,12 @@ export default function SalesPage() {
             setProducts([]);
         }
     };
+    
     useEffect(() => {
         if (typeof window !== "undefined") {
             fetchProducts();
             fetchCategories();
-            const interval = setInterval(fetchProducts, 40000);
+            const interval = setInterval(fetchProducts, 60000);
             return () => clearInterval(interval);
         }
     }, []);
@@ -141,7 +148,7 @@ const fetchTableLastOrder = async (tableId) => {
             api_url += "/api";
         }
 
-        const response = await axios.get(`${api_url}/api/${slug}/orders/${tableId}/table_lastorder`, {
+        const response = await axios.get(`${api_url}/${slug}/orders/${tableId}/table_lastorder`, {
             headers: {
                 Accept: "application/json",
                 Authorization: `Bearer ${authToken}`,
@@ -171,24 +178,19 @@ const fetchTableLastOrder = async (tableId) => {
 useEffect(() => {
     const loadTableLastOrder = async () => {
         if (!tableCode) {
+            console.warn('ไม่มี tableCode');
             return;
         }
 
         try {
-            // ประกาศตัวแปร URL CALL
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
 
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
+            if (!api_url.endsWith('/api')) api_url += '/api';
 
-            // แก้ไข URL ที่เรียก
-            const url = `${api_url}/${slug}/orders/${tableCode}/table_lastorder`; // ตรวจสอบ URL นี้ให้แน่ใจ
+            const url = `${api_url}/${slug}/orders/${tableCode}/table_lastorder`;
 
-            // เรียก API
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -198,36 +200,38 @@ useEffect(() => {
 
             if (response.data && response.data.order) {
                 const lastOrder = response.data.order;
-                if (lastOrder.status === 'N') {
-                    console.log("ข้อมูลออเดอร์ล่าสุด:", lastOrder);
+
+                if (lastOrder.status === 'N') {  // ตรวจสอบว่าออเดอร์ยังไม่ชำระ
+                    console.log("ออเดอร์ล่าสุด:", lastOrder);
                     setOrderId(lastOrder.id); // เก็บ ID ของออเดอร์ล่าสุด
                     setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
+
                     // ใช้ข้อมูลจากออเดอร์ที่ดึงมาอัปเดต cart
-                    setCart((prevCart) => {
-                        const updatedCart = [...prevCart, ...(lastOrder.items || [])]; // รวมรายการเก่ากับรายการใหม่
-                        return updatedCart;
-                    });
+                    setCart(lastOrder.items || []); // กำหนดให้ตะกร้าเป็นรายการสินค้าที่ดึงมา
                 } else {
                     console.warn("ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
+                    setCart([]);  // ล้างตะกร้าหากออเดอร์ไม่ใช่สถานะ 'N'
                 }
             } else {
                 console.warn("ไม่มีข้อมูลออเดอร์ล่าสุด");
+                setCart([]); // ล้างตะกร้าหากไม่มีข้อมูลออเดอร์
             }
-
-            
 
         } catch (error) {
             console.error("เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:", error.response?.data || error.message);
+            setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
         }
     };
+
     loadTableLastOrder(); // เรียกฟังก์ชันเพื่อโหลดข้อมูลออเดอร์และตะกร้า
 
-}, [tableCode]); // ทำงานเมื่อ tableCode เปลี่ยนแปลง
+}, [tableCode]); // เมื่อ `tableCode` เปลี่ยนแปลง จะเรียก `loadTableLastOrder` ใหม่
 
 
 // ฟังก์ชันสำหรับบันทึกข้อมูลตะกร้าใน LocalStorage
 useEffect(() => {
     if (tableCode && cart.length > 0) {
+        console.log(`💾 บันทึกตะกร้าลง LocalStorage`, cart);
         localStorage.setItem(`cart_${tableCode}`, JSON.stringify(cart));
     }
 }, [cart, tableCode]); 
@@ -241,14 +245,15 @@ useEffect(() => {
     }
 }, [tableCode]);
 
-
 // ฟังก์ชันโหลดข้อมูลออเดอร์ล่าสุดจาก API ตาม tableCode
 const loadTableLastOrder = async (tableCode) => {
     if (!tableCode) {
+        console.warn('ไม่มี tableCode');
         return;
     }
 
     try {
+        // ดึงข้อมูลจาก localStorage
         let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
         const slug = localStorage.getItem('slug') || 'default_slug';
         const authToken = localStorage.getItem('token') || 'default_token';
@@ -257,7 +262,6 @@ const loadTableLastOrder = async (tableCode) => {
 
         const url = `${api_url}/${slug}/orders/${tableCode}/table_lastorder`;
 
-        // เรียก API เพื่อดึงข้อมูลออเดอร์ล่าสุด
         const response = await axios.get(url, {
             headers: {
                 'Accept': 'application/json',
@@ -267,8 +271,11 @@ const loadTableLastOrder = async (tableCode) => {
 
         if (response.data && response.data.order) {
             const lastOrder = response.data.order;
-            if (lastOrder.status === 'N') {  // ตรวจสอบว่าออเดอร์ยังไม่ชำระ
-                loadOrderDetails(lastOrder.id); // เรียกฟังก์ชันเพื่อดึงข้อมูลออเดอร์มาแสดง
+
+            if (lastOrder.status === 'N') {
+                console.log("ออเดอร์ล่าสุด:", lastOrder);
+                loadOrderDetails(lastOrder.id);  // เรียกฟังก์ชันเพื่อดึงข้อมูลออเดอร์มาแสดง
+                setCart(lastOrder.items || []);  // อัปเดตตะกร้าด้วยรายการสินค้าจากออเดอร์ล่าสุด
             } else {
                 console.warn("ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
                 setCart([]);  // ล้างตะกร้าหากออเดอร์ไม่ใช่สถานะ 'N'
@@ -282,6 +289,8 @@ const loadTableLastOrder = async (tableCode) => {
         setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
     }
 };
+
+
 const handleInputFocus = (field, itemId = null) => {
     setActiveField({ field, itemId });
     setShowKeyboard(true);
@@ -297,53 +306,102 @@ const handleInputFocus = (field, itemId = null) => {
     }
 };
 
-const fetchOrderDetails = async (orderId) => {
-    if (!orderId) {
-        console.error("❌ Order ID ไม่ถูกต้อง");
-        return;
-    }
+// const fetchOrderDetails = async (orderId) => {
+//     if (!orderId) {
+//         console.error("❌ Order ID ไม่ถูกต้อง");
+//         return;
+//     }
 
-    const api_url = localStorage.getItem('url_api');
-    const slug = localStorage.getItem('slug');
-    const authToken = localStorage.getItem('token');
+//     const api_url = localStorage.getItem('url_api');
+//     const slug = localStorage.getItem('slug');
+//     const authToken = localStorage.getItem('token');
 
-    if (!api_url || !slug) {
-        console.error("⚠️ API URL หรือ Slug ไม่ถูกต้อง");
-        return;
-    }
+//     if (!api_url || !slug) {
+//         console.error("⚠️ API URL หรือ Slug ไม่ถูกต้อง");
+//         return;
+//     }
 
-    const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
-    console.log("📡 กำลังดึงข้อมูลออเดอร์ที่:", endpoint);
+//     const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
+//     console.log("📡 กำลังดึงข้อมูลออเดอร์ที่:", endpoint);
 
-    try {
-        const response = await axios.get(endpoint, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+//     try {
+//         const response = await axios.get(endpoint, {
+//             headers: { 'Authorization': `Bearer ${authToken}` }
+//         });
 
-        console.log("📦 API Response:", response.data);
+//         console.log("📦 API Response:", response.data);
 
-        if (response.data && Array.isArray(response.data.items)) {
-            setCart([]); // ✅ เคลียร์ตะกร้าก่อนอัปเดต
-            setTimeout(() => {
-                setCart(response.data.items);
-            }, 100); // ✅ ใช้ `setTimeout` เพื่อหลีกเลี่ยงการซ้อนข้อมูล
-        } else {
-            console.warn("⚠️ ไม่มีข้อมูลสินค้าในออเดอร์");
-            setCart([]);
-        }
+//         if (response.data && Array.isArray(response.data.items)) {
+//             setCart([]); // ✅ เคลียร์ตะกร้าก่อนอัปเดต
+//             setTimeout(() => {
+//                 setCart(response.data.items);
+//             }, 100); // ✅ ใช้ `setTimeout` เพื่อหลีกเลี่ยงการซ้อนข้อมูล
+//         } else {
+//             console.warn("⚠️ ไม่มีข้อมูลสินค้าในออเดอร์");
+//             setCart([]);
+//         }
 
-    } catch (error) {
-        console.error("❌ Error fetching order details:", error);
-    }
-};
+//     } catch (error) {
+//         console.error("❌ Error fetching order details:", error);
+//     }
+// };
+
+
+
+
 
     // ✅ โหลดข้อมูลออเดอร์ใหม่เมื่อ `orderId` เปลี่ยน
     useEffect(() => {
         if (orderId) {
-            fetchOrderDetails(orderId);
+            fetchOrderDetails(orderId);  // เรียกฟังก์ชันเพื่อดึงข้อมูลออเดอร์เมื่อ `orderId` เปลี่ยนแปลง
+            localStorage.removeItem(`cart_${tableCode}`);  // ลบตะกร้าเก่าออกจาก LocalStorage
         }
-    }, [orderId]);  // ✅ ตรวจสอบเฉพาะ orderId เท่านั้น ไม่ดึง API ซ้ำเมื่อ state อื่นเปลี่ยน
+    }, [orderId]);  // ฟังการเปลี่ยนแปลงของ `orderId`
 
+    const fetchOrderDetails = async (orderId) => {
+        if (!orderId) {
+            console.error("❌ Order ID ไม่ถูกต้อง");
+            return;
+        }
+    
+        const api_url = localStorage.getItem('url_api');
+        const slug = localStorage.getItem('slug');
+        const authToken = localStorage.getItem('token');
+    
+        if (!api_url || !slug) {
+            console.error("⚠️ API URL หรือ Slug ไม่ถูกต้อง");
+            return;
+        }
+    
+        const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
+        console.log("📡 กำลังดึงข้อมูลออเดอร์ที่:", endpoint);
+    
+        try {
+            const response = await axios.get(endpoint, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+    
+            console.log("📦 API Response:", response.data);
+    
+            if (response.data && Array.isArray(response.data.items)) {
+                // ตรวจสอบและเพิ่ม URL รูปภาพให้กับสินค้าที่อยู่ในตะกร้า
+                setCart(response.data.items.map(item => {
+                    const productData = products.find(prod => prod.id === item.product_id);
+                    return {
+                        ...item,
+                        image: productData ? productData.image : null // ใช้ URL รูปภาพจากสินค้า
+                    };
+                }));
+            } else {
+                console.warn("⚠️ ไม่มีข้อมูลสินค้าในออเดอร์");
+                setCart([]);  // ล้างตะกร้าหากไม่มีรายการสินค้า
+            }
+        } catch (error) {
+            console.error("❌ Error fetching order details:", error);
+            setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
+        }
+    };
+    
     const handleKeyPress = (key) => {
         if (!activeField || !activeField.field) return; // ป้องกัน error ถ้า activeField ไม่มีค่า
 
@@ -386,6 +444,8 @@ const fetchOrderDetails = async (orderId) => {
             });
         }
     };
+
+
 
     //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
     
@@ -474,6 +534,8 @@ const fetchOrderDetails = async (orderId) => {
         }
     };
     
+    
+    
 // ฟังก์ชัน fetchCategories
     const fetchCategories = async () => {
         try {
@@ -487,72 +549,90 @@ const fetchOrderDetails = async (orderId) => {
         }
     };
 
-    const updateOrderInDatabase = async (orderId, newItems, retry = 2) => {
-        const api_url = localStorage.getItem('url_api');
-        const slug = localStorage.getItem('slug');
-        const authToken = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
-    
-        if (!api_url || !slug) {
-            console.error("❌ API URL หรือ Slug ไม่ถูกต้อง");
-            return;
+    const updateOrderItems = async () => {
+        if (!orderId) {
+            console.warn("⚠️ Order ID ไม่ถูกต้อง กำลังสร้างออเดอร์ใหม่...");
+            await receiveOrder();
+            if (!orderId) return; // หากไม่สามารถสร้าง Order ID ได้
         }
     
-        const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
-        console.log("📡 กำลังอัปเดตออเดอร์ที่:", endpoint);
+        const userId = localStorage.getItem('userId') || "1";
+        console.log("📌 User ID ที่ใช้ส่งไปยัง API:", userId);
+    
+        let apiUrl = localStorage.getItem('url_api') || 'https://default.api.url';
+        const slug = localStorage.getItem('slug') || 'default_slug';
+        const authToken = localStorage.getItem('token') || 'default_token';
+    
+        if (!apiUrl.endsWith('/api')) apiUrl += '/api';
+    
+        const endpoint = `${apiUrl}/${slug}/orders/${orderId}`;
     
         try {
+            // ดึงข้อมูลสินค้าที่มีอยู่ในออเดอร์ก่อน
             const existingResponse = await axios.get(endpoint, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
     
-            console.log("📦 ออเดอร์ปัจจุบัน:", existingResponse.data);
+            // สร้าง Map ของสินค้าที่มีอยู่ในออเดอร์
+            const existingItemsMap = new Map(
+                existingResponse.data.items.map(item => [item.product_id, item.quantity])
+            );
     
-            if (!existingResponse.data.items || !Array.isArray(existingResponse.data.items)) {
-                console.warn("⚠️ ไม่มีข้อมูลสินค้าเดิมในออเดอร์");
-                return;
-            }
-    
-            const existingItems = existingResponse.data.items.reduce((acc, item) => {
-                acc[item.product_id] = item.quantity;
+            // รวมสินค้าซ้ำในตะกร้า
+            const cartItemsMap = cart.reduce((acc, item) => {
+                if (acc.has(item.id)) {
+                    acc.get(item.id).quantity += item.quantity; // รวมจำนวนสินค้าหากมีสินค้าเดียวกัน
+                } else {
+                    acc.set(item.id, {
+                        ...item,
+                    });
+                }
                 return acc;
-            }, {});
+            }, new Map());
     
-            // ✅ อัปเดตจำนวนสินค้าโดยไม่เพิ่มรายการซ้ำ
-            const updatedItems = newItems.map((item) => ({
-                ...item,
-                quantity: (existingItems[item.product_id] || 0) + item.quantity,
-            }));
+            const itemsToAdd = [];
     
-            console.log("📤 สินค้าที่อัปเดต:", updatedItems);
-    
-            const dataPayload = { 
-                items: updatedItems, 
-                updated_by: userId 
-            };
-    
-            const response = await axios.put(endpoint, dataPayload, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
+            // ตรวจสอบสินค้าที่มีอยู่ในตะกร้าและอัปเดต
+            cartItemsMap.forEach((item, productId) => {
+                // ตรวจสอบว่ามีสินค้านี้ในฐานข้อมูลหรือไม่
+                if (!existingItemsMap.has(productId)) {
+                    // เพิ่มสินค้าลงฐานข้อมูล
+                    itemsToAdd.push({
+                        product_id: item.id,
+                        p_name: item.p_name || 'ไม่มีชื่อสินค้า',
+                        quantity: item.quantity,
+                        price: item.price || 0,
+                        created_by: userId,
+                        total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity,
+                    });
+                } else {
+                    console.log(`รายการสินค้า ${item.p_name} มีอยู่แล้วในออเดอร์และไม่ต้องเพิ่มซ้ำ.`);
+                }
             });
     
-            console.log("✅ API Response:", response);
-    
-            if (response.status === 200) {
-                console.log("✅ อัปเดตข้อมูลคำสั่งซื้อสำเร็จ", response.data);
-                await fetchOrderDetails(orderId); // ✅ โหลดข้อมูลใหม่เพื่ออัปเดตตะกร้า
-                return response.data;
-            } else {
-                throw new Error(`API Response ไม่สำเร็จ (Status ${response.status})`);
+            // บันทึกการเพิ่มสินค้าหากมี
+            if (itemsToAdd.length > 0) {
+                await addItemsToDatabase(orderId, itemsToAdd);
             }
+    
+            // รีเฟรชข้อมูลออเดอร์ใหม่และเคลียร์ตะกร้า
+            setTimeout(async () => {
+                await fetchOrderDetails(orderId); // ดึงข้อมูลใหม่
+                setCart([]); // เคลียร์ตะกร้าหลังการดึงข้อมูล
+            }, 500);
+    
+            Swal.fire({
+                icon: 'success',
+                title: 'อัปเดตออเดอร์สำเร็จ!',
+                text: 'รายการอาหารถูกอัปเดตเรียบร้อยแล้ว',
+            });
+    
         } catch (error) {
-            if (retry > 0) {
-                console.warn(`⚠️ ลองส่ง API อีกครั้ง... เหลือ ${retry} ครั้ง`);
-                return updateOrderInDatabase(orderId, newItems, retry - 1);
-            }
-    
-            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตคำสั่งซื้อ:", error);
+            console.error("❌ เกิดข้อผิดพลาดในการอัปเดตออเดอร์:", error);
+            Swal.fire('ผิดพลาด', 'ไม่สามารถอัปเดตออเดอร์ได้', 'error');
         }
     };
+    
     
     const handleCategorySelect = (categoryId) => {
         console.log("Selected category:", categoryId);  // ตรวจสอบว่า categoryId ที่เลือกมีค่า
@@ -570,104 +650,62 @@ const fetchOrderDetails = async (orderId) => {
             });
         }
     
-        // เพิ่มสินค้าในตะกร้า (local state)
         setCart((prevCart) => {
+            // ค้นหาสินค้าว่ามีอยู่ในตะกร้าหรือไม่
             const existingItem = prevCart.find((item) => item.id === product.id);
+    
             if (existingItem) {
+                // ถ้ามีอยู่แล้ว ให้เพิ่มจำนวน
                 return prevCart.map((item) =>
                     item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             } else {
+                // ถ้ายังไม่มี ให้เพิ่มใหม่
                 return [
                     ...prevCart,
                     {
                         ...product,
                         quantity: 1,
-                        discount: product.discount || 0, // กำหนดส่วนลดเริ่มต้น (ถ้ามี)
-                        discountType: product.discountType || "THB", // กำหนดประเภทส่วนลดเริ่มต้น
+                        discount: product.discount || 0,
+                        discountType: product.discountType || "THB",
                     },
                 ];
             }
         });
     
-        // ส่งข้อมูลสินค้าไปที่ฐานข้อมูล
-        try {
-            await addItemToDatabase(product);
-        } catch (error) {
-            console.error("ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
-        }
+        console.log("อาหารถูกเพิ่มลงในตะกร้า:", product);
     };
     
-    // ฟังก์ชันเพื่อเพิ่มสินค้าลงในฐานข้อมูล
-    const addItemToDatabase = async (product) => {
-        try {
-            //////////////////// ประกาศตัวแปร URL CALL   
-            let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-            const slug = localStorage.getItem('slug') || 'default_slug';
-            const authToken = localStorage.getItem('token') || 'default_token';
-    
-            // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
-            if (!api_url.endsWith('/api')) {
-                api_url += '/api';
-            }
-            //////////////////// ประกาศตัวแปร  END URL CALL 
-    
-            // ตรวจสอบค่า product ก่อนใช้
-            if (!product || !product.id || !product.price) {
-                console.error('ข้อมูลสินค้าไม่ครบถ้วน:', product);
-                throw new Error('ข้อมูลสินค้าไม่ครบถ้วน');
-            }
-    
-            // สร้างข้อมูลที่จะส่ง
-            const orderData = {
-                product_id: product.id,
-                quantity: 1, // กำหนดจำนวนสินค้าเริ่มต้นเป็น 1
-                price: Number(product.price), // ตรวจสอบให้เป็นตัวเลข
-                total: Number(product.price), // ตรวจสอบให้เป็นตัวเลข
-            };
-    
-            console.log('Preparing to send orderData:', orderData);
-    
-            // ส่งข้อมูลไปยัง API
-            const response = await axios.post(`${api_url}/api/${slug}/order-items`, orderData, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-    
-            // ตรวจสอบการตอบกลับ
-            if (response.data && response.data.success) {
-                console.log('สินค้าถูกเพิ่มในฐานข้อมูลออร์เดอร์ไอเท็มเรียบร้อยแล้ว:', response.data);
-            } else {
-                console.error('เกิดข้อผิดพลาดในการเพิ่มสินค้าในฐานข้อมูล:', response.data?.message || 'Unknown error');
-            }
-        } catch (error) {
-            // Handle error อย่างละเอียด
-            if (error.response) {
-                console.error('API Error:', error.response.status, error.response.data);
-                console.error('URL:', `${api_url}/api/${slug}/order-items`);
-            } else {
-                console.error('Network Error:', error.message);
-            }
-        }
-    };
-      
     useEffect(() => {
         if (paymentMethod === 'qr') {
             fetchPaymentChanels(); // ดึง URL QR Code
         }
     }, [paymentMethod]);
+
+
+    
+    useEffect(() => {
+        console.log("📦 ตะกร้าสินค้า:", cart);
+    }, [cart]);
+    
     
     const updateQuantity = (productId, delta) => {
-        setCart((prevCart) =>
-            prevCart
-                .map((item) =>
-                    item.id === productId ? { ...item, quantity: item.quantity + delta } : item
-                )
-                .filter(item => item.quantity > 0)
+        if (!productId) {
+            console.error("❌ ไม่พบ productId");
+            return;
+        }
+    
+        setCart(prevCart =>
+            prevCart.map(item =>
+                item.product_id === productId
+                    ? { ...item, quantity: Math.max(1, (item.quantity ?? 0) + delta) }
+                    : item
+            )
         );
     };
+   
+    
+    
     
     const handlePaymentChange = (selectedMethod) => {
         setPaymentMethod(selectedMethod); // บันทึกวิธีการชำระเงินที่เลือก
@@ -690,32 +728,186 @@ const fetchOrderDetails = async (orderId) => {
         setQrCodeData(qrData);
     };
     
+    
     const clearCart = () => {
         Swal.fire({
-            title: 'คุณแน่ใจหรือไม่?',
-            text: "คุณต้องการเคลียเมนูทั้งหมดออกหรือไม่",
-            icon: 'warning',
+            title: 'กรุณากรอกรหัสผ่านเพื่อยืนยันการยกเลิกออเดอร์',
+            input: 'password',  // ใช้ช่องกรอกรหัสผ่าน
+            inputPlaceholder: 'กรอกรหัสผ่านของคุณ',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'ใช่, เคลีย!',
+            confirmButtonText: 'ยืนยันการยกเลิก',
             cancelButtonText: 'ยกเลิก',
+            showLoaderOnConfirm: true,  // แสดงการโหลดเมื่อกดปุ่มยืนยัน
+            preConfirm: (password) => {
+                return new Promise((resolve, reject) => {
+                    // ตรวจสอบรหัสผ่าน
+                    const storedPassword = localStorage.getItem('password'); // รหัสผ่านที่เก็บไว้ใน localStorage
+                    if (password === storedPassword) {
+                        resolve(); // ถ้ารหัสผ่านถูกต้องให้ดำเนินการ
+                    } else {
+                        reject('รหัสผ่านไม่ถูกต้อง');
+                    }
+                });
+            }
         }).then((result) => {
             if (result.isConfirmed) {
-                setCart([]);
-                setReceivedAmount(0);
-                setBillDiscount(0);
-                setBillDiscountType("THB");
-                setOrderReceived(false);
-                setIsBillPaused(false);
-                Swal.fire('เคลียแล้ว!', 'เมนูทั้งหมดถูกเคลียเรียบร้อยแล้ว', 'success');
+                Swal.fire({
+                    title: 'คุณแน่ใจหรือไม่?',
+                    text: "คุณต้องการยกเลิกออเดอร์และเคลียร์เมนูทั้งหมดออกหรือไม่?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'ใช่, ยกเลิกออเดอร์!',
+                    cancelButtonText: 'ยกเลิก',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // ตรวจสอบว่า orderId มีค่าหรือไม่
+                        if (orderId) {
+                            console.log("Order ID:", orderId);
+    
+                            // เปลี่ยนสถานะเป็น 'C' เมื่อยกเลิกออเดอร์
+                            updateOrderStatus(orderId, 'C')
+                                .then(() => {
+                                    // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1)
+                                    updateTableStatus(tableCode, 1, 'Y')  // ใช้ tableCode ที่ได้จาก API
+                                        .then(() => {
+                                            // รีเซ็ตค่าต่าง ๆ ในตะกร้า
+                                            setCart([]);
+                                            setReceivedAmount(0);
+                                            setBillDiscount(0);
+                                            setBillDiscountType("THB");
+                                            setOrderReceived(false);
+                                            setIsBillPaused(false);
+                                            setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
+    
+                                            Swal.fire({
+                                                title: 'ออเดอร์ถูกยกเลิก!',
+                                                text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
+                                                icon: 'success',
+                                                timer: 2000,
+                                                showConfirmButton: false
+                                            });
+                                        })
+                                        .catch((error) => {
+                                            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดตสถานะโต๊ะได้', 'error');
+                                            console.error("Error updating table status:", error);
+                                        });
+                                })
+                                .catch((error) => {
+                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                                    console.error("Error cancelling order:", error);
+                                });
+                        } else {
+                            Swal.fire('ไม่พบหมายเลขออเดอร์', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                        }
+                    }
+                });
             }
+        }).catch((error) => {
+            Swal.fire('เกิดข้อผิดพลาด', error, 'error');
         });
     };
+    
+    
+    // ฟังก์ชันตรวจสอบรหัสผ่าน
+    const getStoredPassword = () => {
+        // สมมุติว่าเก็บรหัสผ่านใน localStorage หรือ sessionStorage
+        return localStorage.getItem('userPassword');  // สามารถดึงจากระบบเก็บข้อมูลได้
+    };
+    
+    // ฟังก์ชันอัปเดตสถานะออเดอร์
+    const updateOrderStatus = async (orderId, status) => {
+        if (!orderId) {
+            console.error("Order ID is missing");
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขออเดอร์ กรุณาลองอีกครั้ง', 'error');
+            return false;
+        }
+    
+        try {
+            const { api_url, slug, authToken } = getApiConfig();
+    
+            const response = await axios.put(
+                `${api_url}/${slug}/orders/${orderId}`, 
+                {
+                    status: status,  // ส่งแค่สถานะ
+                },
+                {
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}` 
+                    }
+                }
+            );
+    
+            if (response.status === 200) {
+                console.log(`✅ อัปเดตสถานะของออเดอร์ ${orderId} เป็น ${status}`);
+                return true;
+            } else {
+                console.error('❌ ข้อผิดพลาดในการอัปเดตสถานะ:', response.data);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการอัปเดตสถานะ:', error.response ? error.response.data : error.message);
+            return false;
+        }
+    };
+    
+    // ฟังก์ชันอัปเดตสถานะโต๊ะ
+    const updateTableStatus = async (tableCode, tableFreeStatus, tableStatus) => {
+        if (!tableCode) {
+            console.error("Table code is missing");
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขโต๊ะ กรุณาลองอีกครั้ง', 'error');
+            return false;
+        }
+    
+        try {
+            const { api_url, slug, authToken } = getApiConfig();
+    
+            const response = await axios.put(
+                `${api_url}/${slug}/table_codes/${tableCode}`,
+                { 
+                    tableFree: tableFreeStatus,  // ส่งสถานะ tableFree เป็น 1
+                    status: tableStatus  // ส่งสถานะของโต๊ะเป็น 'Y'
+                },
+                {
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}` 
+                    }
+                }
+            );
+    
+            if (response.status === 200) {
+                console.log(`✅ อัปเดตสถานะของโต๊ะ ${tableCode} เป็น tableFree: ${tableFreeStatus}, status: ${tableStatus}`);
+                return true;
+            } else {
+                console.error('❌ ข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', response.data);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', error.response ? error.response.data : error.message);
+            return false;
+        }
+    };
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     const calculateTotalPaid = () => {
         const totalPaid = payments.reduce((acc, payment) => acc + payment.amount, 0); // รวมยอดการชำระทั้งหมดจากประวัติการชำระ
         return totalPaid;
     };
+    
     
     const calculateDiscountedPrice = (price, discount, discountType) => {
         if (discountType === 'THB') {
@@ -731,35 +923,32 @@ const fetchOrderDetails = async (orderId) => {
             let api_url = localStorage.getItem('url_api') || 'https://default.api.url';
             const slug = localStorage.getItem('slug') || 'default_slug';
             const authToken = localStorage.getItem('token') || 'default_token';
-    
+        
             // ตรวจสอบว่า api_url มี /api ต่อท้ายหรือไม่
             if (!api_url.endsWith('/api')) api_url += '/api';
-    
+        
             // ใช้เส้นทาง /payments แทน /payments/{order_id}/list
             const url = `${api_url}/${slug}/payments`;
-    
+        
             // ตรวจสอบข้อมูลที่จำเป็น
             if (!orderId || !paymentMethod || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
                 console.error('❌ ข้อมูลไม่ถูกต้อง:', { orderId, paymentMethod, amount });
                 throw new Error('ข้อมูลชำระเงินไม่ถูกต้อง');
             }
-    
+        
             const paymentData = {
                 order_id: orderId,
-                pay_channel_id: paymentMethod, // ไม่ต้องกำหนดเอง ให้ใช้ค่าที่เลือกจาก dropdown
-                payment_date: new Date().toISOString(),
-                amount: parseFloat(amount),
-                icome: parseFloat(receivedAmount),
-                balances: balances,
-                money_changes: moneyChanges.toFixed(2),
-                status: 'PARTIAL',
+                pay_channel_id: paymentMethod, // ใช้ค่าที่เลือกจาก dropdown
+                payment_date: new Date().toISOString(), // บันทึกวันที่และเวลาปัจจุบัน
+                amount: parseFloat(amount), // ตรวจสอบว่าเป็นจำนวนจริง
+                icome: parseFloat(receivedAmount), // จำนวนที่ได้รับจากลูกค้า
+                balances: balances, // ยอดคงเหลือที่ต้องชำระ
+                money_changes: moneyChanges.toFixed(2), // เงินทอนที่ต้องคืนให้ลูกค้า
+                status: 'PARTIAL', // สถานะการชำระเงิน
             };
-            
-            console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
-            
     
             console.log("📤 ส่งข้อมูลแยกชำระ:", paymentData);
-    
+        
             // ส่งข้อมูลการชำระเงินไปยัง API
             const response = await axios.post(url, paymentData, {
                 headers: {
@@ -767,9 +956,15 @@ const fetchOrderDetails = async (orderId) => {
                     'Authorization': `Bearer ${authToken}`,
                 },
             });
-    
+        
+            // ตรวจสอบการตอบกลับจาก API
             if (response.data && response.data.success) {
                 console.log('✅ บันทึกข้อมูลการแยกชำระสำเร็จ:', response.data);
+                Swal.fire({
+                    title: 'สำเร็จ',
+                    text: 'ข้อมูลการแยกชำระถูกบันทึกแล้ว',
+                    icon: 'success',
+                });
             } else {
                 throw new Error('API ไม่สามารถบันทึกข้อมูลการแยกชำระได้');
             }
@@ -779,12 +974,13 @@ const fetchOrderDetails = async (orderId) => {
         }
     };
     
-    const paymentDate = new Date('2025-02-06T03:33:15.615Z');  
+    
+    const paymentDate = new Date('2025-02-06T03:33:15.615Z');  // ใช้เวลา UTC
 
     // แสดงวันที่และเวลาในรูปแบบที่ต้องการ โดยกำหนดเขตเวลา
     const formattedDate = paymentDate.toLocaleString('th-TH', {
-        timeZone: 'Asia/Bangkok',  
-        weekday: 'long',           
+        timeZone: 'Asia/Bangkok',  // เปลี่ยนเขตเวลาเป็น Bangkok
+        weekday: 'long',           // วันในสัปดาห์ (long format)
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -792,6 +988,9 @@ const fetchOrderDetails = async (orderId) => {
         minute: 'numeric',
         second: 'numeric'
     });
+    
+    
+   
     
     //ดึงประวัติการเเยกชำระ
     const fetchPartialPayments = async (orderId) => {
@@ -880,6 +1079,7 @@ const fetchOrderDetails = async (orderId) => {
         , 0) || 0;
     };
     
+    
     // ✅ ใช้ useMemo เพื่อลดการคำนวณที่ไม่จำเป็น
     const calculateChange = () => {
         const remainingDue = calculateRemainingDue(partialPayments);
@@ -948,6 +1148,8 @@ const fetchOrderDetails = async (orderId) => {
     
         return Math.round(vatAmount); // ✅ ปัดเศษค่าภาษีให้เป็นจำนวนเต็มบาท
     };
+
+
 
     // ✅ ประกาศฟังก์ชันก่อน
     const calculateRemainingDue = (partialPayments = []) => {
@@ -1064,6 +1266,8 @@ const fetchOrderDetails = async (orderId) => {
         }
     };
     
+    
+    
     useEffect(() => {
         calculateTotalWithVAT();
     }, [vatType]); // ใช้ useEffect ติดตามค่า vatType
@@ -1072,7 +1276,6 @@ const fetchOrderDetails = async (orderId) => {
     const receiveOrder = async () => {
         try {
             const { api_url, slug, authToken } = getApiConfig(); // ดึงค่าจากฟังก์ชัน getApiConfig
-    
             const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
             const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0;
             console.log("Total Amount with VAT (ยอดรวม):", totalAmountWithVAT);
@@ -1101,7 +1304,7 @@ const fetchOrderDetails = async (orderId) => {
                 net_amount: totalAmountWithVAT.toFixed(2),
                 status: 'N',
                 tables_id: tableCode || null,
-                created_by:localStorage.getItem('userId'),
+                created_by: localStorage.getItem('userId'),
                 vatType,
                 items: cart.map((item) => ({
                     product_id: item.id || 0,
@@ -1123,6 +1326,13 @@ const fetchOrderDetails = async (orderId) => {
     
             // ส่งคำขอสร้างออเดอร์
             const newOrder = await sendOrder(orderData, api_url, slug, authToken); 
+    
+            // ✅ เคลียร์ตะกร้าหลังจากรับออเดอร์สำเร็จ
+            setCart([]); 
+    
+            // ✅ โหลดข้อมูลออเดอร์ที่เพิ่งสร้าง
+            fetchOrderData(newOrder.id); 
+    
             setOrderNumber(newOrder.order_number);
             setOrderId(newOrder.id);
             setOrderReceived(true);
@@ -1166,6 +1376,29 @@ const fetchOrderDetails = async (orderId) => {
             Swal.fire('Error', `Could not receive order: ${error.message}`, 'error');
         }
     };
+    
+
+    const fetchOrderData = async (orderId) => {
+        try {
+            const { api_url, slug, authToken } = getApiConfig();
+            const response = await axios.get(`${api_url}/${slug}/orders/${orderId}`, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${authToken}`,
+                },
+            });
+    
+            if (response.status === 200) {
+                console.log("Order Data:", response.data);
+                setOrderDetails(response.data); // สมมติว่ามี state `setOrderDetails`
+            } else {
+                throw new Error(`Unexpected response status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error("Error fetching order data:", error);
+            Swal.fire('Error', `Could not load order data: ${error.message}`, 'error');
+        }
+    };
     useEffect(() => {
         if (orderId) {
             setOrderReceived(true);  // เมื่อออเดอร์ถูกดึงมาแล้ว ให้แสดงบล็อกคำนวณ
@@ -1181,7 +1414,10 @@ const fetchOrderDetails = async (orderId) => {
             return;
         }
     
-        const endpoint = `${apiUrl}/api/${slug}/orders/${orderId}/items`;
+        // ✅ แก้ปัญหา URL ซ้ำ `/api/api/`
+        let endpoint = `${apiUrl}/api/${slug}/orders/${orderId}`;
+        endpoint = endpoint.replace(/\/api\/api\//, "/api/");
+    
         console.log("📡 กำลังส่งข้อมูลไปยัง API:", endpoint);
     
         try {
@@ -1198,56 +1434,6 @@ const fetchOrderDetails = async (orderId) => {
                 console.warn(`⚠️ ลองส่ง API อีกครั้ง... เหลือ ${retry} ครั้ง`);
                 return addItemsToDatabase(orderId, items, retry - 1);
             }
-        }
-    };
-    
-    const addOrderItems = async () => {
-        if (!orderId) {
-            console.warn("⚠️ Order ID ไม่ถูกต้อง กำลังสร้างออเดอร์ใหม่...");
-            await receiveOrder();
-        }
-    
-        if (!orderId) {
-            console.error("❌ ไม่สามารถสร้าง Order ID ได้");
-            return;
-        }
-    
-        const userId = localStorage.getItem('userId') || "1";
-        console.log("📌 User ID ที่ใช้ส่งไปยัง API:", userId);
-    
-        // ✅ ตรวจสอบว่าสินค้าใหม่ซ้ำกับสินค้าเดิมหรือไม่
-        const existingItems = cart.reduce((acc, item) => {
-            acc[item.id] = item.quantity;
-            return acc;
-        }, {});
-    
-        const newItems = cart
-            .filter((item) => item.id > 0)
-            .map((item) => ({
-                product_id: item.id,
-                p_name: item.p_name || 'ไม่มีชื่อสินค้า',
-                quantity: (existingItems[item.id] || 0) + (item.quantity || 1), // ✅ รวมจำนวนสินค้าเดิม
-                price: item.price || 0,
-                created_by: userId,
-                total: calculateDiscountedPrice(item.price, item.discount, item.discountType) * item.quantity || 0,
-            }));
-    
-        if (newItems.length === 0) {
-            console.warn("⚠️ ไม่มีสินค้าให้เพิ่ม (product_id เป็น 0 ทั้งหมด)");
-            return;
-        }
-    
-        console.log("🛒 รายการสินค้าที่จะเพิ่ม:", newItems);
-    
-        try {
-            await addItemsToDatabase(orderId, newItems);
-            await updateOrderInDatabase(orderId, newItems); 
-            
-            // ✅ รีเซ็ตตะกร้าแล้วโหลดข้อมูลใหม่
-            await fetchOrderDetails(orderId);
-            
-        } catch (error) {
-            console.error("❌ ไม่สามารถเพิ่มสินค้าไปที่ฐานข้อมูลได้:", error);
         }
     };
 
@@ -1392,12 +1578,7 @@ const fetchOrderDetails = async (orderId) => {
     
     
     const formattedTableCode = `T${String(tableCode).padStart(3, '0')}`;
-    // ฟังก์ชันคำนวณยอดสุทธิ
-    // const calculateNetAmount = (totalDue, billDiscount) => {
-    //     return Number(totalDue.toFixed(2)); // ยอดรวมไม่ลดซ้ำ
-    // };
 
-    // ฟังก์ชันรีเซ็ตสถานะหลังชำระเงินสำเร็จ
     const resetStateAfterSuccess = () => {
         setTemporaryPayments([]); // ล้างข้อมูลการแยกชำระเงิน
         setShowReceipt(false);
@@ -1580,8 +1761,384 @@ const fetchOrderDetails = async (orderId) => {
         }
     };
     
+    // ฟังก์ชันสำหรับเปิดป๊อบอัพเพิ่มรายการอาหาร
+ // ✅ 1. ฟังก์ชันเปิด Popup เพิ่มสินค้า
+const handleAddOrderItemsPopup = () => {
+    setShowAddItemPopup(true);
+};
+
+// ✅ 2. ฟังก์ชันเพิ่มสินค้าเข้าไปในออเดอร์
+const handleAddToOrder = (product, selectedQuantity) => {
+    setSelectedItems(prevItems => {
+        const exists = prevItems.find(item => item.id === product.id);
+        if (exists) {
+            return prevItems.map(item =>
+                item.id === product.id 
+                    ? { ...item, quantity: item.quantity + selectedQuantity } 
+                    : item
+            );
+        } else {
+            return [...prevItems, { ...product, quantity: selectedQuantity }];
+        }
+    });
+};
+
+// ✅ 3. ฟังก์ชันลบสินค้าออกจากออเดอร์
+const handleRemoveItem = (productId) => {
+    setSelectedItems(selectedItems.filter(item => item.id !== productId));
+};
+
+// ✅ 4. ฟังก์ชันดึงรายการสินค้าในออเดอร์ที่มีอยู่แล้ว
+const fetchExistingOrderItems = async () => {
+    try {
+        const { api_url, slug, authToken } = getApiConfig();
+        const response = await axios.get(
+            `${api_url}/${slug}/orders/${orderId}`,
+            { headers: { 'Authorization': `Bearer ${authToken}` } }
+        );
+        return response.data.items || [];
+    } catch (error) {
+        console.error("Error fetching existing order items:", error);
+        return [];
+    }
+};
+
+// ✅ 5. ฟังก์ชันยืนยันการเพิ่มสินค้า
+const handleConfirm = async () => {
+    try {
+        console.log('handleConfirm ถูกเรียก!');
+        console.log('Selected Items:', selectedItems);
+
+        const result = await Swal.fire({
+            title: 'ยืนยันการเพิ่มอาหาร?',
+            text: 'ต้องการเพิ่มรายการนี้หรือไม่?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยัน',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isDismissed) {
+            console.log("❌ ผู้ใช้กดยกเลิก");
+            return;
+        }
+
+        console.log("✅ ผู้ใช้กดยืนยัน");
+
+        const existingOrderItems = await fetchExistingOrderItems();
+
+        const updatedItems = selectedItems.map(item => {
+            const existingItem = existingOrderItems.find(orderItem => orderItem.product_id === item.id);
+            const newQuantity = existingItem ? existingItem.quantity + item.quantity : item.quantity;
+            return {
+                product_id: item.id,
+                p_name: item.p_name,
+                quantity: newQuantity,
+                price: item.price || 0,
+                total: newQuantity * (item.price || 0),
+            };
+        });
+
+        const { api_url, slug, authToken } = getApiConfig();
+        const dataToSend = { items: updatedItems };
+
+        console.log("Sending data to API:", dataToSend);
+
+        const response = await axios.post(
+            `${api_url}/${slug}/orders/${orderId}`,
+            dataToSend,
+            { 
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                } 
+            }
+        );
+
+        if (response.status === 200) {
+            await Swal.fire({
+                icon: 'success',
+                title: 'เพิ่มรายการสำเร็จ!',
+                text: 'รายการของคุณได้รับการอัปเดตเรียบร้อยแล้ว',
+                confirmButtonColor: '#2ecc71',
+            });
+
+            setSelectedItems([]); 
+            setShowAddItemPopup(false);
+
+            await loadTableLastOrder(tableCode);
+            await refreshOrderData(response.data.order.id);
+        }
+    } catch (error) {
+        await Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: error.message || 'ไม่สามารถเพิ่มรายการได้ กรุณาลองใหม่',
+            confirmButtonColor: '#e74c3c',
+        });
+    }
+};
+
+
+
+
+
+// ✅ 6. ฟังก์ชันดึงข้อมูลออเดอร์ล่าสุดหลังจากบันทึกสำเร็จ
+const refreshOrderData = async (orderId) => {
+    if (!orderId) {
+        console.error("❌ Order ID ไม่ถูกต้อง");
+        return;
+    }
+
+    const api_url = localStorage.getItem('url_api');
+    const slug = localStorage.getItem('slug');
+    const authToken = localStorage.getItem('token');
+
+    if (!api_url || !slug) {
+        console.error("⚠️ API URL หรือ Slug ไม่ถูกต้อง");
+        return;
+    }
+
+    const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
+    console.log("📡 กำลังดึงข้อมูลออเดอร์ที่:", endpoint);
+
+    try {
+        const response = await axios.get(endpoint, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        console.log("📦 API Response:", response.data);
+
+        if (response.data && Array.isArray(response.data.items)) {
+            // ✅ อัปเดตรายการสินค้าและเติม URL รูปภาพ
+            const updatedCart = response.data.items.map(item => {
+                const productData = products.find(prod => prod.id === item.product_id);
+                return {
+                    ...item,
+                    image: productData ? productData.image : `${api_url}/storage/app/public/product/${slug}/${item.product_id}.jpg`, // ดึงจาก API ถ้าไม่มี
+                };
+            });
+
+            setCart(updatedCart);  // ✅ อัปเดตตะกร้าให้มีรูปภาพ
+        } else {
+            console.warn("⚠️ ไม่มีข้อมูลสินค้าในออเดอร์");
+            setCart([]);  // ✅ ล้างตะกร้าหากไม่มีสินค้า
+        }
+
+    } catch (error) {
+        console.error("❌ Error fetching order details:", error);
+        setCart([]); // ✅ ล้างตะกร้าหากเกิดข้อผิดพลาด
+    }
+};
+
+
+// ✅ 7. ฟังก์ชันยกเลิกการเพิ่มสินค้า
+const handleCancel = () => {
+    Swal.fire({
+        icon: 'info',
+        title: 'ปิดหน้าเพิ่มอาหาร',
+        text: 'ไม่มีการเพิ่มรายการ',
+        confirmButtonColor: '#f39c12',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            setShowPopup(false); // ปิดป๊อบอัพหลักหลังจากกด "OK"
+        }
+    });
+};
+
+// ✅ 8. ใช้ useEffect ปิด Popup เมื่อไม่มีสินค้าใน selectedItems
+useEffect(() => {
+    if (selectedItems.length === 0) {
+        setShowAddItemPopup(false);
+    }
+}, [selectedItems]);
+                   
+    
+
+
+
+    
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const { api_url, slug, authToken } = getApiConfig();  // ดึงข้อมูลจาก getApiConfig()
+                const response = await axios.get(`${api_url}/${slug}/products`, {
+                    headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                });
+    
+                if (Array.isArray(response.data)) {
+                    setProducts(response.data);  // เก็บข้อมูลที่ได้จาก API
+                } else {
+                    console.warn('API response format is incorrect');
+                    setProducts([]);  // หากข้อมูลไม่ถูกต้อง ให้ตั้งค่าเป็นอาเรย์ว่าง
+                }
+            } catch (error) {
+                console.error('Error fetching products:', error.message);
+                setProducts([]);  // หากเกิดข้อผิดพลาด ให้ตั้งค่าเป็นอาเรย์ว่าง
+            }
+        };
+    
+        fetchProducts();  // เรียกฟังก์ชัน fetchProducts
+    
+    }, []);  // ใช้ [] เป็นการ run ฟังก์ชันนี้แค่ครั้งเดียวตอน component mount
+    // 
+
     return (
         <div style={styles.pageContainer}>
+            {showAddItemPopup && (
+                <div style={{
+                    position: 'fixed', top: '0', left: '0', width: '100%', height: '100vh', // ขยายป๊อบอัพเต็มความสูง
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)', // สีพื้นหลังเบลอ
+                    zIndex: 999, // กำหนดให้ป๊อบอัพอยู่ด้านบน
+                    backdropFilter: 'blur(10px)', // เบลอพื้นหลัง
+                    display: 'flex', justifyContent: 'center', alignItems: 'center'
+                }}>
+                    <div style={{
+                        backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
+                        zIndex: 1000, width: '100%', maxWidth: '1100px', display: 'flex', gap: '20px', overflow: 'hidden',
+                        transition: 'all 0.3s ease-in-out', maxHeight: '80vh' // ขยายให้เต็มความสูงที่จำกัด
+                    }}>
+                        {/* ฝั่งซ้าย: รายการอาหารทั้งหมด */}
+                        <div style={{
+                            flex: 1, overflowY: 'auto', maxHeight: '400px', paddingRight: '20px', padding: '0 50px',
+                            display: 'flex', flexDirection: 'column', gap: '1px'
+                        }}>
+                            <h3 style={{
+                                fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '1px', textAlign: 'center',
+                                position: 'sticky', top: '0', backgroundColor: '#fff', zIndex: 2
+                            }}>เลือกอาหาร</h3>
+
+                            {products
+                                .filter(product => product.p_name) // กรองเฉพาะรายการที่มีชื่อ
+                                .map((product) => (
+                                    <div key={product.id} style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #eee',
+                                        transition: 'all 0.3s ease',
+                                    }}>
+                                        <p style={{ fontSize: '16px', color: '#000000', flex: 1 }}>{product.p_name}</p>
+                                        <p style={{ fontSize: '16px', color: '#000000', marginRight: '20px' }}>{product.price} บาท</p>
+                                        <button
+                                            onClick={() => handleAddToOrder(product, selectedQuantity)}
+                                            style={{
+                                                backgroundColor: '#0c9fa9', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '5px',
+                                                cursor: 'pointer', transition: 'background-color 0.3s ease',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f7b82'}
+                                        >
+                                            เพิ่ม
+                                        </button>
+                                    </div>
+                                ))
+                            }
+                        </div>
+
+
+                        {/* ฝั่งขวา: อาหารที่เลือก และปุ่ม */}
+                        <div style={{
+                            flex: 1, backgroundColor: '#f9f9f9', boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
+                            height: '100%', maxHeight: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto',gap: '10px'
+                        }}>
+                            <h3 style={{
+                                fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '1px', textAlign: 'center',
+                                position: 'sticky', top: '1px', backgroundColor: '#ffffff',
+                            }}>รายการที่เลือก</h3>
+                            {selectedItems.length > 0 ? (
+                            <div style={{
+                                height: '700px', // กำหนดความสูงคงที่ของพื้นที่แสดงผล
+                                overflowY: 'auto', // ให้เลื่อนขึ้นลงได้เมื่อเนื้อหามีมากเกิน
+                                overflowX: 'hidden', // ป้องกันการเลื่อนแบบแนวนอน
+                                paddingRight: '100px', // เว้นระยะจากขอบด้านขวา
+                            }}>
+                                 {selectedItems.map((item) => (
+                                    <div key={item.id} style={{
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'space-between',
+                                        borderBottom: '5px solid #ffffff',
+                                        width: '120%', 
+                                        backgroundColor: '#ececec4b', 
+                                        transition: 'all 0.3s ease'
+                                    }}>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            alignItems: 'flex-start' 
+                                        }}>
+                                            <p style={{ 
+                                                fontSize: '16px', 
+                                                color: '#000000', 
+                                                marginBottom: '5px' 
+                                            }}>{item.p_name}</p>
+                                            <p style={{ 
+                                                fontSize: '0.9em', 
+                                                color: '#555', 
+                                                marginTop: '0',
+                                                marginRight: '230px' 
+ 
+                                            }}>x {item.quantity} ชิ้น</p>
+                                        </div>
+                                        <p style={{ 
+                                            fontSize: '16px', 
+                                            color: '#333', 
+                                        }}>{item.price} บาท</p>
+                                        <button
+                                            onClick={() => handleRemoveItem(item.id)}
+                                            style={{
+                                                backgroundColor: '#e30d11', 
+                                                color: 'white', 
+                                                padding: '5px 10px', 
+                                                border: 'none', 
+                                                borderRadius: '5px',
+                                                cursor: 'pointer', 
+                                                transition: 'background-color 0.3s ease',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
+                                        >
+                                            ลบ
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            ) : (
+                                <p style={{ fontSize: '16px', color: '#777', textAlign: 'center' }}>ยังไม่มีรายการที่เลือก</p>
+                            )}
+
+                            <div style={{
+                                display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '20px', width: '100%'
+                            }}>
+                                <button
+                                    onClick={handleConfirm}
+                                    style={{
+                                        backgroundColor: '#0c9fa9', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
+                                        fontSize: '16px', transition: 'background-color 0.3s ease',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
+                                >
+                                    ยืนยัน
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleCancel();  // เรียกฟังก์ชัน handleCancel สำหรับแสดงข้อความ
+                                        setShowAddItemPopup(false);  // ปิดป๊อบอัพ
+                                    }}
+                                    style={{
+                                        backgroundColor: '#f39c12', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
+                                        fontSize: '16px', transition: 'background-color 0.3s ease',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
+                                >
+                                    ยกเลิก
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {showQRCode && (
                 <div style={{
                     position: 'fixed',
@@ -1645,7 +2202,6 @@ const fetchOrderDetails = async (orderId) => {
                     </div>
                 </div>
             )}
- 
         <div style={styles.sidebarContainer}>
             <Sidebar onCategorySelect={(categoryId) => setSelectedCategoryId(categoryId)} />
         </div>
@@ -1829,7 +2385,12 @@ const fetchOrderDetails = async (orderId) => {
                             );
                         })}
                     </div>
+
+                    
                 </div>
+
+
+
                 </div>
                         <div style={styles.searchAndTableCodeContainer}>
                             <div style={styles.searchContainer}>
@@ -1847,58 +2408,71 @@ const fetchOrderDetails = async (orderId) => {
                         </div>
                     </div>
                     <div style={styles.products}>
-                        {filteredProducts.map((product) => (
-                            <div
-                                key={product.id}
-                                id={`product-${product.id}`} // เพิ่ม ID สำหรับ Animation
-                                style={{
-                                    ...styles.productCard,
-                                    position: 'relative',
-                                    cursor: product.status === 'Y' ? 'pointer' : 'not-allowed',
-                                }}
-                                onClick={() => addToCart(product)} // เรียกฟังก์ชันเมื่อคลิก
-                            >
-                                {product.status === 'N' && (
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            height: '100%',
-                                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#fff',
-                                            fontSize: '1.5em',
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        หมด
-                                    </div>
-                                )}
-                                {product.image ? (
-                                    <Image
-                                        src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${product.image}`}
-                                        alt={product.p_name}
-                                        width={100}
-                                        height={100}
-                                        quality={100}
-                                        style={styles.productImage}
-                                    />
-                                ) : (
-                                    <div style={styles.noImage}>
-                                        <span style={styles.noImageText}>ไม่มีภาพ</span>
-                                    </div>
-                                )}
-                                <div style={styles.productDetails}>
-                                    <p style={styles.productName}>{product.p_name}</p>
-                                    <p style={styles.productPrice}>{product.price.toFixed(2)}</p>
+                    {filteredProducts.map((product) => (
+                        <div
+                            key={product.id}
+                            id={`product-${product.id}`} // เพิ่ม ID สำหรับ Animation
+                            style={{
+                                ...styles.productCard,
+                                position: 'relative',
+                                cursor: orderReceived ? 'not-allowed' : (product.status === 'Y' ? 'pointer' : 'not-allowed'),
+                                opacity: orderReceived ? 0.5 : 1, // ลดความชัดเจนเมื่อถูกล็อก
+                            }}
+                            onClick={() => {
+                                if (orderReceived) {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'ไม่สามารถเลือกสินค้าได้',
+                                        text: 'ออเดอร์นี้ได้รับการยืนยันแล้ว กรุณากด "เพิ่มรายการอาหาร" หากต้องการเพิ่ม',
+                                        confirmButtonColor: '#f39c12',
+                                    });
+                                    return; // หยุดทำงาน
+                                }
+                                addToCart(product); // ถ้าไม่ถูกล็อก ให้เพิ่มสินค้าได้
+                            }}
+                        >
+                            {product.status === 'N' && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff',
+                                        fontSize: '1.5em',
+                                        fontWeight: 'bold',
+                                    }}
+                                >
+                                    หมด
                                 </div>
+                            )}
+                            {product.image ? (
+                                <Image
+                                    src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${product.image}`}
+                                    alt={product.p_name}
+                                    width={100}
+                                    height={100}
+                                    quality={100}
+                                    style={styles.productImage}
+                                />
+                            ) : (
+                                <div style={styles.noImage}>
+                                    <span style={styles.noImageText}>ไม่มีภาพ</span>
+                                </div>
+                            )}
+                            <div style={styles.productDetails}>
+                                <p style={styles.productName}>{product.p_name}</p>
+                                <p style={styles.productPrice}>{product.price.toFixed(2)}</p>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
+                </div>
+
                 </div>
             </div>
                 <div style={styles.cart}>
@@ -1938,8 +2512,8 @@ const fetchOrderDetails = async (orderId) => {
                                     {/* ✅ ตรวจสอบว่ามีภาพหรือไม่ */}
                                     {item.image ? (
                                         <Image
-                                            src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${item.image}`}
-                                            alt={item.p_name ?? "ไม่มีชื่อสินค้า"}
+                                        src={`${api_url.replace("/api", "")}/storage/app/public/product/${slug}/${item.image}`}
+                                        alt={item.p_name ?? "ไม่มีชื่อสินค้า"}
                                             width={100}
                                             height={100}
                                             quality={100}
@@ -1950,7 +2524,6 @@ const fetchOrderDetails = async (orderId) => {
                                             <span style={styles.noImageText}>ไม่มีภาพ</span>
                                         </div>
                                     )}
-
                                     <div style={styles.cartItemDetails}>
                                         <p style={styles.cartItemName}>{item.p_name ?? "ไม่มีชื่อสินค้า"}</p>
                                         <div style={styles.cartItemPriceDiscountRow}>
@@ -1969,14 +2542,14 @@ const fetchOrderDetails = async (orderId) => {
                                                             item.discountType
                                                         )
                                                     }
-                                                    style={{ flex: '1', width: '60px' }}
+                                                    style={{ width: '60px' }}
                                                 />
                                                 <select
                                                     value={item.discountType ?? "THB"}
                                                     onChange={(e) =>
                                                         handleItemDiscountChange(item.product_id, item.discount, e.target.value)
                                                     }
-                                                    style={{ flex: '1', width: '50px' }}
+                                                    style={{ width: '50px' }}
                                                 >
                                                     <option value="THB">บาท (฿)</option>
                                                     <option value="%">%</option>
@@ -1985,20 +2558,9 @@ const fetchOrderDetails = async (orderId) => {
                                         </div>
                                     </div>
 
-                                    <div style={styles.quantityControls}>
-                                        <button
-                                            onClick={() => updateQuantity(item.product_id, -1)}
-                                            style={styles.quantityButton}
-                                        >
-                                            -
-                                        </button>
-                                        <span style={styles.quantityDisplay}>{item.quantity ?? 1}</span>
-                                        <button
-                                            onClick={() => updateQuantity(item.product_id, 1)}
-                                            style={styles.quantityButton}
-                                        >
-                                            +
-                                        </button>
+                                    {/* จัดให้อยู่ในบรรทัดเดียวกัน */}
+                                    <div style={{ display: "flex", alignItems: "center", fontWeight: "bold", gap: "4px" }}>
+                                        <span style={{ whiteSpace: "nowrap" }}>x {item.quantity ?? 1}</span>
                                     </div>
                                 </div>
                             ))
@@ -2006,8 +2568,12 @@ const fetchOrderDetails = async (orderId) => {
                             <p>ไม่มีสินค้าในตะกร้า</p>
                         )}
                     </div>
-                    {/* บล็อกรวมยอดรวม */}
-                    <div
+
+
+
+
+                            {/* บล็อกรวมยอดรวม */}
+                            <div
                     style={{
                         ...styles.totalContainer,
                         boxShadow: '0 8px 15px rgba(0, 0, 0, 0.15)', // เงาชัดเจนขึ้น
@@ -2076,6 +2642,7 @@ const fetchOrderDetails = async (orderId) => {
                         </select> 
                     </div>
                 </div>
+
     {orderReceived && (
         <>
             <div style={styles.discountAndReceivedAmountRow}>
@@ -2108,6 +2675,7 @@ const fetchOrderDetails = async (orderId) => {
                         <option value="includeVat3">รวมภาษีมูลค่าเพิ่ม 3%</option>
                         <option value="excludeVat3">ไม่รวมภาษีมูลค่าเพิ่ม 3%</option>
                     </select>
+
                     <input
                         type="number"
                         placeholder="ส่วนลดรวม"
@@ -2135,6 +2703,9 @@ const fetchOrderDetails = async (orderId) => {
                             textAlign: 'right', // ✅ จัดข้อความให้อยู่ด้านขวา
                         }}
                     />
+
+
+
                     <select
                         value={billDiscountType}
                         onChange={(e) => setBillDiscountType(e.target.value)}
@@ -2293,19 +2864,18 @@ const fetchOrderDetails = async (orderId) => {
             </div>
         </>
     )}
-    {/* ปุ่มการทำงาน */}
+
+
+        {/* ปุ่มการทำงาน */}
         <div style={styles.paymentRow}>
             {orderReceived ? (
                 <button
-                    style={{
-                        ...styles.receiveOrderButton,
-                        ...(cart.length === 0 ? styles.buttonDisabled : {}),
-                    }}
-                    onClick={addOrderItems}
-                    disabled={cart.length === 0}
-                >
-                    อัพเดทอาหาร
+                        style={styles.receiveOrderButton}
+                        onClick={handleAddOrderItemsPopup} // เมื่อกดปุ่มให้แสดงป๊อบอัพ
+                    >
+                        เพิ่มรายการอาหาร
                 </button>
+            
             ) : (
                 <button
                     style={{
@@ -2357,7 +2927,11 @@ const fetchOrderDetails = async (orderId) => {
                         handlePartialPayment(); // ✅ ดำเนินการแยกชำระ
                     }
                 }}
-                disabled={!orderReceived || !paymentMethod || (receivedAmount <= 0 && calculateRemainingDue() !== 0)}
+                disabled={
+                    !orderReceived || 
+                    !paymentMethod || 
+                    ((receivedAmount <= 0 && calculateRemainingDue() !== 0) && calculateRemainingDue() > 0)
+                }
             >
                 {orderReceived && calculateRemainingDue() === 0
                     ? 'แสดงบิล'
@@ -2367,6 +2941,10 @@ const fetchOrderDetails = async (orderId) => {
                     ? 'ชำระด้วยบัตรเครดิต'
                     : 'ชำระเงิน'}
             </button>
+
+
+
+
         </div>
     </div>
             </div>
@@ -2427,6 +3005,7 @@ const fetchOrderDetails = async (orderId) => {
                 ×
             </button>
         </div>
+
         <div style={{
             maxHeight: '300px',
             overflowY: 'auto',
@@ -2476,20 +3055,21 @@ const fetchOrderDetails = async (orderId) => {
                         </div>
                     );
                 })
-                    ) : (
-                        <p style={{
-                            color: '#7f8c8d',
-                            textAlign: 'center',
-                            fontSize: '16px',
-                            fontWeight: '400',
-                        }}>
-                            ไม่มีประวัติการชำระ
-                        </p>
-                    )}
-                </div>
-            </div>
-        )}
-        {showReceipt && (
+            ) : (
+                <p style={{
+                    color: '#7f8c8d',
+                    textAlign: 'center',
+                    fontSize: '16px',
+                    fontWeight: '400',
+                }}>
+                    ไม่มีประวัติการชำระ
+                </p>
+            )}
+        </div>
+    </div>
+)}
+
+    {showReceipt && (
         <div style={styles.receiptOverlay}>
             <div style={styles.receiptContainer}>
                 <div style={styles.header}>
@@ -2617,9 +3197,10 @@ const fetchOrderDetails = async (orderId) => {
                     )}
                 </div>
             </div>
-        </div>  
+        </div>
     )}
-         </div>
+
+        </div>
     );
 } 
 
@@ -2630,9 +3211,9 @@ const styles = {
     popupTitle: { fontSize: '28px', fontWeight: 'bold', marginBottom: '20px', color: '#333', margin: '0px' },
     icon: { margin: '20px 0', cursor: 'pointer', borderRadius: '12px', padding: '5px', width: '10px', height: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.3s ease' },
     categoryRow: { display: 'flex', justifyContent: 'center', gap: '10px', margin: '0 auto', flexWrap: 'wrap', alignItems: 'center', width: '100%',},
-    searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '990px', padding: '10px', },
-    pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden',},
-    sidebarContainer: { flex: '0 0 100px' },
+    searchAndTableCodeContainer: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px', },
+    pageContainer: { display: 'flex', padding: '10px', height: '92vh',overflow: 'hidden', },
+    sidebarContainer: { flex: '0 0 100px', zIndex: 800  },
     cart: {width: '400px',overflowY: 'auto',overflowX: 'hidden',backgroundColor: '#f8f9fa',padding: '15px',borderRadius: '12px',marginTop: '-8px',display: 'flex',flexDirection: 'column',justifyContent: 'flex-start',boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',},    
     discountAndTotal: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' },
     totalText: { fontSize: '1.1rem',fontWeight: '400', textAlign: 'left', marginTop: '2px', color: '#444', paddingLeft: '5px', lineHeight: '1', fontFamily: '   Impact, sans-serif ', textTransform: 'uppercase', paddingBottom: '5px', letterSpacing: '2px', },
@@ -2647,7 +3228,7 @@ const styles = {
     headerContainer: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', position: 'sticky', top: '0', backgroundColor: '#f5f5f5', zIndex: 10, padding: '10px 0', width: '100%' },
     searchContainer: { display: 'flex', alignItems: 'center', width: '100%', gap: '10px', marginTop: '-10px' },
     mainContent: { display: 'flex', flex: 1, backgroundColor: '#f5f5f5', padding: '5px' },
-    productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto', marginLeft: '20px', paddingTop: '0px' },
+    productListContainer: { flex: 1, maxHeight: '92vh', overflowY: 'auto',overflowX: 'hidden', marginLeft: '20px', paddingTop: '0px' },
     pageTitle: { fontSize: '24px', fontWeight: 'bold', color: '#333' },
     tableCode: { fontSize: '15px', color: '#333' },
     receiveOrderButton: { flex: '1',padding: '10px',backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer',borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},    
@@ -2658,7 +3239,7 @@ const styles = {
     receiveOrderButton: { flex: 1, padding: '10px', backgroundColor: '#347cae',color: '#ffffff',border: 'none',cursor: 'pointer', borderRadius: '5px',fontWeight: 'bold',marginTop: '5px',transition: 'all 0.3s ease',},
     buttonDisabled: {backgroundColor: '#bbbbd6',color: '#666666',cursor: 'not-allowed', pointerEvents: 'none'},
     searchBar: { marginBottom: '10px', position: 'sticky', top: '40px', backgroundColor: '#f5f5f5', zIndex: 1, marginLeft: '100px' },
-    searchInput: { width: 'calc(930px - 150px)', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' },
+    searchInput: { width: 'calc(940px - 150px)', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' },
     products: { display: 'flex', flexWrap: 'wrap', gap: '15px', },
     productCard: {width: '120px',height: '100px',border: '1px solid #ddd',borderRadius: '8px',   cursor: 'pointer',   backgroundColor: '#ffffff',  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column',alignItems: 'center',padding: '15px',transition: 'transform 0.3s ease, box-shadow 0.3s ease',overflow: 'hidden',':hover': {transform: 'scale(1.05)',boxShadow: '0 8px 15px rgba(0, 0, 0, 0.2)',},},
     productImage: { width: '100px', height: '70px', objectFit: 'cover', borderRadius: '3px', },
@@ -2717,6 +3298,7 @@ const styles = {
 };
 
 // ซ่อนแถบเลื่อนใน WebKit browsers (Chrome, Safari และ Opera)
+
     // เพิ่ม CSS เข้าไปในหัวของเอกสาร
     if (typeof document !== 'undefined') {
         const styleSheet = document.createElement("style");
@@ -2824,62 +3406,295 @@ const styles = {
                     background-color: #d1f4e8;
                 }
         @keyframes pulse {
-            0% {transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
+        0% {transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
         }
-            50% {transform: scale(1.05); box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        50% {transform: scale(1.05); box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
         }
-            100% {transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
+        100% {transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0.7);
         }
-        }
-        @@keyframes colorTransitionBlue {
-            0% { border-color: #4c9eff; }
-            50% { border-color: #80b9ff; }
-            100% { border-color: #4c9eff; }
-        }
+    }
+    @@keyframes colorTransitionBlue {
+    0% { border-color: #4c9eff; }
+    50% { border-color: #80b9ff; }
+    100% { border-color: #4c9eff; }
+    }
 
-        @keyframes colorTransitionPurple {
-            0% { border-color: #b97aff; }
-            50% { border-color: #d09eff; }
-            100% { border-color: #b97aff; }
-        }
+    @keyframes colorTransitionPurple {
+        0% { border-color: #b97aff; }
+        50% { border-color: #d09eff; }
+        100% { border-color: #b97aff; }
+    }
 
-        @keyframes colorTransitionPink {
-            0% { border-color: #ff7dbf; }
-            50% { border-color: #ff99d9; }
-            100% { border-color: #ff7dbf; }
-        }
+    @keyframes colorTransitionPink {
+        0% { border-color: #ff7dbf; }
+        50% { border-color: #ff99d9; }
+        100% { border-color: #ff7dbf; }
+    }
 
-        @keyframes colorTransitionGreen {
-            0% { border-color: #78d259; }
-            50% { border-color: #98e78b; }
-            100% { border-color: #78d259; }
-        }
+    @keyframes colorTransitionGreen {
+        0% { border-color: #78d259; }
+        50% { border-color: #98e78b; }
+        100% { border-color: #78d259; }
+    }
 
-        @keyframes colorTransitionYellow {
-            0% { border-color: #ffeb4b; }
-            50% { border-color: #ffea76; }
-            100% { border-color: #ffeb4b; }
-        }
+    @keyframes colorTransitionYellow {
+        0% { border-color: #ffeb4b; }
+        50% { border-color: #ffea76; }
+        100% { border-color: #ffeb4b; }
+    }
 
-        @keyframes colorTransitionOrange {
-            0% { border-color: #ff9f0f; }
-            50% { border-color: #ffb84f; }
-            100% { border-color: #ff9f0f; }
-        }
+    @keyframes colorTransitionOrange {
+        0% { border-color: #ff9f0f; }
+        50% { border-color: #ffb84f; }
+        100% { border-color: #ff9f0f; }
+    }
 
-        /* กำหนดเอฟเฟกต์การคลิกและการโฟกัส */
-        .categoryCircle:active {
-            transform: scale(0.95);
-            box-shadow: 0px 5px 15px rgba(0, 123, 255, 0.8); /* เอฟเฟกต์เมื่อกด */
-        }
+    /* กำหนดเอฟเฟกต์การคลิกและการโฟกัส */
+    .categoryCircle:active {
+        transform: scale(0.95);
+        box-shadow: 0px 5px 15px rgba(0, 123, 255, 0.8); /* เอฟเฟกต์เมื่อกด */
+    }
 
-        .categoryCircle:focus {
-            outline: none; /* ลบเส้นขอบของเบราว์เซอร์ */
-            box-shadow: 0px 0px 12px rgba(0, 123, 255, 0.8); /* แสงเมื่อโฟกัส */
-        }
+    .categoryCircle:focus {
+        outline: none; /* ลบเส้นขอบของเบราว์เซอร์ */
+        box-shadow: 0px 0px 12px rgba(0, 123, 255, 0.8); /* แสงเมื่อโฟกัส */
+    }
+        .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4); /* พื้นหลังเบลอ */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modal-container {
+    background-color: white;
+    width: 90%;
+    max-width: 500px;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 80%;
+    animation: slideIn 0.3s ease-out;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    font-size: 1.5rem;
+    color: #333;
+    font-weight: bold;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #e74c3c;
+}
+
+.product-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+.product-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.select-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.select-button:hover {
+    background-color: #2980b9;
+}
+
+.selected {
+    background-color: #e74c3c;
+}
+
+.popup-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.confirm-button, .close-popup-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.confirm-button {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.close-popup-button {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.confirm-button:hover {
+    background-color: #27ae60;
+}
+
+.close-popup-button:hover {
+    background-color: #c0392b;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* มืดเบื้องหลัง */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.popup-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 400px;
+    box-shadow: 0px 10px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* ทำให้ปุ่มอยู่ด้านล่าง */
+    height: 100%; /* ให้ครอบคลุมพื้นที่ทั้งหมด */
+}
+
+.product-list {
+    flex-grow: 1; /* ทำให้ส่วนนี้เติบโตเต็มที่ */
+    overflow-y: auto; /* ถ้ารายการเยอะเกินก็สามารถเลื่อนลงได้ */
+}
+
+.popup-actions {
+    margin-top: 20px; /* ช่องว่างระหว่างรายการอาหารกับปุ่ม */
+    display: flex;
+    justify-content: space-between;
+}
 
 
-        .pulse-effect {animation: pulse 0.5s ease-out;background-color: #d9f7be !important;}
-        `;
-            document.head.appendChild(styleSheet);
-        }
+h3 {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.product-list {
+    width: 100%;
+    margin-bottom: 20px;
+    overflow-y: auto;
+    max-height: 250px;
+}
+
+.product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.select-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.select-button.selected {
+    background-color: #e74c3c;
+}
+
+.popup-actions {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.confirm-button, .close-popup-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.confirm-button {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.confirm-button:hover {
+    background-color: #27ae60;
+}
+
+.close-popup-button {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.close-popup-button:hover {
+    background-color: #c0392b;
+}
+
+
+
+    .pulse-effect {animation: pulse 0.5s ease-out;background-color: #d9f7be !important;}
+    `;
+        document.head.appendChild(styleSheet);
+    }
