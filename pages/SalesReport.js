@@ -5,6 +5,7 @@ import BackendSidebar from './components/backendsidebar';
 import Swal from 'sweetalert2';
 
     export default function SalesReport({ initialReportData, initialError }) {
+
         // การใช้ useState สำหรับสถานะของข้อมูล รายงาน, ข้อผิดพลาด และตัวกรองวันที่
         const [reportData, setReportData] = useState(initialReportData || []);
         const [error, setError] = useState(initialError || null);
@@ -21,7 +22,7 @@ import Swal from 'sweetalert2';
             });
         };
         
-                // ฟังก์ชันกรองข้อมูลตามวันที่ที่เลือก
+        // ฟังก์ชันกรองข้อมูลตามวันที่ที่เลือก
         const filterByDate = (data) => {
             if (!dateFilter) return data; // หากไม่มีวันที่เลือก จะไม่กรอง
             return data.filter(order =>
@@ -43,9 +44,11 @@ import Swal from 'sweetalert2';
         // ฟังก์ชันสำหรับแปลงวันที่และเวลาให้อยู่ในรูปแบบของประเทศไทย
         const formatDateTimeToThai = (utcDateTime) => {
             if (!utcDateTime) return 'N/A';
-            const date = new Date(`${utcDateTime}T00:00:00Z`); // เพิ่มเวลาเริ่มต้น
+            // เพิ่ม 'Z' สำหรับเวลาที่ไม่ได้ระบุเป็น UTC
+            const date = new Date(utcDateTime + 'Z');
             return date.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
         };
+                     
 
         // ฟังก์ชันสำหรับดึงข้อมูลการชำระเงินตาม Order ID
             const fetchPaymentHistory = async (orderId) => {
@@ -407,7 +410,7 @@ import Swal from 'sweetalert2';
                                         <td style="padding: 5px; border: 1px solid #ddd;">${payment.amount ? payment.amount + " ฿" : '0 ฿'}</td>
                                         <td style="padding: 5px; border: 1px solid #ddd;">${payment.icome ? payment.icome + " ฿" : '0 ฿'}</td>
                                         <td style="padding: 5px; border: 1px solid #ddd;">${payment.pay_channel_id === 1 ? 'เงินสด' : payment.pay_channel_id === 2 ? 'QR Code พร้อมเพย์' : 'อื่นๆ'}</td>
-                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.payment_date ? formatDateTimeToThai(payment.payment_date) : 'N/A'}</td>
+                                        <td style="padding: 5px; border: 1px solid #ddd;">${payment.created_at ? formatDateTimeToThai(payment.created_at) : 'N/A'}</td>
                                         <td style="padding: 5px; border: 1px solid #ddd;">${payment.balances ? payment.balances + " ฿" : "0 ฿"}</td> 
                                         <td style="padding: 5px; border: 1px solid #ddd;">${payment.money_changes ? payment.money_changes + " ฿" : '0 ฿'}</td>
                                     </tr>
@@ -614,7 +617,7 @@ import Swal from 'sweetalert2';
                                         <tr key={index}>
                                             <td style={styles.td}>{order.order_number}</td>
                                             <td style={styles.td}>{order.table_code === 'CT001' ? 'หน้าขาย' : order.table_code || 'N/A'}</td>
-                                            <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
+                                            <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
                                             <td style={styles.td}>{order.total_amount}</td>
                                             <td style={styles.td}>{order.discount}</td>
                                             <td style={styles.td}>{calculateVatDetails(order).vatLabel}</td>
