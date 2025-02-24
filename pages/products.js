@@ -68,6 +68,7 @@ export default function SalesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const inputRef = useRef(null);
     const searchInputRef = useRef(null);
+    const inputRefPopup = useRef(null);
 
     // const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
 
@@ -312,69 +313,29 @@ const loadTableLastOrder = async (tableCode) => {
     }
 };
 
-
 const handleInputFocus = (field, itemId = null, ref = null) => {
-    setActiveField({ field, itemId });
-    setShowKeyboard(true);
+    setActiveField({ field, itemId }); // ตั้งค่าฟิลด์ที่ใช้งาน
+    setShowKeyboard(true); // แสดงคีย์บอร์ด
 
-    // ใช้ useRef เพื่อโฟกัสช่อง input ที่ถูกต้อง
+    // โฟกัสที่ช่องกรอกที่ถูกคลิก
     if (ref && ref.current) {
         ref.current.focus();
     }
 
-    // ตั้งตำแหน่งคีย์บอร์ด
+    // ตั้งตำแหน่งของคีย์บอร์ด
     setTimeout(() => {
         const inputElement = document.activeElement;
         if (inputElement) {
             const rect = inputElement.getBoundingClientRect();
             setKeyboardPosition({
-                top: `${rect.bottom + window.scrollY + 10}px`,
-                left: `${rect.left + window.scrollX}px`,
+                top: `${rect.bottom + window.scrollY + 10}px`, // ตั้งตำแหน่งคีย์บอร์ดให้ตรงกับช่องกรอก
+                left: `${rect.left + window.scrollX}px`, // ตำแหน่งคีย์บอร์ดชิดกับช่องกรอก
             });
-
-            inputElement.focus();
         }
     }, 100);
 };
-// const fetchOrderDetails = async (orderId) => {
-//     if (!orderId) {
-//         console.error("❌ Order ID ไม่ถูกต้อง");
-//         return;
-//     }
 
-//     const api_url = localStorage.getItem('url_api');
-//     const slug = localStorage.getItem('slug');
-//     const authToken = localStorage.getItem('token');
 
-//     if (!api_url || !slug) {
-//         console.error("⚠️ API URL หรือ Slug ไม่ถูกต้อง");
-//         return;
-//     }
-
-//     const endpoint = `${api_url}/api/${slug}/orders/${orderId}`.replace(/\/api\/api\//, "/api/");
-//     console.log("📡 กำลังดึงข้อมูลออเดอร์ที่:", endpoint);
-
-//     try {
-//         const response = await axios.get(endpoint, {
-//             headers: { 'Authorization': `Bearer ${authToken}` }
-//         });
-
-//         console.log("📦 API Response:", response.data);
-
-//         if (response.data && Array.isArray(response.data.items)) {
-//             setCart([]); // ✅ เคลียร์ตะกร้าก่อนอัปเดต
-//             setTimeout(() => {
-//                 setCart(response.data.items);
-//             }, 100); // ✅ ใช้ `setTimeout` เพื่อหลีกเลี่ยงการซ้อนข้อมูล
-//         } else {
-//             console.warn("⚠️ ไม่มีข้อมูลสินค้าในออเดอร์");
-//             setCart([]);
-//         }
-
-//     } catch (error) {
-//         console.error("❌ Error fetching order details:", error);
-//     }
-// };
 
 
 
@@ -384,8 +345,6 @@ const handleInputFocus = (field, itemId = null, ref = null) => {
             inputRef.current.focus(); // โฟกัสไปที่ input
         }
     };
-
-
 
     // ✅ โหลดข้อมูลออเดอร์ใหม่เมื่อ `orderId` เปลี่ยน
     useEffect(() => {
@@ -2127,56 +2086,19 @@ useEffect(() => {
                     position: 'sticky', top: '0', backgroundColor: '#fff', zIndex: 2
                 }}>เลือกอาหาร</h3>
 
-             {/* ✅ ช่องค้นหาชื่ออาหาร พร้อมรองรับ Keyboard เสมือน */}
-<div style={{ position: 'relative', width: '100%' }}>
-<input
-    ref={searchInputRef} // ✅ ผูก input กับ useRef
-    type="text"
-    placeholder="ค้นหาชื่ออาหาร..."
-    value={searchQuery}
-    onFocus={() => handleInputFocus("search", searchInputRef)} // ✅ ส่งค่าไปโฟกัส
-    onChange={(e) => setSearchQuery(e.target.value)}
-    style={{
-        width: '100%',
-        padding: '10px',
-        fontSize: '16px',
-        marginBottom: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '5px'
-    }}
-/>
-</div>
-
-{/* ✅ แสดง Keyboard ถ้า showKeyboard เป็น true และ activeField เป็น "search" */}
-{showKeyboard && activeField === "search" && (
-    <div style={{
-        position: 'fixed', // ✅ ทำให้ Keyboard ลอยอยู่เหนือทุกอย่าง
-        bottom: '10%', // ✅ ตำแหน่ง Keyboard
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 9999 // ✅ ทำให้ Keyboard อยู่หน้าสุด
-    }}>
-        <Keyboard
-            onKeyPress={(key) => {
-                setSearchQuery((prev) => {
-                    if (key === "DELETE") {
-                        return prev.slice(0, -1); // ✅ ลบตัวอักษรตัวสุดท้าย
-                    } else {
-                        return prev + key; // ✅ เพิ่มตัวอักษรที่พิมพ์
-                    }
-                });
-
-                setTimeout(() => {
-                    inputRef.current?.focus(); // ✅ ทำให้ช่องกรอกได้รับโฟกัสตลอด
-                }, 100);
-            }}
-            onClose={() => setShowKeyboard(false)}
-        />
-    </div>
-)}
-
-
-
+                {/* ช่องกรอกในป๊อปอัพที่ต้องการใช้งาน */}
+                <input
+                    ref={inputRefPopup} // กำหนด ref สำหรับช่องกรอกในป๊อปอัพ
+                    type="text"
+                    placeholder="ค้นหาชื่ออาหาร..."
+                    value={searchQuery}
+                    onFocus={() => setShowKeyboard(false)} // เมื่อโฟกัสไม่ให้แสดงคีย์บอร์ด
+                    onChange={(e) => setSearchQuery(e.target.value)} // เมื่อกรอกข้อมูลจะอัปเดต state
+                    style={{
+                        width: '100%', padding: '10px', fontSize: '16px', marginBottom: '10px',
+                        border: '1px solid #ccc', borderRadius: '5px'
+                    }}
+                />
 
                 {/* ✅ รายการอาหารที่สามารถเลื่อนแนวตั้งได้ */}
                 <div style={{ overflowY: 'auto', maxHeight: '300px', marginTop: '10px' }}>
@@ -2681,6 +2603,7 @@ useEffect(() => {
                                             </p>
                                             <div style={styles.discountContainer}>
                                                 <input
+                                                
                                                     type="text" // เปลี่ยนเป็น text เพื่อรองรับคีย์บอร์ดเสมือน
                                                     value={item.discount === 0 ? '' : item.discount}
                                                     placeholder="ส่วนลด"
