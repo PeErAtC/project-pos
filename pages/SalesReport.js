@@ -545,7 +545,7 @@ import Swal from 'sweetalert2';
                                     <tr key={index}>
                                         <td style={styles.td}>{order.order_number}</td>
                                         <td style={styles.td}>{order.table_code === 'CT001' ? 'หน้าขาย' : order.table_code || 'N/A'}</td>
-                                        <td style={styles.td}>{formatDateTimeToThai(order.order_date)}</td>
+                                        <td style={styles.td}>{formatDateTimeToThai(order.created_at)}</td>
                                         <td style={styles.td}>{order.total_amount}</td>
                                         <td style={styles.td}>{order.discount}</td>
                                         <td style={styles.td}>{calculateVatDetails(order).vatLabel}</td>
@@ -658,7 +658,7 @@ import Swal from 'sweetalert2';
 
 const styles = {
     pageContainer: { display: 'flex' },
-    content: { flex: 1, padding: '25px', backgroundColor: '#fff', marginLeft: '110px', overflowY: 'hidden',height:'800px' },
+    content: { flex: 1, padding: '25px', backgroundColor: '#fff', marginLeft: '110px', overflowY: 'hidden',height:'750px' },
     headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', },
     dateSearchContainer: { display: 'flex',flexDirection: 'column', alignItems: 'flex-end', },
     title: { fontSize: '24px', fontWeight: 'bold', color: '#000' },
