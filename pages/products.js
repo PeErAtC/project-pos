@@ -17,7 +17,7 @@ export default function SalesPage() {
     const [products, setProducts] = useState([]);
     const router = useRouter();
     const [showPopup, setShowPopup] = useState(false); // สำหรับแสดงป๊อบอัพ
-    const { tableCode } = router.query;
+    const { tableCode, tableId } = router.query; // ✅ ตรวจสอบค่าก่อนใช้
     const [cart, setCart] = useState([]);
     const [order, setOrder] = useState(null); // เก็บข้อมูลออเดอร์
     const [receivedAmount, setReceivedAmount] = useState(0);
@@ -55,7 +55,7 @@ export default function SalesPage() {
     const [promptPayAPI, setPromptPayAPI] = useState("");
     const [promptPayAcc, setPromptPayAcc] = useState("");
     const [showKeyboard, setShowKeyboard] = useState(false);
-    const [activeField, setActiveField] = useState('');
+    const [activeField, setActiveField] = useState(null);
     const [keyboardPosition, setKeyboardPosition] = useState({
         top: '50%',
         left: '50%',
@@ -64,8 +64,11 @@ export default function SalesPage() {
     const [showAddItemPopup, setShowAddItemPopup] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
     const [orderDetails, setOrderDetails] = useState(null);
+    const [tableName, setTableName] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+    const inputRef = useRef(null);
+    const searchInputRef = useRef(null);
 
-    
     // const [change, setChange] = useState(0); // ประกาศ state สำหรับเงินทอน
 
     const getApiConfig = () => {
@@ -97,6 +100,18 @@ export default function SalesPage() {
         if (!api_url.endsWith("/api")) {
             api_url += "/api";
     }
+
+      useEffect(() => {
+        const storedTableName = localStorage.getItem("selected_table");
+        console.log("📌 ดึงค่าจาก LocalStorage ใน products.js:", storedTableName);
+        console.log("📌 ค่า tableId ที่รับจาก query:", tableId);
+
+        if (storedTableName) {
+            setTableName(storedTableName);
+        }
+    }, [tableId]);
+    
+    
 
     // ฟังก์ชัน fetchProducts
     const fetchProducts = async () => {
@@ -177,8 +192,15 @@ const fetchTableLastOrder = async (tableId) => {
 
 useEffect(() => {
     const loadTableLastOrder = async () => {
-        if (!tableCode) {
-            console.warn('ไม่มี tableCode');
+        // ✅ ดึงค่าทั้ง tableId และ tableCode
+        const storedTableId = localStorage.getItem("selected_table_id");
+        const storedTableCode = localStorage.getItem("selected_table");
+        
+        const finalTableId = tableId || storedTableId; 
+        const finalTableCode = tableCode || storedTableCode;
+
+        if (!finalTableId || !finalTableCode) {
+            console.warn('❌ ไม่มี tableId หรือ tableCode');
             return;
         }
 
@@ -189,7 +211,10 @@ useEffect(() => {
 
             if (!api_url.endsWith('/api')) api_url += '/api';
 
-            const url = `${api_url}/${slug}/orders/${tableCode}/table_lastorder`;
+            // ✅ ใช้ tableId สำหรับ API
+            const url = `${api_url}/${slug}/orders/${finalTableId}/table_lastorder`;
+            console.log("🔍 API URL:", url);
+            console.log("📌 tableId:", finalTableId, " | tableCode:", finalTableCode);
 
             const response = await axios.get(url, {
                 headers: {
@@ -201,31 +226,28 @@ useEffect(() => {
             if (response.data && response.data.order) {
                 const lastOrder = response.data.order;
 
-                if (lastOrder.status === 'N') {  // ตรวจสอบว่าออเดอร์ยังไม่ชำระ
-                    console.log("ออเดอร์ล่าสุด:", lastOrder);
-                    setOrderId(lastOrder.id); // เก็บ ID ของออเดอร์ล่าสุด
-                    setOrderNumber(lastOrder.order_number); // เก็บหมายเลขออเดอร์
-
-                    // ใช้ข้อมูลจากออเดอร์ที่ดึงมาอัปเดต cart
-                    setCart(lastOrder.items || []); // กำหนดให้ตะกร้าเป็นรายการสินค้าที่ดึงมา
+                if (lastOrder.status === 'N') {
+                    console.log("✅ ออเดอร์ล่าสุด:", lastOrder);
+                    setOrderId(lastOrder.id);
+                    setOrderNumber(lastOrder.order_number);
+                    setCart(lastOrder.items || []);
+                    setTableName(finalTableCode); // ✅ ใช้ tableCode ในการแสดงผล
                 } else {
-                    console.warn("ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
-                    setCart([]);  // ล้างตะกร้าหากออเดอร์ไม่ใช่สถานะ 'N'
+                    console.warn("⚠️ ออเดอร์ล่าสุดไม่ใช่สถานะ 'N'");
+                    setCart([]);
                 }
             } else {
-                console.warn("ไม่มีข้อมูลออเดอร์ล่าสุด");
-                setCart([]); // ล้างตะกร้าหากไม่มีข้อมูลออเดอร์
+                console.warn("⚠️ ไม่มีข้อมูลออเดอร์ล่าสุด");
+                setCart([]);
             }
-
         } catch (error) {
-            console.error("เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:", error.response?.data || error.message);
-            setCart([]); // ล้างตะกร้าหากเกิดข้อผิดพลาด
+            console.error("❌ เกิดข้อผิดพลาดในการดึงออเดอร์ล่าสุด:", error.response?.data || error.message);
+            setCart([]);
         }
     };
 
-    loadTableLastOrder(); // เรียกฟังก์ชันเพื่อโหลดข้อมูลออเดอร์และตะกร้า
-
-}, [tableCode]); // เมื่อ `tableCode` เปลี่ยนแปลง จะเรียก `loadTableLastOrder` ใหม่
+    loadTableLastOrder();
+}, [tableId, tableCode]);  // ✅ ฟังการเปลี่ยนแปลงของทั้ง tableId และ tableCode
 
 
 // ฟังก์ชันสำหรับบันทึกข้อมูลตะกร้าใน LocalStorage
@@ -291,21 +313,29 @@ const loadTableLastOrder = async (tableCode) => {
 };
 
 
-const handleInputFocus = (field, itemId = null) => {
+const handleInputFocus = (field, itemId = null, ref = null) => {
     setActiveField({ field, itemId });
     setShowKeyboard(true);
 
-    // ดึงตำแหน่งของ input field ที่ถูกเลือก
-    const inputElement = document.activeElement; // ช่อง input ที่ถูกคลิก
-    if (inputElement) {
-        const rect = inputElement.getBoundingClientRect(); // ตำแหน่งของ input
-        setKeyboardPosition({
-            top: `${rect.bottom + window.scrollY + 10}px`, // ให้ Keyboard อยู่ใต้ช่อง input
-            left: `${rect.left + window.scrollX}px`, // ให้ Keyboard อยู่ชิดกับ input
-        });
+    // ใช้ useRef เพื่อโฟกัสช่อง input ที่ถูกต้อง
+    if (ref && ref.current) {
+        ref.current.focus();
     }
-};
 
+    // ตั้งตำแหน่งคีย์บอร์ด
+    setTimeout(() => {
+        const inputElement = document.activeElement;
+        if (inputElement) {
+            const rect = inputElement.getBoundingClientRect();
+            setKeyboardPosition({
+                top: `${rect.bottom + window.scrollY + 10}px`,
+                left: `${rect.left + window.scrollX}px`,
+            });
+
+            inputElement.focus();
+        }
+    }, 100);
+};
 // const fetchOrderDetails = async (orderId) => {
 //     if (!orderId) {
 //         console.error("❌ Order ID ไม่ถูกต้อง");
@@ -347,6 +377,13 @@ const handleInputFocus = (field, itemId = null) => {
 // };
 
 
+
+    // ฟังก์ชันให้ Input ได้รับโฟกัสช่องกรอกในเพิ่มรายการอาหาร
+    const focusInput = () => {
+        if (inputRef.current) {
+            inputRef.current.focus(); // โฟกัสไปที่ input
+        }
+    };
 
 
 
@@ -404,47 +441,59 @@ const handleInputFocus = (field, itemId = null) => {
     
     const handleKeyPress = (key) => {
         if (!activeField || !activeField.field) return; // ป้องกัน error ถ้า activeField ไม่มีค่า
-
+    
         if (activeField.field === "search") {
-            // ✅ ใช้งานกับช่องค้นหา
-            if (key === "DELETE") {
-                setSearchTerm((prev) => prev.slice(0, -1));
-            } else {
-                setSearchTerm((prev) => prev + key);
-            }
-        } else if (activeField.field === "discount") {
-            // ✅ ใช้งานกับช่องใส่ส่วนลดของสินค้าในตะกร้า
+            setSearchTerm((prev) => (key === "DELETE" ? prev.slice(0, -1) : prev + key));
+        } 
+        else if (activeField.field === "discount") {
             setCart((prevCart) =>
                 prevCart.map((item) =>
-                    item.id === activeField.itemId
-                        ? {
-                            ...item,
-                            discount: key === "DELETE"
-                                ? parseFloat(item.discount.toString().slice(0, -1)) || 0 // ลบตัวเลขตัวสุดท้าย
-                                : parseFloat((item.discount || "").toString() + key) || 0, // เพิ่มตัวเลขต่อท้าย
-                        }
+                    item.product_id === activeField.itemId
+                        ? (() => {
+                            let updatedDiscount = key === "DELETE"
+                                ? String(item.discount || "").slice(0, -1)
+                                : String(item.discount || "") + key;
+    
+                            let newDiscount = parseFloat(updatedDiscount) || 0;
+                            let discountType = item.discountType || "THB"; // ✅ ตั้งค่า "บาท" เป็นค่าเริ่มต้น
+    
+                            let newPrice = item.price;
+                            if (discountType === "%") {
+                                newPrice = item.price - (item.price * newDiscount / 100);
+                            } else {
+                                newPrice = item.price - newDiscount;
+                            }
+    
+                            return {
+                                ...item,
+                                discount: newDiscount, // ✅ อัปเดตส่วนลด
+                                discountType, // ✅ ตั้งค่าเป็น "บาท" หากยังไม่มีค่า
+                                finalPrice: Math.max(newPrice, 0) // ✅ ป้องกันราคาติดลบ
+                            };
+                        })()
                         : item
                 )
             );
-        } else if (activeField.field === "billDiscount") {
-            // ✅ ใช้งานกับช่องส่วนลดรวมของบิล
-            if (key === "DELETE") {
-                setBillDiscount((prev) => parseFloat(prev.toString().slice(0, -1)) || 0);
-            } else {
-                setBillDiscount((prev) => parseFloat((prev || "").toString() + key) || 0);
-            }
-        } else if (activeField.field === "receivedAmount") {
-            // ✅ ใช้งานกับช่องรับเงิน
+        } 
+        else if (activeField.field === "billDiscount") {
+            setBillDiscount((prev) => {
+                const updatedValue = key === "DELETE" ? String(prev || "").slice(0, -1) : String(prev || "") + key;
+                return updatedValue === "" ? 0 : parseFloat(updatedValue);
+            });
+        } 
+        else if (activeField.field === "receivedAmount") {
             setReceivedAmount((prev) => {
-                if (key === "DELETE") {
-                    return parseFloat(prev.toString().slice(0, -1)) || 0; // ลบตัวเลขตัวสุดท้าย
-                } else {
-                    return parseFloat((prev || "").toString() + key) || 0; // เพิ่มตัวเลขต่อท้าย
-                }
+                const updatedValue = key === "DELETE" ? String(prev || "").slice(0, -1) : String(prev || "") + key;
+                return updatedValue === "" ? 0 : parseFloat(updatedValue);
             });
         }
     };
-
+    
+    
+    
+    
+    
+    
 
 
     //******ดึงข้อมูลออเดอร์ที่ยังไม่ได้ทำการชำระเงิน****** */
@@ -768,79 +817,93 @@ const handleInputFocus = (field, itemId = null) => {
     
     
     
-    // ใช้ function checkPassword ในการตรวจสอบก่อนการยกเลิกออเดอร์
-const clearCart = () => {
-    Swal.fire({
-        title: 'กรุณากรอกรหัสผ่านเพื่อยืนยันการยกเลิกออเดอร์',
-        input: 'password',  // ใช้ช่องกรอกรหัสผ่าน
-        inputPlaceholder: 'กรอกรหัสผ่านของคุณ',
-        showCancelButton: true,
-        confirmButtonText: 'ยืนยันการยกเลิก',
-        cancelButtonText: 'ยกเลิก',
-        showLoaderOnConfirm: true,  // แสดงการโหลดเมื่อกดปุ่มยืนยัน
-        preConfirm: (password) => {
-            return new Promise((resolve, reject) => {
-                checkPassword(password)
-                    .then(() => {
-                        resolve();  // ถ้ารหัสผ่านถูกต้องและมีสิทธิ์ให้ดำเนินการยกเลิก
-                    })
-                    .catch((error) => {
-                        reject(error.message);  // ส่งข้อความ error หากไม่สามารถยกเลิกได้
-                    });
-            });
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'คุณแน่ใจหรือไม่?',
-                text: "คุณต้องการยกเลิกออเดอร์และเคลียร์เมนูทั้งหมดออกหรือไม่?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'ใช่, ยกเลิกออเดอร์!',
-                cancelButtonText: 'ยกเลิก',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // ตรวจสอบว่า orderId มีค่าหรือไม่
-                    if (orderId) {
-                        console.log("Order ID:", orderId);
-
-                        // เปลี่ยนสถานะเป็น 'C' เมื่อยกเลิกออเดอร์
-                        updateOrderStatus(orderId, 'C')
-                            .then(() => {
-                                // รีเซ็ตค่าต่าง ๆ ในตะกร้า
-                                setCart([]);
-                                setReceivedAmount(0);
-                                setBillDiscount(0);
-                                setBillDiscountType("THB");
-                                setOrderReceived(false);
-                                setIsBillPaused(false);
-                                setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
-
-                                Swal.fire({
-                                    title: 'ออเดอร์ถูกยกเลิก!',
-                                    text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
-                                    icon: 'success',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                            })
-                            .catch((error) => {
-                                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
-                                console.error("Error cancelling order:", error);
-                            });
+    const clearCart = () => {
+        Swal.fire({
+            title: 'กรุณากรอกรหัสผ่านเพื่อยืนยันการยกเลิกออเดอร์',
+            input: 'password',  // ใช้ช่องกรอกรหัสผ่าน
+            inputPlaceholder: 'กรอกรหัสผ่านของคุณ',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันการยกเลิก',
+            cancelButtonText: 'ยกเลิก',
+            showLoaderOnConfirm: true,  // แสดงการโหลดเมื่อกดปุ่มยืนยัน
+            preConfirm: (password) => {
+                return new Promise((resolve, reject) => {
+                    // ตรวจสอบรหัสผ่าน
+                    const storedPassword = localStorage.getItem('password'); // รหัสผ่านที่เก็บไว้ใน localStorage
+                    if (password === storedPassword) {
+                        resolve(); // ถ้ารหัสผ่านถูกต้องให้ดำเนินการ
                     } else {
-                        Swal.fire('ไม่พบหมายเลขออเดอร์', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                        reject('รหัสผ่านไม่ถูกต้อง');
                     }
-                }
-            });
-        }
-    }).catch((error) => {
-        Swal.fire('เกิดข้อผิดพลาด', error, 'error');
-    });
-};
-
+                });
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'คุณแน่ใจหรือไม่?',
+                    text: "คุณต้องการยกเลิกออเดอร์และเคลียร์เมนูทั้งหมดออกหรือไม่?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'ใช่, ยกเลิกออเดอร์!',
+                    cancelButtonText: 'ยกเลิก',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // ตรวจสอบว่า orderId มีค่าหรือไม่
+                        if (orderId) {
+                            console.log("Order ID:", orderId);
+    
+                            // เปลี่ยนสถานะเป็น 'C' เมื่อยกเลิกออเดอร์
+                            updateOrderStatus(orderId, 'C')
+                                .then(() => {
+                                    // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1)
+                                    updateTableStatus(tableCode, 1, 'Y')  // ใช้ tableCode ที่ได้จาก API
+                                        .then(() => {
+                                            // รีเซ็ตค่าต่าง ๆ ในตะกร้า
+                                            setCart([]);
+                                            setReceivedAmount(0);
+                                            setBillDiscount(0);
+                                            setBillDiscountType("THB");
+                                            setOrderReceived(false);
+                                            setIsBillPaused(false);
+                                            setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
+    
+                                            Swal.fire({
+                                                title: 'ออเดอร์ถูกยกเลิก!',
+                                                text: 'เมนูทั้งหมดถูกลบและออเดอร์ถูกยกเลิกเรียบร้อยแล้ว',
+                                                icon: 'success',
+                                                timer: 2000,
+                                                showConfirmButton: false
+                                            });
+                                        })
+                                        .catch((error) => {
+                                            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดตสถานะโต๊ะได้', 'error');
+                                            console.error("Error updating table status:", error);
+                                        });
+                                })
+                                .catch((error) => {
+                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                                    console.error("Error cancelling order:", error);
+                                });
+                        } else {
+                            Swal.fire('ไม่พบหมายเลขออเดอร์', 'ไม่สามารถยกเลิกออเดอร์ได้', 'error');
+                        }
+                    }
+                });
+            }
+        }).catch((error) => {
+            Swal.fire('เกิดข้อผิดพลาด', error, 'error');
+        });
+    };
+    
+    
+    // ฟังก์ชันตรวจสอบรหัสผ่าน
+    const getStoredPassword = () => {
+        // สมมุติว่าเก็บรหัสผ่านใน localStorage หรือ sessionStorage
+        return localStorage.getItem('userPassword');  // สามารถดึงจากระบบเก็บข้อมูลได้
+    };
+    
 
     
     // ฟังก์ชันอัปเดตสถานะออเดอร์
@@ -1302,13 +1365,13 @@ const clearCart = () => {
     // ฟังก์ชันหลักสำหรับรับคำสั่งซื้อ (สร้าง order และบันทึกรายการ order_items)
     const receiveOrder = async () => {
         try {
-            const { api_url, slug, authToken } = getApiConfig(); // ดึงค่าจากฟังก์ชัน getApiConfig
-            const userId = 1; // ตัวอย่าง ID ผู้ใช้งาน
+            const { api_url, slug, authToken } = getApiConfig(); 
+            const userId = 1; 
             const totalAmountWithVAT = Number(calculateTotalAfterItemDiscounts()) || 0;
-            console.log("Total Amount with VAT (ยอดรวม):", totalAmountWithVAT);
+    
+            console.log("📌 Total Amount with VAT:", totalAmountWithVAT);
     
             let vatAmount = 0;
-    
             if (vatType === 'includeVat7') {
                 vatAmount = totalAmountWithVAT * (7 / 107);
             } else if (vatType === 'includeVat3') {
@@ -1321,6 +1384,16 @@ const clearCart = () => {
     
             const vatPercentage = vatType.includes('7') ? 7 : vatType.includes('3') ? 3 : 0;
     
+            // ✅ ดึง tableId จาก localStorage ถ้าไม่มีใน state
+            const storedTableId = localStorage.getItem("selected_table_id"); 
+            const finalTableId = tableId || storedTableId; 
+    
+            if (!finalTableId) {
+                console.error('❌ ไม่มี tableId ที่จะอัปเดต');
+                Swal.fire('Error', 'ไม่พบหมายเลขโต๊ะ กรุณาลองอีกครั้ง', 'error');
+                return;
+            }
+    
             const orderData = {
                 total_amount: totalAmountWithVAT.toFixed(2),
                 vat_per: vatPercentage,
@@ -1330,7 +1403,7 @@ const clearCart = () => {
                 discount_per: Number(billDiscountType === '%' ? billDiscount : 0).toFixed(2),
                 net_amount: totalAmountWithVAT.toFixed(2),
                 status: 'N',
-                tables_id: tableCode || null,
+                tables_id: finalTableId, // ✅ ใช้ tableId แทน tableCode
                 created_by: localStorage.getItem('userId'),
                 vatType,
                 items: cart.map((item) => ({
@@ -1349,9 +1422,9 @@ const clearCart = () => {
                 payment_method: paymentMethod || 'cash',
             };
     
-            console.log("Order Data to send:", orderData);
+            console.log("📤 Order Data to send:", orderData);
     
-            // ส่งคำขอสร้างออเดอร์
+            // ✅ ส่งคำขอสร้างออเดอร์
             const newOrder = await sendOrder(orderData, api_url, slug, authToken); 
     
             // ✅ เคลียร์ตะกร้าหลังจากรับออเดอร์สำเร็จ
@@ -1364,11 +1437,12 @@ const clearCart = () => {
             setOrderId(newOrder.id);
             setOrderReceived(true);
     
-            // ตรวจสอบว่า tableCode มีค่าหรือไม่
-            if (tableCode) {
-                const tableUpdateData = { status: 'N' }; // กำหนดสถานะใหม่ของโต๊ะ
-                const url = `${api_url}/${slug}/table_codes/${tableCode}`; // แก้ไข URL ให้ถูกต้อง
-                console.log("Updating table status with URL:", url);
+            // ✅ ตรวจสอบว่า tableId มีค่าหรือไม่ ก่อนอัปเดตสถานะโต๊ะ
+            if (finalTableId) {
+                const tableUpdateData = { status: 'N' };
+                const url = `${api_url}/${slug}/table_codes/${finalTableId}`; // ✅ ใช้ tableId แทน tableCode
+    
+                console.log("🔍 Updating table status with URL:", url);
     
                 try {
                     const response = await axios.put(url, tableUpdateData, {
@@ -1379,12 +1453,12 @@ const clearCart = () => {
                     });
     
                     if (response.status === 200 || response.status === 204) {
-                        console.log(`Table ${tableCode} status updated to "Not Available"`);
+                        console.log(`✅ โต๊ะ ${finalTableId} ถูกอัปเดตเป็น "Not Available"`);
                     } else {
                         throw new Error(`Unexpected response status: ${response.status}`);
                     }
                 } catch (error) {
-                    console.error('Failed to update table status:', error.response?.data || error.message);
+                    console.error('❌ Failed to update table status:', error.response?.data || error.message);
                     Swal.fire(
                         'Error',
                         `Failed to update table status: ${error.response?.data?.message || error.message}`,
@@ -1393,7 +1467,7 @@ const clearCart = () => {
                 }
             }
         } catch (error) {
-            console.error('Error receiving order:', error);
+            console.error('❌ Error receiving order:', error);
     
             if (error.response) {
                 console.error("Response Data:", error.response.data);
@@ -1403,6 +1477,7 @@ const clearCart = () => {
             Swal.fire('Error', `Could not receive order: ${error.message}`, 'error');
         }
     };
+    
     
 
     const fetchOrderData = async (orderId) => {
@@ -1488,16 +1563,9 @@ const clearCart = () => {
 
     const closeReceipt = async () => {
         try {
-            const totalDue = parseFloat(calculateTotalWithBillDiscountAndVAT()); // คำนวณยอดทั้งหมดที่ต้องชำระ
-            const amountToPay = receivedAmount ? parseFloat(receivedAmount) : parseFloat(calculateTotalPaid()); // ใช้ receivedAmount หรือยอดที่ชำระจริง
-    
-            // คำนวณเงินทอน
+            const totalDue = parseFloat(calculateTotalWithBillDiscountAndVAT());
+            const amountToPay = receivedAmount ? parseFloat(receivedAmount) : parseFloat(calculateTotalPaid());
             const moneyChanges = amountToPay > totalDue ? amountToPay - totalDue : 0;
-    
-            console.log("📌 ยอดที่ต้องชำระ (totalDue):", totalDue);
-            console.log("📌 ยอดที่รับเงิน (receivedAmount):", receivedAmount);
-            console.log("📌 ยอดชำระ (amountToPay):", amountToPay);
-            console.log("📌 เงินทอนที่คำนวณได้:", moneyChanges);
     
             if (!orderId) {
                 Swal.fire('ผิดพลาด', 'ไม่พบเลขที่ออเดอร์ กรุณาลองอีกครั้ง', 'error');
@@ -1514,12 +1582,16 @@ const clearCart = () => {
                 return;
             }
     
-            console.log("📌 ค่า orderId:", orderId);
-            console.log("📌 ค่า netAmount:", totalDue);
-            console.log("📌 ค่า paymentMethod:", paymentMethod);
-            console.log("📌 ค่า receivedAmount:", amountToPay);
+            // ✅ ใช้ `tables_id` แทน `tableCode`
+            let finalTableId = tableId || localStorage.getItem("selected_table_id");
     
-            // ✅ ตรวจสอบว่ามีการอัปเดตเงินทอนลงฐานข้อมูล
+            console.log("📌 ค่า tableId ที่ใช้ในการอัปเดตโต๊ะ:", finalTableId);
+    
+            if (!finalTableId) {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถระบุ ID โต๊ะได้', 'error');
+                return;
+            }
+    
             const response = await axios.put(
                 `${api_url}/${slug}/orders/${orderId}`,
                 {
@@ -1529,9 +1601,9 @@ const clearCart = () => {
                     net_amount: totalDue,
                     discount: parseFloat(billDiscount).toFixed(2),
                     payment_method: paymentMethod,
-                    money_changes: moneyChanges.toFixed(2), // ส่งเงินทอนที่คำนวณ
-                    updated_by: 1, // กำหนดค่า updated_by
-                    created_by:1
+                    money_changes: moneyChanges.toFixed(2),
+                    updated_by: 1,
+                    created_by: 1
                 },
                 {
                     headers: {
@@ -1543,27 +1615,31 @@ const clearCart = () => {
     
             console.log("📌 API Response:", response.data);
     
-            // ✅ ตรวจสอบ response
             if (response && (response.status === 200 || response.status === 201) && response.data?.order) {
                 console.log("✅ บันทึกข้อมูลบิลสำเร็จ:", response.data.order);
             } else {
                 Swal.fire("แจ้งเตือน", "บิลถูกบันทึกแต่ไม่มีข้อมูล order", "warning");
             }
     
-            // ✅ ตรวจสอบ response.data.items ว่ามีสินค้าในบิลหรือไม่
-            if (response.data?.items && response.data.items.length === 0) {
-                console.warn("⚠️ บิลนี้ไม่มีสินค้า (Empty items array)");
-            }
-    
-            // ✅ อัปเดตสถานะโต๊ะ
-            if (tableCode) {
+            // ✅ ใช้ `tables_id` แทน `tableCode` ในการอัปเดตโต๊ะ
+            if (finalTableId) {
                 try {
-                    const tableResponse = await axios.patch(`${api_url}/${slug}/table_codes/${tableCode}`, { status: 'Y' }, {
-                        headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` },
-                    });
+                    const tableUpdateURL = `${api_url}/${slug}/table_codes/${finalTableId}`;
+                    console.log("🔄 กำลังอัปเดตสถานะโต๊ะ:", tableUpdateURL);
+    
+                    const tableResponse = await axios.patch(
+                        tableUpdateURL,
+                        { status: 'Y' },
+                        {
+                            headers: {
+                                Accept: "application/json",
+                                Authorization: `Bearer ${authToken}`,
+                            },
+                        }
+                    );
     
                     if (tableResponse.status === 200 || tableResponse.status === 204) {
-                        console.log(`✅ โต๊ะ ${tableCode} ถูกอัปเดตเป็น "ว่าง" สำเร็จ`);
+                        console.log(`✅ โต๊ะ ${finalTableId} ถูกอัปเดตเป็น "ว่าง" สำเร็จ`);
                     } else {
                         throw new Error(`❌ Response status: ${tableResponse.status}`);
                     }
@@ -1572,19 +1648,17 @@ const clearCart = () => {
                 }
             }
     
-            // รีเซ็ตตะกร้าเมื่อบันทึกบิลเสร็จสิ้น
-            setCart([]); // ล้างตะกร้า
-            localStorage.removeItem(`cart_${tableCode}`); // ลบข้อมูลตะกร้าจาก localStorage
+            setCart([]);
+            localStorage.removeItem(`cart_${finalTableId}`);
             closePaymentHistory();
-
+    
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกบิลสำเร็จ',
                 text: `บิลถูกปิดเรียบร้อยแล้ว! ยอดสุทธิ: ${totalDue.toFixed(2)} บาท และเงินทอน: ${moneyChanges.toFixed(2)} บาท`,
                 confirmButtonText: 'ตกลง',
             }).then(() => {
-                resetStateAfterSuccess(); // รีเซ็ตสถานะหลังบันทึกสำเร็จ
-                
+                resetStateAfterSuccess();
             });
     
         } catch (error) {
@@ -1592,6 +1666,7 @@ const clearCart = () => {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกบิลได้ กรุณาลองอีกครั้ง', 'error');
         }
     };
+    
     
     useEffect(() => {
         if (paymentMethod === "2") {
@@ -1625,13 +1700,31 @@ const clearCart = () => {
         setIsBillPaused(true);
     };
     
-    const handleItemDiscountChange = (id, discount, discountType) => {
-        setCart((prevCart) => 
-            prevCart.map((item) => 
-                item.id === id ? { ...item, discount: discount, discountType: discountType } : item
-            )
+    const handleItemDiscountChange = (productId, discount, discountType) => {
+        setCart((prevCart) =>
+            prevCart.map((item) => {
+                if (item.product_id === productId) {
+                    let newPrice = item.price; // ราคาสินค้าตั้งต้น
+    
+                    if (discountType === "%") {
+                        newPrice = item.price - (item.price * discount / 100); // ✅ หักส่วนลดเป็นเปอร์เซ็นต์
+                    } else {
+                        newPrice = item.price - discount; // ✅ หักส่วนลดเป็นบาท
+                    }
+    
+                    return { 
+                        ...item, 
+                        discount, 
+                        discountType, 
+                        finalPrice: Math.max(newPrice, 0) // ✅ ป้องกันราคาติดลบ
+                    };
+                }
+                return item;
+            })
         );
     };
+    
+    
  
     useEffect(() => {
         console.log("📌 อัปเดตค่าของ paymentMethods:", paymentMethods);
@@ -2012,160 +2105,189 @@ useEffect(() => {
 
     return (
         <div style={styles.pageContainer}>
-            {showAddItemPopup && (
-                <div style={{
-                    position: 'fixed', top: '0', left: '0', width: '100%', height: '100vh', // ขยายป๊อบอัพเต็มความสูง
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)', // สีพื้นหลังเบลอ
-                    zIndex: 999, // กำหนดให้ป๊อบอัพอยู่ด้านบน
-                    backdropFilter: 'blur(10px)', // เบลอพื้นหลัง
-                    display: 'flex', justifyContent: 'center', alignItems: 'center'
-                }}>
-                    <div style={{
-                        backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
-                        zIndex: 1000, width: '100%', maxWidth: '1100px', display: 'flex', gap: '20px', overflow: 'hidden',
-                        transition: 'all 0.3s ease-in-out', maxHeight: '80vh' // ขยายให้เต็มความสูงที่จำกัด
-                    }}>
-                        {/* ฝั่งซ้าย: รายการอาหารทั้งหมด */}
-                        <div style={{
-                            flex: 1, overflowY: 'auto', maxHeight: '400px', paddingRight: '20px', padding: '0 50px',
-                            display: 'flex', flexDirection: 'column', gap: '1px'
-                        }}>
-                            <h3 style={{
-                                fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '1px', textAlign: 'center',
-                                position: 'sticky', top: '0', backgroundColor: '#fff', zIndex: 2
-                            }}>เลือกอาหาร</h3>
+           {showAddItemPopup && (
+    <div style={{
+        position: 'fixed', top: '0', left: '0', width: '100%', height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 999, backdropFilter: 'blur(10px)',
+        display: 'flex', justifyContent: 'center', alignItems: 'center'
+    }}>
+        <div style={{
+            backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', 
+            boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)', zIndex: 1000, 
+            width: '100%', maxWidth: '1100px', display: 'flex', gap: '20px', 
+            overflow: 'hidden', transition: 'all 0.3s ease-in-out', maxHeight: '80vh'
+        }}>
+            {/* ✅ ฝั่งซ้าย: รายการอาหารทั้งหมด พร้อมช่องค้นหา */}
+            <div style={{
+                flex: 1, overflowY: 'auto', maxHeight: '400px', paddingRight: '20px', padding: '0 50px',
+                display: 'flex', flexDirection: 'column', gap: '10px' // ✅ ช่องค้นหาอยู่ห่างจากรายการ
+            }}>
+                <h3 style={{
+                    fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '10px', textAlign: 'center',
+                    position: 'sticky', top: '0', backgroundColor: '#fff', zIndex: 2
+                }}>เลือกอาหาร</h3>
 
-                            {products
-                                .filter(product => product.p_name) // กรองเฉพาะรายการที่มีชื่อ
-                                .map((product) => (
-                                    <div key={product.id} style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #eee',
-                                        transition: 'all 0.3s ease',
-                                    }}>
-                                        <p style={{ fontSize: '16px', color: '#000000', flex: 1 }}>{product.p_name}</p>
-                                        <p style={{ fontSize: '16px', color: '#000000', marginRight: '20px' }}>{product.price} บาท</p>
-                                        <button
-                                            onClick={() => handleAddToOrder(product, selectedQuantity)}
-                                            style={{
-                                                backgroundColor: '#0c9fa9', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '5px',
-                                                cursor: 'pointer', transition: 'background-color 0.3s ease',
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f7b82'}
-                                        >
-                                            เพิ่ม
-                                        </button>
-                                    </div>
-                                ))
-                            }
-                        </div>
+             {/* ✅ ช่องค้นหาชื่ออาหาร พร้อมรองรับ Keyboard เสมือน */}
+<div style={{ position: 'relative', width: '100%' }}>
+<input
+    ref={searchInputRef} // ✅ ผูก input กับ useRef
+    type="text"
+    placeholder="ค้นหาชื่ออาหาร..."
+    value={searchQuery}
+    onFocus={() => handleInputFocus("search", searchInputRef)} // ✅ ส่งค่าไปโฟกัส
+    onChange={(e) => setSearchQuery(e.target.value)}
+    style={{
+        width: '100%',
+        padding: '10px',
+        fontSize: '16px',
+        marginBottom: '10px',
+        border: '1px solid #ccc',
+        borderRadius: '5px'
+    }}
+/>
+</div>
+
+{/* ✅ แสดง Keyboard ถ้า showKeyboard เป็น true และ activeField เป็น "search" */}
+{showKeyboard && activeField === "search" && (
+    <div style={{
+        position: 'fixed', // ✅ ทำให้ Keyboard ลอยอยู่เหนือทุกอย่าง
+        bottom: '10%', // ✅ ตำแหน่ง Keyboard
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 9999 // ✅ ทำให้ Keyboard อยู่หน้าสุด
+    }}>
+        <Keyboard
+            onKeyPress={(key) => {
+                setSearchQuery((prev) => {
+                    if (key === "DELETE") {
+                        return prev.slice(0, -1); // ✅ ลบตัวอักษรตัวสุดท้าย
+                    } else {
+                        return prev + key; // ✅ เพิ่มตัวอักษรที่พิมพ์
+                    }
+                });
+
+                setTimeout(() => {
+                    inputRef.current?.focus(); // ✅ ทำให้ช่องกรอกได้รับโฟกัสตลอด
+                }, 100);
+            }}
+            onClose={() => setShowKeyboard(false)}
+        />
+    </div>
+)}
 
 
-                        {/* ฝั่งขวา: อาหารที่เลือก และปุ่ม */}
-                        <div style={{
-                            flex: 1, backgroundColor: '#f9f9f9', boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
-                            height: '100%', maxHeight: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto',gap: '10px'
-                        }}>
-                            <h3 style={{
-                                fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '1px', textAlign: 'center',
-                                position: 'sticky', top: '1px', backgroundColor: '#ffffff',
-                            }}>รายการที่เลือก</h3>
-                            {selectedItems.length > 0 ? (
-                            <div style={{
-                                height: '700px', // กำหนดความสูงคงที่ของพื้นที่แสดงผล
-                                overflowY: 'auto', // ให้เลื่อนขึ้นลงได้เมื่อเนื้อหามีมากเกิน
-                                overflowX: 'hidden', // ป้องกันการเลื่อนแบบแนวนอน
-                                paddingRight: '100px', // เว้นระยะจากขอบด้านขวา
+
+
+                {/* ✅ รายการอาหารที่สามารถเลื่อนแนวตั้งได้ */}
+                <div style={{ overflowY: 'auto', maxHeight: '300px', marginTop: '10px' }}>
+                    {products
+                        .filter(product => product.p_name && product.p_name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((product) => (
+                            <div key={product.id} style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                                borderBottom: '1px solid #eee', transition: 'all 0.3s ease',
                             }}>
-                                 {selectedItems.map((item) => (
-                                    <div key={item.id} style={{
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'space-between',
-                                        borderBottom: '5px solid #ffffff',
-                                        width: '120%', 
-                                        backgroundColor: '#ececec4b', 
-                                        transition: 'all 0.3s ease'
-                                    }}>
-                                        <div style={{ 
-                                            display: 'flex', 
-                                            flexDirection: 'column', 
-                                            alignItems: 'flex-start' 
-                                        }}>
-                                            <p style={{ 
-                                                fontSize: '16px', 
-                                                color: '#000000', 
-                                                marginBottom: '5px' 
-                                            }}>{item.p_name}</p>
-                                            <p style={{ 
-                                                fontSize: '0.9em', 
-                                                color: '#555', 
-                                                marginTop: '0',
-                                                marginRight: '230px' 
- 
-                                            }}>x {item.quantity} ชิ้น</p>
-                                        </div>
-                                        <p style={{ 
-                                            fontSize: '16px', 
-                                            color: '#333', 
-                                        }}>{item.price} บาท</p>
-                                        <button
-                                            onClick={() => handleRemoveItem(item.id)}
-                                            style={{
-                                                backgroundColor: '#e30d11', 
-                                                color: 'white', 
-                                                padding: '5px 10px', 
-                                                border: 'none', 
-                                                borderRadius: '5px',
-                                                cursor: 'pointer', 
-                                                transition: 'background-color 0.3s ease',
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
-                                        >
-                                            ลบ
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                            ) : (
-                                <p style={{ fontSize: '16px', color: '#777', textAlign: 'center' }}>ยังไม่มีรายการที่เลือก</p>
-                            )}
-
-                            <div style={{
-                                display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '20px', width: '100%'
-                            }}>
+                                <p style={{ fontSize: '16px', color: '#000000', flex: 1 }}>{product.p_name}</p>
+                                <p style={{ fontSize: '16px', color: '#000000', marginRight: '20px' }}>{product.price} บาท</p>
                                 <button
-                                    onClick={handleConfirm}
+                                    onClick={() => handleAddToOrder(product, selectedQuantity)}
                                     style={{
-                                        backgroundColor: '#0c9fa9', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
-                                        fontSize: '16px', transition: 'background-color 0.3s ease',
+                                        backgroundColor: '#0c9fa9', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '5px',
+                                        cursor: 'pointer', transition: 'background-color 0.3s ease',
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f7b82'}
                                 >
-                                    ยืนยัน
+                                    เพิ่ม
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        handleCancel();  // เรียกฟังก์ชัน handleCancel สำหรับแสดงข้อความ
-                                        setShowAddItemPopup(false);  // ปิดป๊อบอัพ
-                                    }}
-                                    style={{
-                                        backgroundColor: '#f39c12', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
-                                        fontSize: '16px', transition: 'background-color 0.3s ease',
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
-                                >
-                                    ยกเลิก
-                                </button>
-
                             </div>
-                        </div>
-                    </div>
+                        ))
+                    }
                 </div>
-            )}
+            </div>
+
+            {/* ✅ ฝั่งขวา: รายการที่เลือก และปุ่ม (ไม่มีการเลื่อนแนวนอน) */}
+            <div style={{
+                flex: 1, backgroundColor: '#f9f9f9', boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
+                height: '100%', maxHeight: '450px', display: 'flex', flexDirection: 'column', 
+                alignItems: 'center', overflowY: 'auto', gap: '10px', overflowX: 'hidden' // ✅ ปิดการเลื่อนแนวนอน
+            }}>
+                <h3 style={{
+                    fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '10px', textAlign: 'center',
+                    position: 'sticky', top: '1px', backgroundColor: '#ffffff',
+                }}>รายการที่เลือก</h3>
+
+                {selectedItems.length > 0 ? (
+                    <div style={{
+                        height: '700px', overflowY: 'auto', paddingRight: '10px',
+                    }}>
+                        {selectedItems.map((item) => (
+                            <div key={item.id} style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                borderBottom: '5px solid #ffffff', backgroundColor: '#ececec4b', transition: 'all 0.3s ease'
+                            }}>
+                                <div style={{
+                                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start'
+                                }}>
+                                    <p style={{ fontSize: '16px', color: '#000000', marginBottom: '5px' }}>{item.p_name}</p>
+                                    <p style={{ fontSize: '0.9em', color: '#555', marginTop: '0' }}>x {item.quantity} ชิ้น</p>
+                                </div>
+                                <p style={{ fontSize: '16px', color: '#333' }}>{item.price} บาท</p>
+                                <button
+                                    onClick={() => handleRemoveItem(item.id)}
+                                    style={{
+                                        backgroundColor: '#e30d11', color: 'white', padding: '5px 10px',
+                                        border: 'none', borderRadius: '5px', cursor: 'pointer',
+                                        transition: 'background-color 0.3s ease',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
+                                >
+                                    ลบ
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p style={{ fontSize: '16px', color: '#777', textAlign: 'center' }}>ยังไม่มีรายการที่เลือก</p>
+                )}
+
+                {/* ✅ ปุ่ม ยืนยัน / ยกเลิก */}
+                <div style={{
+                    display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '20px', width: '100%'
+                }}>
+                    <button
+                        onClick={handleConfirm}
+                        style={{
+                            backgroundColor: '#0c9fa9', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
+                            fontSize: '16px', transition: 'background-color 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
+                    >
+                        ยืนยัน
+                    </button>
+                    <button
+                        onClick={() => {
+                            handleCancel();
+                            setShowAddItemPopup(false);
+                        }}
+                        style={{
+                            backgroundColor: '#f39c12', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
+                            fontSize: '16px', transition: 'background-color 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
+                    >
+                        ยกเลิก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
+
+
             {showQRCode && (
                 <div style={{
                     position: 'fixed',
@@ -2421,7 +2543,7 @@ useEffect(() => {
                 </div>
                         <div style={styles.searchAndTableCodeContainer}>
                             <div style={styles.searchContainer}>
-                                <h5 style={styles.tableCode}>โต๊ะ: {formattedTableCode}</h5>
+                                <h5 style={styles.tableCode}>โต๊ะ: {tableName}</h5>
                                 <input 
                                     type="text" 
                                     placeholder="ค้นหาชื่ออาหาร..." 
@@ -2559,20 +2681,29 @@ useEffect(() => {
                                             </p>
                                             <div style={styles.discountContainer}>
                                                 <input
-                                                    type="number"
+                                                    type="text" // เปลี่ยนเป็น text เพื่อรองรับคีย์บอร์ดเสมือน
                                                     value={item.discount === 0 ? '' : item.discount}
                                                     placeholder="ส่วนลด"
-                                                    onChange={(e) =>
-                                                        handleItemDiscountChange(
-                                                            item.product_id,
-                                                            parseFloat(e.target.value) || 0,
-                                                            item.discountType
-                                                        )
-                                                    }
-                                                    style={{ width: '60px' }}
+                                                    onFocus={() => handleInputFocus("discount", item.product_id)}
+                                                    onChange={(e) => {
+                                                        let newDiscount = e.target.value.replace(/[^0-9]/g, ""); // กรองเฉพาะตัวเลข
+                                                        setCart((prevCart) =>
+                                                            prevCart.map((cartItem) =>
+                                                                cartItem.product_id === item.product_id
+                                                                    ? {
+                                                                        ...cartItem,
+                                                                        discount: parseFloat(newDiscount) || 0, // ✅ อัปเดตส่วนลด
+                                                                        discountType: cartItem.discountType || "THB", // ✅ ตั้งค่า "บาท" เป็นค่าเริ่มต้น
+                                                                    }
+                                                                    : cartItem
+                                                            )
+                                                        );
+                                                    }}
+                                                    style={{ width: '60px', textAlign: 'right' }}
                                                 />
+
                                                 <select
-                                                    value={item.discountType ?? "THB"}
+                                                    value={item.discountType ?? "THB"} // ✅ ถ้ายังไม่มีค่า ให้ใช้ "THB"
                                                     onChange={(e) =>
                                                         handleItemDiscountChange(item.product_id, item.discount, e.target.value)
                                                     }
@@ -2582,6 +2713,9 @@ useEffect(() => {
                                                     <option value="%">%</option>
                                                 </select>
                                             </div>
+
+
+
                                         </div>
                                     </div>
 
@@ -2976,125 +3110,141 @@ useEffect(() => {
     </div>
             </div>
             {isSplitPaymentPopupOpen && (
-    <div
-        style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
-            zIndex: 1000,
-            width: '450px',
-            maxHeight: '950px',
-            overflow: 'hidden',
-        }}
-    >
-        <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'relative',
-            marginBottom: '15px',
-        }}>
-            <h3 style={{
-                margin: 0,
-                color: '#34495e',
-                fontSize: '22px',
-                fontWeight: '600',
-                letterSpacing: '1px',
-                textAlign: 'center',
-                width: '100%',
-            }}>
-                ประวัติการชำระ
-            </h3>
-            <button
-                onClick={toggleSplitPaymentPopup}
-                style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '0px',
-                    padding: '6px 12px',
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    borderRadius: '10%',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
-                    transition: 'background-color 0.3s ease',
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e74c3c'}
-            >
-                ×
-            </button>
-        </div>
-
-        <div style={{
-            maxHeight: '300px',
-            overflowY: 'auto',
-            paddingRight: '10px',
-            marginBottom: '10px',
-        }}>
-            {payments && payments.length > 0 ? (
-                payments.map((payment, index) => {
-                    return (
-                        <div
-                            key={index}
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        backgroundColor: 'white',
+                        padding: '20px',
+                        borderRadius: '12px',
+                        boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
+                        zIndex: 1000,
+                        width: '450px',
+                        maxHeight: '950px',
+                        overflow: 'hidden',
+                    }}
+                >
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        position: 'relative',
+                        marginBottom: '15px',
+                    }}>
+                        <h3 style={{
+                            margin: 0,
+                            color: '#34495e',
+                            fontSize: '22px',
+                            fontWeight: '600',
+                            letterSpacing: '1px',
+                            textAlign: 'center',
+                            width: '100%',
+                        }}>
+                            ประวัติการชำระ
+                        </h3>
+                        <button
+                            onClick={toggleSplitPaymentPopup}
                             style={{
-                                marginBottom: '20px',
-                                padding: '20px',
-                                backgroundColor: '#ecf0f1',
-                                borderRadius: '12px',
-                                boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
+                                position: 'absolute',
+                                top: '10px',
+                                right: '0px',
+                                padding: '6px 12px',
+                                backgroundColor: '#e74c3c',
+                                color: 'white',
+                                borderRadius: '10%',
+                                border: 'none',
                                 cursor: 'pointer',
-                                transition: 'transform 0.3s ease-in-out',
+                                fontSize: '16px',
+                                boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
+                                transition: 'background-color 0.3s ease',
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e74c3c'}
                         >
-                            <div style={{
-                                fontSize: '16px',
-                                color: '#2c3e50',
-                                fontWeight: '500',
-                                marginBottom: '10px',
-                            }}>
-                                {payment.formattedDate}
-                            </div>
-                            <div style={{
-                                fontSize: '18px',
-                                color: '#16a085',
-                                fontWeight: '600',
-                                marginBottom: '5px',
-                            }}>
-                                จำนวนเงิน: {payment.amount.toFixed(2)} บาท
-                            </div>
-                            <div style={{
-                                fontSize: '16px',
-                                color: '#2980b9',
-                                fontWeight: '500',
-                            }}>
-                                ช่องทาง: {payment.pay_name ? payment.pay_name : "ไม่พบข้อมูลช่องทาง"}
-                            </div>
-                        </div>
-                    );
-                })
-            ) : (
-                <p style={{
-                    color: '#7f8c8d',
-                    textAlign: 'center',
+                            ×
+                        </button>
+                    </div>
+
+                    <div style={{
+                        maxHeight: '300px',
+                        overflowY: 'auto',
+                        paddingRight: '10px',
+                        marginBottom: '10px',
+                    }}>
+                       {payments && payments.length > 0 ? (
+    payments.map((payment, index) => {
+        // ✅ ตรวจสอบว่ามี `created_at` หรือไม่ และแปลงเป็นวันที่ที่อ่านง่าย
+        const paymentDate = payment.created_at ? new Date(payment.created_at) : null;
+        const formattedDate = paymentDate
+            ? paymentDate.toLocaleString('th-TH', {
+                timeZone: 'Asia/Bangkok',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+            })
+            : "ไม่พบวันที่"; // ถ้าไม่มีข้อมูล created_at
+
+        return (
+            <div
+                key={index}
+                style={{
+                    marginBottom: '20px',
+                    padding: '20px',
+                    backgroundColor: '#ecf0f1',
+                    borderRadius: '12px',
+                    boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
+                    cursor: 'pointer',
+                    transition: 'transform 0.3s ease-in-out',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+                {/* ✅ แสดงวันที่จาก `created_at` ที่ถูกแปลงแล้ว */}
+                <div style={{
                     fontSize: '16px',
-                    fontWeight: '400',
+                    color: '#2c3e50',
+                    fontWeight: '500',
+                    marginBottom: '10px',
                 }}>
-                    ไม่มีประวัติการชำระ
-                </p>
-            )}
-        </div>
-    </div>
+                    {formattedDate}
+                </div>
+                <div style={{
+                    fontSize: '18px',
+                    color: '#16a085',
+                    fontWeight: '600',
+                    marginBottom: '5px',
+                }}>
+                    จำนวนเงิน: {payment.amount ? payment.amount.toFixed(2) : "0.00"} บาท
+                </div>
+                <div style={{
+                    fontSize: '16px',
+                    color: '#2980b9',
+                    fontWeight: '500',
+                }}>
+                    ช่องทาง: {payment.pay_name ? payment.pay_name : "ไม่พบข้อมูลช่องทาง"}
+                </div>
+            </div>
+        );
+    })
+) : (
+    <p style={{
+        color: '#7f8c8d',
+        textAlign: 'center',
+        fontSize: '16px',
+        fontWeight: '400',
+    }}>
+        ไม่มีประวัติการชำระ
+    </p>
 )}
+
+                    </div>
+                </div>
+            )}
 
     {showReceipt && (
         <div style={styles.receiptOverlay}>
@@ -3149,8 +3299,8 @@ useEffect(() => {
                 </div>
 
                 <div style={styles.receiptSummary}>
-                    <p>โต๊ะ: {`T${String(tableCode ?? "000").padStart(3, '0')}`}</p>
-                    <p>
+                <p>โต๊ะ: {tableCode.startsWith("T") ? tableCode : `T${String(tableCode ?? "000").padStart(3, '0')}`}</p>
+                <p>
                         ยอดบิล: 
                         <span style={styles.summaryValue}>
                             {parseFloat(calculateTotalWithBillDiscountAndVAT() || 0).toFixed(2)} บาท
