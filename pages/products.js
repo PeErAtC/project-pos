@@ -335,7 +335,15 @@ const handleInputFocus = (field, itemId = null, ref = null) => {
     }, 100);
 };
 
+const handlePopupInputFocus = (ref) => {
+    // เมื่อคลิกที่ช่องกรอกในป๊อปอัพ ปิดคีย์บอร์ด
+    setActiveField({ field: 'popupSearch' });
+    setShowKeyboard(false);  // ปิดคีย์บอร์ด
 
+    if (ref && ref.current) {
+        ref.current.focus();  // โฟกัสที่ช่องกรอกที่คลิก
+    }
+};
 
 
 
@@ -2078,7 +2086,8 @@ useEffect(() => {
         }}>
             {/* ✅ ฝั่งซ้าย: รายการอาหารทั้งหมด พร้อมช่องค้นหา */}
             <div style={{
-                flex: 1, overflowY: 'auto', maxHeight: '400px', paddingRight: '20px', padding: '0 50px',
+                flex: 1, overflowY: 'auto', maxHeight: '400px', paddingRight: '20px', padding: '0 50px',    overflowX: 'hidden', // ปิดการเลื่อนในแกน X
+
                 display: 'flex', flexDirection: 'column', gap: '10px' // ✅ ช่องค้นหาอยู่ห่างจากรายการ
             }}>
                 <h3 style={{
@@ -2087,18 +2096,42 @@ useEffect(() => {
                 }}>เลือกอาหาร</h3>
 
                 {/* ช่องกรอกในป๊อปอัพที่ต้องการใช้งาน */}
-                <input
+               <input
                     ref={inputRefPopup} // กำหนด ref สำหรับช่องกรอกในป๊อปอัพ
                     type="text"
                     placeholder="ค้นหาชื่ออาหาร..."
                     value={searchQuery}
-                    onFocus={() => setShowKeyboard(false)} // เมื่อโฟกัสไม่ให้แสดงคีย์บอร์ด
-                    onChange={(e) => setSearchQuery(e.target.value)} // เมื่อกรอกข้อมูลจะอัปเดต state
-                    style={{
-                        width: '100%', padding: '10px', fontSize: '16px', marginBottom: '10px',
-                        border: '1px solid #ccc', borderRadius: '5px'
-                    }}
+                    onFocus={() => handlePopupInputFocus(inputRefPopup)} // เรียกใช้ handlePopupInputFocus
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ width: '100%', padding: '10px', fontSize: '16px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px' }}
                 />
+                
+                {/* {showKeyboard && activeField === "popupSearch" && (
+                    <div style={{
+                        position: 'fixed', bottom: '10%', left: '50%',
+                        transform: 'translateX(-50%)', zIndex: 9999
+                    }}>
+                        <Keyboard
+                            onKeyPress={(key) => {
+                                setSearchQuery((prev) => {
+                                    if (key === "DELETE") {
+                                        return prev.slice(0, -1); // ลบตัวอักษร
+                                    } else {
+                                        return prev + key; // เพิ่มตัวอักษร
+                                    }
+                                });
+
+                                setTimeout(() => {
+                                    inputRefPopup.current?.focus(); // ทำให้ช่องกรอกในป๊อบอัพได้รับโฟกัส
+                                }, 100);
+                            }}
+                            onClose={() => setShowKeyboard(false)} // ปิดคีย์บอร์ด
+                        />
+                    </div>
+                )} */}
+
+
+
 
                 {/* ✅ รายการอาหารที่สามารถเลื่อนแนวตั้งได้ */}
                 <div style={{ overflowY: 'auto', maxHeight: '300px', marginTop: '10px' }}>
@@ -2129,82 +2162,139 @@ useEffect(() => {
             </div>
 
             {/* ✅ ฝั่งขวา: รายการที่เลือก และปุ่ม (ไม่มีการเลื่อนแนวนอน) */}
-            <div style={{
-                flex: 1, backgroundColor: '#f9f9f9', boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)',
-                height: '100%', maxHeight: '450px', display: 'flex', flexDirection: 'column', 
-                alignItems: 'center', overflowY: 'auto', gap: '10px', overflowX: 'hidden' // ✅ ปิดการเลื่อนแนวนอน
-            }}>
-                <h3 style={{
-                    fontSize: '20px', fontWeight: 'bold', color: '#333', marginBottom: '10px', textAlign: 'center',
-                    position: 'sticky', top: '1px', backgroundColor: '#ffffff',
-                }}>รายการที่เลือก</h3>
-
-                {selectedItems.length > 0 ? (
-                    <div style={{
-                        height: '700px', overflowY: 'auto', paddingRight: '10px',
-                    }}>
-                        {selectedItems.map((item) => (
-                            <div key={item.id} style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                borderBottom: '5px solid #ffffff', backgroundColor: '#ececec4b', transition: 'all 0.3s ease'
-                            }}>
-                                <div style={{
-                                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start'
-                                }}>
-                                    <p style={{ fontSize: '16px', color: '#000000', marginBottom: '5px' }}>{item.p_name}</p>
-                                    <p style={{ fontSize: '0.9em', color: '#555', marginTop: '0' }}>x {item.quantity} ชิ้น</p>
-                                </div>
-                                <p style={{ fontSize: '16px', color: '#333' }}>{item.price} บาท</p>
-                                <button
-                                    onClick={() => handleRemoveItem(item.id)}
-                                    style={{
-                                        backgroundColor: '#e30d11', color: 'white', padding: '5px 10px',
-                                        border: 'none', borderRadius: '5px', cursor: 'pointer',
-                                        transition: 'background-color 0.3s ease',
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
-                                >
-                                    ลบ
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p style={{ fontSize: '16px', color: '#777', textAlign: 'center' }}>ยังไม่มีรายการที่เลือก</p>
-                )}
-
-                {/* ✅ ปุ่ม ยืนยัน / ยกเลิก */}
-                <div style={{
-                    display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '20px', width: '100%'
+                            <div style={{
+                    flex: 1, 
+                    backgroundColor: '#f9f9f9', 
+                    boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)', 
+                    height: '100%', 
+                    maxHeight: '450px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    overflowY: 'auto', 
+                    gap: '10px', 
+                    overflowX: 'hidden'
                 }}>
-                    <button
-                        onClick={handleConfirm}
-                        style={{
-                            backgroundColor: '#0c9fa9', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
-                            fontSize: '16px', transition: 'background-color 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
-                    >
-                        ยืนยัน
-                    </button>
-                    <button
-                        onClick={() => {
-                            handleCancel();
-                            setShowAddItemPopup(false);
-                        }}
-                        style={{
-                            backgroundColor: '#f39c12', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '5px', cursor: 'pointer',
-                            fontSize: '16px', transition: 'background-color 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
-                    >
-                        ยกเลิก
-                    </button>
+                    <h3 style={{
+                        fontSize: '20px', 
+                        fontWeight: 'bold', 
+                        color: '#333', 
+                        marginBottom: '10px', 
+                        textAlign: 'center', 
+                        position: 'sticky', 
+                        top: '1px', 
+                        backgroundColor: '#ffffff',
+                    }}>รายการที่เลือก</h3>
+
+                    {selectedItems.length > 0 ? (
+                        <div style={{
+                            height: '700px', 
+                            overflowY: 'auto', 
+                            paddingRight: '10px', 
+                        }}>
+                            {selectedItems.map((item) => (
+                                 <div key={item.id} style={{
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between',
+                                    borderBottom: '5px solid #ffffff',
+                                    width: '100%', 
+                                    backgroundColor: '#ececec4b', 
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column', 
+                                        alignItems: 'flex-start' 
+                                    }}>
+                                        <p style={{ 
+                                            fontSize: '16px', 
+                                            color: '#000000', 
+                                            marginBottom: '5px' 
+                                        }}>{item.p_name}</p>
+                                        <p style={{ 
+                                            fontSize: '0.9em', 
+                                            color: '#555', 
+                                            marginTop: '0',
+                                            marginRight: '230px' 
+
+                                        }}>x {item.quantity} ชิ้น</p>
+                                    </div>
+                                    <p style={{ 
+                                        fontSize: '16px', 
+                                        color: '#333', 
+                                    }}>{item.price} บาท</p>
+                                    <button
+                                        onClick={() => handleRemoveItem(item.id)}
+                                        style={{
+                                            backgroundColor: '#e30d0d', 
+                                            color: 'white', 
+                                            padding: '10px 10px', 
+                                            border: 'none', 
+                                            borderRadius: '7px',
+                                            marginLeft:'10px',
+                                            cursor: 'pointer', 
+                                            transition: 'background-color 0.3s ease',
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
+                                    >
+                                        ลบ
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{ fontSize: '16px', color: '#777', textAlign: 'center' }}>ยังไม่มีรายการที่เลือก</p>
+                    )}
+
+                    <div style={{
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        gap: '20px', 
+                        marginTop: '20px', 
+                        width: '100%'
+                    }}>
+                        <button
+                            onClick={handleConfirm}
+                            style={{
+                                backgroundColor: '#0c9fa9', 
+                                color: 'white', 
+                                padding: '12px 24px', 
+                                border: 'none', 
+                                borderRadius: '5px', 
+                                cursor: 'pointer',
+                                fontSize: '16px', 
+                                transition: 'background-color 0.3s ease',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
+                        >
+                            ยืนยัน
+                        </button>
+                        <button
+                            onClick={() => {
+                                handleCancel();
+                                setShowAddItemPopup(false);
+                            }}
+                            style={{
+                                backgroundColor: '#f39c12', 
+                                color: 'white', 
+                                padding: '12px 24px', 
+                                border: 'none', 
+                                borderRadius: '5px', 
+                                cursor: 'pointer',
+                                fontSize: '16px', 
+                                transition: 'background-color 0.3s ease',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
+                        >
+                            ยกเลิก
+                        </button>
+                    </div>
                 </div>
-            </div>
+
         </div>
     </div>
 )}
