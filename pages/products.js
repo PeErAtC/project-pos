@@ -821,11 +821,11 @@ const handlePopupInputFocus = (ref) => {
                         if (orderId) {
                             console.log("Order ID:", orderId);
     
-                            // เปลี่ยนสถานะเป็น 'C' เมื่อยกเลิกออเดอร์
+                            // เปลี่ยนสถานะออเดอร์เป็น 'C' เมื่อยกเลิกออเดอร์
                             updateOrderStatus(orderId, 'C')
                                 .then(() => {
                                     // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1)
-                                    updateTableStatus(tableCode, 1, 'Y')  // ใช้ tableCode ที่ได้จาก API
+                                    updateTableStatus(tableCode, 1)  // ใช้ tableCode และ tableFreeStatus เป็น 1 (โต๊ะว่าง)
                                         .then(() => {
                                             // รีเซ็ตค่าต่าง ๆ ในตะกร้า
                                             setCart([]);
@@ -911,40 +911,29 @@ const handlePopupInputFocus = (ref) => {
     };
     
     // ฟังก์ชันอัปเดตสถานะโต๊ะ
-    const updateTableStatus = async (tableCode, tableFreeStatus) => {
-        if (!tableCode) {
-            console.error("Table code is missing");
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขโต๊ะ กรุณาลองอีกครั้ง', 'error');
-            return false;
-        }
-    
+    const updateTableStatus = async (finalTableId) => {
         try {
-            const { api_url, slug, authToken } = getApiConfig();
-            
-            // ใช้ tableCode แทน finalTableId
-            const response = await axios.put(
-                `${api_url}/${slug}/table_codes/${tableCode}`, // เปลี่ยน finalTableId เป็น tableCode
-                { 
-                    tableFree: tableFreeStatus,  // ส่งสถานะ tableFree เป็น 1
-                    status: 'Y'  // เปลี่ยนสถานะของโต๊ะเป็น 'Y'
-                },
+            const tableUpdateURL = `${api_url}/${slug}/table_codes/${finalTableId}`;
+            console.log("🔄 กำลังอัปเดตสถานะโต๊ะ:", tableUpdateURL);
+    
+            const tableResponse = await axios.patch(
+                tableUpdateURL,
+                { status: 'Y' },  // ใช้ 'Y' เพื่ออัปเดตโต๊ะเป็นว่าง
                 {
-                    headers: { 
-                        'Authorization': `Bearer ${authToken}` 
-                    }
+                    headers: {
+                        Accept: "application/json",
+                        Authorization: `Bearer ${authToken}`,  // ใช้ token สำหรับการตรวจสอบ
+                    },
                 }
             );
     
-            if (response.status === 200) {
-                console.log(`✅ อัปเดตสถานะของโต๊ะ ${tableCode} เป็น tableFree: ${tableFreeStatus}, status: 'Y'`);
-                return true;
+            if (tableResponse.status === 200 || tableResponse.status === 204) {
+                console.log(`✅ โต๊ะ ${finalTableId} ถูกอัปเดตเป็น "ว่าง" สำเร็จ`);
             } else {
-                console.error('❌ ข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', response.data);
-                return false;
+                throw new Error(`❌ Response status: ${tableResponse.status}`);
             }
         } catch (error) {
-            console.error('❌ เกิดข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', error.response ? error.response.data : error.message);
-            return false;
+            console.error(`❌ ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`);
         }
     };
     
