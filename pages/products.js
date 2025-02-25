@@ -875,6 +875,7 @@ const handlePopupInputFocus = (ref) => {
     
     // ฟังก์ชันอัปเดตสถานะออเดอร์
     const updateOrderStatus = async (orderId, status) => {
+       
         if (!orderId) {
             console.error("Order ID is missing");
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขออเดอร์ กรุณาลองอีกครั้ง', 'error');
@@ -910,7 +911,7 @@ const handlePopupInputFocus = (ref) => {
     };
     
     // ฟังก์ชันอัปเดตสถานะโต๊ะ
-    const updateTableStatus = async (tableCode, tableFreeStatus, tableStatus) => {
+    const updateTableStatus = async (tableCode, tableFreeStatus) => {
         if (!tableCode) {
             console.error("Table code is missing");
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขโต๊ะ กรุณาลองอีกครั้ง', 'error');
@@ -919,12 +920,13 @@ const handlePopupInputFocus = (ref) => {
     
         try {
             const { api_url, slug, authToken } = getApiConfig();
-    
+            
+            // ใช้ tableCode แทน finalTableId
             const response = await axios.put(
-                `${api_url}/${slug}/table_codes/${tableCode}`,
+                `${api_url}/${slug}/table_codes/${tableCode}`, // เปลี่ยน finalTableId เป็น tableCode
                 { 
                     tableFree: tableFreeStatus,  // ส่งสถานะ tableFree เป็น 1
-                    status: tableStatus  // ส่งสถานะของโต๊ะเป็น 'Y'
+                    status: 'Y'  // เปลี่ยนสถานะของโต๊ะเป็น 'Y'
                 },
                 {
                     headers: { 
@@ -934,7 +936,7 @@ const handlePopupInputFocus = (ref) => {
             );
     
             if (response.status === 200) {
-                console.log(`✅ อัปเดตสถานะของโต๊ะ ${tableCode} เป็น tableFree: ${tableFreeStatus}, status: ${tableStatus}`);
+                console.log(`✅ อัปเดตสถานะของโต๊ะ ${tableCode} เป็น tableFree: ${tableFreeStatus}, status: 'Y'`);
                 return true;
             } else {
                 console.error('❌ ข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', response.data);
@@ -945,6 +947,7 @@ const handlePopupInputFocus = (ref) => {
             return false;
         }
     };
+    
     
     
     
