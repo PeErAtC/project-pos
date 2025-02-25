@@ -783,7 +783,6 @@ const handlePopupInputFocus = (ref) => {
     };
     
     
-    
     const clearCart = () => {
         Swal.fire({
             title: 'กรุณากรอกรหัสผ่านเพื่อยืนยันการยกเลิกออเดอร์',
@@ -792,13 +791,12 @@ const handlePopupInputFocus = (ref) => {
             showCancelButton: true,
             confirmButtonText: 'ยืนยันการยกเลิก',
             cancelButtonText: 'ยกเลิก',
-            showLoaderOnConfirm: true,  // แสดงการโหลดเมื่อกดปุ่มยืนยัน
+            showLoaderOnConfirm: true,
             preConfirm: (password) => {
                 return new Promise((resolve, reject) => {
-                    // ตรวจสอบรหัสผ่าน
-                    const storedPassword = localStorage.getItem('password'); // รหัสผ่านที่เก็บไว้ใน localStorage
+                    const storedPassword = localStorage.getItem('password');
                     if (password === storedPassword) {
-                        resolve(); // ถ้ารหัสผ่านถูกต้องให้ดำเนินการ
+                        resolve();
                     } else {
                         reject('รหัสผ่านไม่ถูกต้อง');
                     }
@@ -817,15 +815,14 @@ const handlePopupInputFocus = (ref) => {
                     cancelButtonText: 'ยกเลิก',
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // ตรวจสอบว่า orderId มีค่าหรือไม่
                         if (orderId) {
                             console.log("Order ID:", orderId);
     
                             // เปลี่ยนสถานะออเดอร์เป็น 'C' เมื่อยกเลิกออเดอร์
                             updateOrderStatus(orderId, 'C')
                                 .then(() => {
-                                    // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1)
-                                    updateTableStatus(tableCode, 1)  // ใช้ tableCode และ tableFreeStatus เป็น 1 (โต๊ะว่าง)
+                                    // เปลี่ยนสถานะโต๊ะให้เป็นว่าง (tableFree = 1 และ status = 'Y')
+                                    updateTableStatus(tableCode, tableId, 1, 'Y')  // ใช้ tableCode, tableId, tableFreeStatus = 1 และ tableStatus = 'Y'
                                         .then(() => {
                                             // รีเซ็ตค่าต่าง ๆ ในตะกร้า
                                             setCart([]);
@@ -834,7 +831,7 @@ const handlePopupInputFocus = (ref) => {
                                             setBillDiscountType("THB");
                                             setOrderReceived(false);
                                             setIsBillPaused(false);
-                                            setOrderNumber(null); // เคลียร์เลขที่ออเดอร์
+                                            setOrderNumber(null);  // เคลียร์เลขที่ออเดอร์
     
                                             Swal.fire({
                                                 title: 'ออเดอร์ถูกยกเลิก!',
@@ -864,18 +861,8 @@ const handlePopupInputFocus = (ref) => {
         });
     };
     
-    
-    // ฟังก์ชันตรวจสอบรหัสผ่าน
-    const getStoredPassword = () => {
-        // สมมุติว่าเก็บรหัสผ่านใน localStorage หรือ sessionStorage
-        return localStorage.getItem('userPassword');  // สามารถดึงจากระบบเก็บข้อมูลได้
-    };
-    
-
-    
     // ฟังก์ชันอัปเดตสถานะออเดอร์
     const updateOrderStatus = async (orderId, status) => {
-       
         if (!orderId) {
             console.error("Order ID is missing");
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบหมายเลขออเดอร์ กรุณาลองอีกครั้ง', 'error');
@@ -886,14 +873,10 @@ const handlePopupInputFocus = (ref) => {
             const { api_url, slug, authToken } = getApiConfig();
     
             const response = await axios.put(
-                `${api_url}/${slug}/orders/${orderId}`, 
+                `${api_url}/${slug}/orders/${orderId}`,
+                { status: status },
                 {
-                    status: status,  // ส่งแค่สถานะ
-                },
-                {
-                    headers: { 
-                        'Authorization': `Bearer ${authToken}` 
-                    }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 }
             );
     
@@ -911,33 +894,39 @@ const handlePopupInputFocus = (ref) => {
     };
     
     // ฟังก์ชันอัปเดตสถานะโต๊ะ
-    const updateTableStatus = async (finalTableId) => {
+    const updateTableStatus = async (tableCode, tableId, tableFreeStatus, tableStatus) => {
         try {
-            const tableUpdateURL = `${api_url}/${slug}/table_codes/${finalTableId}`;
-            console.log("🔄 กำลังอัปเดตสถานะโต๊ะ:", tableUpdateURL);
+            const { api_url, slug, authToken } = getApiConfig();
+            const tableUpdateURL = `${api_url}/${slug}/table_codes/${tableCode}?tableId=${tableId}`;
+            console.log("🔄 กำลังกำหนดสถานะโต๊ะ:", tableUpdateURL);
     
-            const tableResponse = await axios.patch(
+            const tableResponse = await axios.put(
                 tableUpdateURL,
-                { status: 'Y' },  // ใช้ 'Y' เพื่ออัปเดตโต๊ะเป็นว่าง
+                { status: tableStatus, tableFree: tableFreeStatus },
                 {
                     headers: {
                         Accept: "application/json",
-                        Authorization: `Bearer ${authToken}`,  // ใช้ token สำหรับการตรวจสอบ
+                        Authorization: `Bearer ${authToken}`,
                     },
                 }
             );
     
             if (tableResponse.status === 200 || tableResponse.status === 204) {
-                console.log(`✅ โต๊ะ ${finalTableId} ถูกอัปเดตเป็น "ว่าง" สำเร็จ`);
+                console.log(`✅ โต๊ะ ${tableCode} (ID: ${tableId}) ถูกอัปเดตเป็นสถานะ "ว่าง"`);
+                return true;
             } else {
-                throw new Error(`❌ Response status: ${tableResponse.status}`);
+                // ตรวจสอบข้อมูลจากเซิร์ฟเวอร์เมื่อเกิดข้อผิดพลาด
+                console.error('❌ ข้อผิดพลาดจากเซิร์ฟเวอร์:', tableResponse.data);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดตสถานะโต๊ะได้', 'error');
+                return false;
             }
         } catch (error) {
-            console.error(`❌ ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`);
+            // แสดงข้อมูลที่มากขึ้นเมื่อเกิดข้อผิดพลาด
+            console.error('❌ เกิดข้อผิดพลาดในการอัปเดตสถานะโต๊ะ:', error.response ? error.response.data : error.message);
+            Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถอัปเดตสถานะโต๊ะได้: ${error.message}`, 'error');
+            return false;
         }
     };
-    
-    
     
     
     
