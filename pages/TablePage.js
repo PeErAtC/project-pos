@@ -4,7 +4,7 @@ import { MdRestaurant } from 'react-icons/md';
 import axios from 'axios';
 import Keyboard from './keyboard'; // คีย์บอร์ดเสมือนที่คุณสร้างขึ้นมา
 import Sidebar from './components/sidebar'; // Sidebar
-import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+import config from './config';  // ใช้ config ในไฟล์ที่ต้องการ
 import Image from 'next/image';
 import './styles.css';  // เพิ่มไฟล์ CSS ที่คุณสร้างใหม่เข้ามา
 import { FaCircle } from 'react-icons/fa';
@@ -40,8 +40,8 @@ function TableCard({ table, onClick }) {
             }}
             onClick={() => {
                 setIsPressed(false);
-                onClick(table.id); // เมื่อกดที่โต๊ะให้ไปที่หน้ารายละเอียด
-            }}
+                onClick(table.table_code, table.id)  // ✅ ส่งทั้ง table_code และ table_id
+              }}
             onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
                 e.currentTarget.style.boxShadow = '0px 8px 20px rgba(0, 0, 0, 0.25)';
@@ -166,13 +166,27 @@ export default function MainTablePage() {
     return tableCode.includes(searchQuery.toLowerCase());
   });
 
-  const handleTableClick = (tableCode) => {
-    playClickSound();
-    router.push({
-      pathname: '/products',
-      query: { tableCode: tableCode },
-    });
+  const handleTableClick = (tableCode, tableId) => {
+      playClickSound();
+      localStorage.setItem("selected_table", tableCode);
+      localStorage.setItem("selected_table_id", tableId);
+
+      console.log("📌 โต๊ะที่ถูกเลือก:", tableCode);
+      console.log("📌 ID ของโต๊ะ:", tableId);
+
+      router.push({
+        pathname: '/products',
+        query: { tableCode: tableCode, tableId: tableId }, // ✅ ส่งทั้ง 2 ค่า
+      });
   };
+
+
+  
+
+
+
+
+
 
   const handleFocusSearch = () => {
     setKeyboardVisible(true);
@@ -264,4 +278,3 @@ const styles = {
   noTableText: { color: '#333' },
   sale: { color: '#000' },
 };
-
