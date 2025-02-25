@@ -27,13 +27,36 @@ export default function BackendPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);  // ใช้เพื่อควบคุมการแสดงเมนู
+  const [showKeyboard, setShowKeyboard] = useState(false);  // เพิ่มสถานะการแสดงคีย์บอร์ด
   
-
   useEffect(() => {
     checkLoginStatus();
     fetchItems();
     fetchCategories();
   }, []);
+
+    // ฟังก์ชันสำหรับการจับข้อมูลจากคีย์บอร์ด
+    const handleKeyPress = (key) => {
+      if (key === 'Backspace') {
+        setItemName(itemName.slice(0, -1));  // ลบตัวอักษรสุดท้าย
+      } else if (key === 'Space') {
+        setItemName(itemName + ' ');  // เพิ่มช่องว่าง
+      } else if (key === 'Enter') {
+        // ใช้สำหรับกรณีที่ต้องการให้การกด Enter ทำอะไรบางอย่าง
+      } else {
+        setItemName(itemName + key);  // เพิ่มตัวอักษรที่กด
+      }
+    };
+  
+    // เปิดคีย์บอร์ดเมื่อมีการคลิกที่ช่องกรอกข้อมูล
+    const handleFocus = () => {
+      setShowKeyboard(true);
+    };
+  
+    // ซ่อนคีย์บอร์ดเมื่อผู้ใช้คลิกออกจากช่องกรอกข้อมูล
+    const handleBlur = () => {
+      setShowKeyboard(false);
+    };
 
   // ฟังก์ชันตรวจสอบการเข้าสู่ระบบ
   const checkLoginStatus = () => {
@@ -50,6 +73,11 @@ export default function BackendPage() {
       });
     }
   };
+
+  const handleMenuToggle = (index) => {
+    setShowMenu(prevState => prevState === index ? null : index);  // Toggle เมนูสำหรับแต่ละรายการ
+};
+
 
   // ฟังก์ชันดึงรายการอาหารจาก API
   const fetchItems = async () => {
@@ -72,6 +100,7 @@ export default function BackendPage() {
         showNotification('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
     }
 };
+
   // ฟังก์ชันดึงหมวดหมู่อาหารจาก API
   const fetchCategories = async () => {
     try {
@@ -231,120 +260,131 @@ export default function BackendPage() {
     setEditIndex(null);
   };
 
-    // ฟังก์ชันจัดการการเพิ่ม/ลบ/แก้ไขหมวดหมู่
-    const handleCategoryAction = (action, categoryId = null) => {
-      setCategoryAction(action);
-      if (action === 'edit') {
-        const categoryToEdit = categories.find((category) => category.id === categoryId);
-        setNewCategoryName(categoryToEdit.c_name);
-        setEditingCategoryId(categoryId);
-        setIsEditingCategory(true); // แสดงว่ากำลังแก้ไข
-      } else {
-        setNewCategoryName('');
-        setEditingCategoryId(null);
-        setIsEditingCategory(false); // แสดงว่ากำลังเพิ่มหมวดหมู่ใหม่
-      }
-      setShowCategoryModal(true); // เปิด modal
-    }; 
+  // ฟังก์ชันจัดการการเพิ่ม/ลบ/แก้ไขหมวดหมู่
+  const handleCategoryAction = (action, categoryId = null) => {
+    setCategoryAction(action);
+    if (action === 'edit') {
+      const categoryToEdit = categories.find((category) => category.id === categoryId);
+      setNewCategoryName(categoryToEdit.c_name);
+      setEditingCategoryId(categoryId);
+      setIsEditingCategory(true); // แสดงว่ากำลังแก้ไข
+    } else {
+      setNewCategoryName('');
+      setEditingCategoryId(null);
+      setIsEditingCategory(false); // แสดงว่ากำลังเพิ่มหมวดหมู่ใหม่
+    }
+    setShowCategoryModal(true); // เปิด modal
+  }; 
+  
+  const handleSaveCategory = async () => {
+    if (!newCategoryName && !selectedCategory) {
+      showNotification('กรุณากรอกชื่อหมวดหมู่หรือเลือกหมวดหมู่', 'error');
+      return;
+    }
     
-    // ฟังก์ชันจัดการการเพิ่ม/แก้ไข/ลบหมวดหมู่
-// ฟังก์ชันจัดการการเพิ่ม/แก้ไข/ลบหมวดหมู่
-const handleSaveCategory = async () => {
-  if (!newCategoryName && !selectedCategory) {
-    showNotification('กรุณากรอกชื่อหมวดหมู่หรือเลือกหมวดหมู่', 'error');
-    return;
-  }
-  const result = await 
-  Swal.fire({
-    title: 'ยืนยันการเพิ่มหมวดหมู่',
-    text: `คุณต้องการเพิ่มหมวดหมู่ "${newCategoryName}" หรือไม่?`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'เพิ่ม',
-    cancelButtonText: 'ยกเลิก',
-  });
-
-  if (!result.isConfirmed) return; // ถ้ากดยกเลิก ให้หยุดทำงานที่นี่
-
-  const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-  const slug = localStorage.getItem('slug') || 'default_slug';
-  const authToken = localStorage.getItem('token') || 'default_token';
-
-  const formData = { c_name: newCategoryName };
-
-  try {
-    let response;
-    if (categoryAction === 'edit') {
-      const url = `${api_url}/${slug}/category/${editingCategoryId}`;
-      response = await axios.put(url, formData, {
-        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
-      });
-
-    
-      Swal.fire({
-        icon: 'success',
-        title: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว!',
-        confirmButtonText: 'ตกลง',
-      });
-      fetchCategories();  // โหลดหมวดหมู่ใหม่
-      setShowCategoryModal(false);  // ปิด modal
+    console.log("Deleting Category:", selectedCategory); // ตรวจสอบค่า selectedCategory ที่ถูกเลือก
+  
+    const result = await Swal.fire({
+      title: 'ยืนยันการเพิ่มหมวดหมู่',
+      text: `คุณต้องการเพิ่มหมวดหมู่ "${newCategoryName}" หรือไม่?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'เพิ่ม',
+      cancelButtonText: 'ยกเลิก',
+    });
+  
+    if (!result.isConfirmed) return; // ถ้ากดยกเลิก ให้หยุดทำงานที่นี่
+  
+    const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+    const slug = localStorage.getItem('slug') || 'default_slug';
+    const authToken = localStorage.getItem('token') || 'default_token';
+  
+    const formData = { c_name: newCategoryName };
+  
+    try {
+      let response;
+      if (categoryAction === 'edit') {
+        const url = `${api_url}/${slug}/category/${editingCategoryId}`;
+        response = await axios.put(url, formData, {
+          headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
+        });
       
-    } else if (categoryAction === 'add') {
-      const url = `${api_url}/${slug}/category`;
-      response = await axios.post(url, formData, {
-        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
-      });
+        Swal.fire({
+          icon: 'success',
+          title: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว!',
+          confirmButtonText: 'ตกลง',
+        });
+        fetchCategories();  // โหลดหมวดหมู่ใหม่
+        setShowCategoryModal(false);  // ปิด modal
+        
+      } else if (categoryAction === 'add') {
+        const url = `${api_url}/${slug}/category`;
+        response = await axios.post(url, formData, {
+          headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
+        });
+        Swal.fire({
+          icon: 'success',
+          title: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว!',
+          confirmButtonText: 'ตกลง',
+        });
+      } else if (categoryAction === 'delete' && selectedCategory) {
+        // ตรวจสอบค่า selectedCategory ก่อนลบ
+        const url = `${api_url}/${slug}/category/${selectedCategory}`;
+        response = await axios.delete(url, {
+          headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
+        });
+        Swal.fire({
+          icon: 'success',
+          title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
+          confirmButtonText: 'ตกลง',
+        });
+      }
+  
+      fetchCategories();  // รีเฟรชหมวดหมู่
+      setShowCategoryModal(false);  // ปิด modal
+    } catch (error) {
+      console.error('Error:', error);
       Swal.fire({
-        icon: 'success',
-        title: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว!',
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาดในการจัดการหมวดหมู่',
         confirmButtonText: 'ตกลง',
-
-      });
-    } else if (categoryAction === 'delete' && selectedCategory) {
-      const url = `${api_url}/${slug}/category/${selectedCategory}`;
-      response = await axios.delete(url, {
-        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
-      });
-      Swal.fire({
-        icon: 'success',
-        title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
-        confirmButtonText: 'ตกลง',
-
+        confirmButtonColor: '#d33'
       });
     }
+  };  
 
-    fetchCategories();  // รีเฟรชหมวดหมู่
-    setShowCategoryModal(false);  // ปิด modal
-  } catch (error) {
-    console.error('Error:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'เกิดข้อผิดพลาดในการจัดการหมวดหมู่',
-      confirmButtonText: 'ตกลง',
-      confirmButtonColor: '#d33'
-    });
-  }
-};  
-  
-    // ฟังก์ชันปิด modal
-    const handleCloseCategoryModal = () => {
-      setShowCategoryModal(false);
-    };
+  // ฟังก์ชันปิด modal
+  const handleCloseCategoryModal = () => {
+    setShowCategoryModal(false);
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (!file.type.startsWith('image/')) {
-        showNotification('กรุณาเลือกไฟล์รูปภาพที่ถูกต้อง!', 'error');
-        return;
-      }
-      if (file.size > 2 * 1024 * 1024) { // ตรวจสอบขนาด (2MB)
-        showNotification('ไฟล์มีขนาดใหญ่เกินไป! (ไม่เกิน 2MB)', 'error');
-        return;
-      }
-      setItemImage(file);
+        if (!file.type.startsWith('image/')) {
+            showNotification('กรุณาเลือกไฟล์รูปภาพที่ถูกต้อง!', 'error');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) { // ตรวจสอบขนาด (2MB)
+            showNotification('ไฟล์มีขนาดใหญ่เกินไป! (ไม่เกิน 2MB)', 'error');
+            return;
+        }
+
+        // อ่านไฟล์รูปภาพ
+        const img = new Image();
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            img.onload = function () {
+                const width = img.width;   // ความกว้างของภาพ
+                const height = img.height; // ความสูงของภาพ
+                showNotification(`ขนาดรูปภาพ: ${width}x${height}`, 'success');
+            };
+            img.src = event.target.result;  // โหลดรูปที่อ่านจากไฟล์
+        };
+        reader.readAsDataURL(file); // อ่านไฟล์เป็น Base64
+        setItemImage(file); // เก็บรูปภาพ
     }
-  };
+};
 
   const handleRemoveImage = () => {
     setItemImage(null); // รีเซ็ตรูปภาพที่เลือก
@@ -353,7 +393,7 @@ const handleSaveCategory = async () => {
   const handleImageUpload = async (event) => {
     const formData = new FormData();
     formData.append('image', event.target.files[0]); // เลือกรูปที่ผู้ใช้เลือก
-  
+
     try {
       const slug = localStorage.getItem('slug') || 'default_slug';
       const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
@@ -366,7 +406,7 @@ const handleSaveCategory = async () => {
         },
         body: formData,
       });
-  
+
       const result = await response.json();
     
       if (result.success) {
@@ -375,7 +415,7 @@ const handleSaveCategory = async () => {
           title: 'อัพโหลดรูปภาพสำเร็จ',
           text: result.message,
         });
-  
+
         // Update image path or URL in the state
         setImage(result.data.image);
       } else {
@@ -394,7 +434,53 @@ const handleSaveCategory = async () => {
       });
     }
   };
+
+  const handleDeleteCategory = async () => {
+    if (!selectedCategory) {
+      showNotification('กรุณาเลือกหมวดหมู่ที่ต้องการลบ', 'error');
+      return;
+    }
   
+    const result = await Swal.fire({
+      title: 'ยืนยันการลบหมวดหมู่',
+      text: 'คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'ลบ',
+      cancelButtonText: 'ยกเลิก',
+    });
+  
+    if (!result.isConfirmed) return; // ถ้าผู้ใช้กดยกเลิก ให้หยุดที่นี่
+  
+    const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
+    const slug = localStorage.getItem('slug') || 'default_slug';
+    const authToken = localStorage.getItem('token') || 'default_token';
+    const url = `${api_url}/${slug}/category/${selectedCategory}`;
+  
+    try {
+      await axios.delete(url, {
+        headers: { Authorization: `Bearer ${authToken}`, Accept: 'application/json' },
+      });
+  
+      Swal.fire({
+        icon: 'success',
+        title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
+        confirmButtonText: 'ตกลง',
+      });
+      fetchCategories();  // รีเฟรชหมวดหมู่
+      setShowCategoryModal(false);  // ปิด modal
+    } catch (error) {
+      console.error('Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาดในการลบหมวดหมู่',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#d33'
+      });
+    }
+  };  
 
   // ฟังก์ชันจัดการการลบรายการอาหาร
   const handleDeleteItem = async (id) => {
@@ -443,24 +529,24 @@ const handleSaveCategory = async () => {
     const slug = localStorage.getItem('slug') || 'default_slug';
     const authToken = localStorage.getItem('token') || 'default_token';
     const itemToEdit = items.find((item) => item.id === id);
-  
+
     console.log("API:", api_url, "Slug:", slug, "Token:", authToken); // ตรวจสอบค่าจาก localStorage
-  
+
     if (!itemToEdit) {
       showNotification('ไม่พบรายการที่ต้องการแก้ไข', 'error');
       return;
     }
-  
+
     setItemName(itemToEdit.p_name || itemToEdit.name);
     setItemCategory(itemToEdit.category_id);
     setItemPrice(itemToEdit.price);
     setItemStatus(itemToEdit.status === 'Y');
     setEditMode(true);
     setEditIndex(id);
-  
-    // รีเซ็ตค่ารูปภาพก่อนแสดง
+
+    // รีเซ็ตรูปภาพก่อนแสดง
     setItemImage(null);
-  
+
     // ถ้ามีรูปเก่า ให้โหลดจาก URL พร้อม timestamp ป้องกันแคช
     if (itemToEdit.image && !itemToEdit.image.startsWith("http")) {
       let imageUrl = `https://easyapp.clinic/pos-api/storage/app/public/product/${slug}/${itemToEdit.image}`;
@@ -469,84 +555,20 @@ const handleSaveCategory = async () => {
     } else {
       setItemImage(itemToEdit.image);
     }
-  };  
-
-  // ฟังก์ชันลบหมวดหมู่
-  const handleDeleteCategory = async () => {
-    if (!selectedCategory) {
-      showNotification('กรุณาเลือกหมวดหมู่ที่ต้องการลบ', 'error');
-      return;
-    }
-  
-    const result = await Swal.fire({
-      title: 'ยืนยันการลบหมวดหมู่',
-      text: 'คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'ลบ',
-      cancelButtonText: 'ยกเลิก',
-    });
-  
-    if (!result.isConfirmed) return; // ถ้าผู้ใช้กดยกเลิก ให้หยุดที่นี่
-  
-    const api_url = localStorage.getItem('url_api') || 'https://default.api.url';
-    const slug = localStorage.getItem('slug') || 'default_slug';
-    const authToken = localStorage.getItem('token') || 'default_token';
-    const url = `${api_url}/${slug}/category/${selectedCategory}`;
-  
-    try {
-      await axios.delete(url, {
-        headers: { Authorization: `Bearer ${authToken}`, Accept: 'application/json' },
-      });
-  
-      Swal.fire({
-        icon: 'success',
-        title: 'ลบหมวดหมู่เรียบร้อยแล้ว!',
-        confirmButtonText: 'ตกลง',
-      });
-      fetchCategories();
-      setShowCategoryModal(false);
-    } catch (error) {
-      console.error('Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'เกิดข้อผิดพลาดในการลบหมวดหมู่',
-        confirmButtonText: 'ตกลง',
-        confirmButtonColor: '#d33'
-      });
-    }
   };
 
-  const handleMenuToggle = (index) => {
-    setShowMenu(prevState => prevState === index ? null : index);  // Toggle เมนูสำหรับแต่ละรายการ
-  
-
-  const handleEditItem = (id) => {
-    console.log("Editing item", id);
-    // การทำงานเมื่อคลิกปุ่มแก้ไข
-  };
-
-  const handleDeleteItem = (id) => {
-    console.log("Deleting item", id);
-    // การทำงานเมื่อคลิกปุ่มลบ
-  }};
-  
   // ฟังก์ชันกรองรายการอาหารตามคำค้นหาและหมวดหมู่
   const filteredItems = items.filter((item) => {
     const nameMatch = item.p_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
     const categoryMatch = filterCategory === '' || item.category_id === parseInt(filterCategory);
     return nameMatch && categoryMatch;
-  });  
+  });
 
-  const availableItemsForSale = filteredItems.filter(item => item.status === 'Y'); // รายการที่มีสถานะเปิด
-  const sortedItems = items.sort((a, b) => a.id - b.id);
+  //****************************************************เริ่ม*******************************************************************// 
 
   return (
     <div style={styles.container}>
       <Sidebar onListClick={() => console.log('List clicked')} />
-      
       <div style={styles.contentContainer}>
         {notification && (
           <div style={{
@@ -567,10 +589,10 @@ const handleSaveCategory = async () => {
             <span style={{ marginLeft: '10px', fontSize: '16px', fontWeight: 'bold' }}>{notification.message}</span>
           </div>
         )}
-
+  
         <div style={styles.listContainer}>
           <h1 style={styles.title}>รายการอาหาร</h1>
-
+  
           <div style={styles.searchContainer}>
             <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} style={styles.dropdown_all}>
               <option value="">หมวดหมู่ (ทั้งหมด)</option>
@@ -613,10 +635,10 @@ const handleSaveCategory = async () => {
                       <td style={{ ...styles.td, color: item.status === "Y" ? "#111" : "red" }}>
                         {item.status === "Y" ? "เปิด" : "ปิด"}
                       </td>
-
+  
                       <td style={styles.td}>
                         <button onClick={() => handleMenuToggle(index)} style={styles.menuButton}><FaEllipsisH size={20} /></button>
-                      
+  
                         {showMenu === index && (
                           <div style={styles.menu}>
                             <button onClick={() => handleEditItem(item.id)} style={styles.menuItemEdit}>
@@ -635,49 +657,51 @@ const handleSaveCategory = async () => {
             </div>
           )}
         </div>
+  
         {/* Modal สำหรับการจัดการหมวดหมู่ */}
         {showCategoryModal && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalContent}>
-              <h2>{categoryAction === 'edit' ? 'แก้ไขหมวดหมู่' : categoryAction === 'delete' ? 'ลบหมวดหมู่' : 'เพิ่มหมวดหมู่'}</h2>
-              <input
-                type="text"
-                placeholder="ชื่อหมวดหมู่"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                style={styles.inputModal}
-              />
-              
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                style={styles.dropdown}
-              >
-                <option value="">เลือกหมวดหมู่</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>{category.c_name}</option>
-                ))}
-              </select>
-
-              {/* จัดการปุ่มเรียงลำดับลง */}
-              <div style={styles.buttonGroup}>
-                {selectedCategory ? (
-                  <div>
-                    <button onClick={handleDeleteCategory} style={styles.DeleteButtonModal}>ลบ</button>
-                    <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
-                  </div>
-                ) : (
-                  <div>
-                    <button onClick={handleSaveCategory} style={styles.saveButton}>บันทึก</button>
-                    <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
-                  </div>
-                )}
+          <div style={styles.overlay}>
+            <div style={styles.modal}>
+              <div style={styles.modalContent}>
+                <h2>{categoryAction === 'edit' ? 'แก้ไขหมวดหมู่' : categoryAction === 'delete' ? 'ลบหมวดหมู่' : 'เพิ่มหมวดหมู่'}</h2>
+                <input
+                  type="text"
+                  placeholder="ชื่อหมวดหมู่"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  style={styles.inputModal}
+                />
+  
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  style={styles.dropdown}
+                >
+                  <option value="">เลือกหมวดหมู่</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.c_name}</option>
+                  ))}
+                </select>
+  
+                {/* จัดการปุ่มเรียงลำดับลง */}
+                <div style={styles.buttonGroup}>
+                  {selectedCategory ? (
+                    <div>
+                      <button onClick={handleDeleteCategory} style={styles.DeleteButtonModal}>ลบ</button>
+                      <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <button onClick={handleSaveCategory} style={styles.saveButton}>บันทึก</button>
+                      <button onClick={handleCloseCategoryModal} style={styles.cancelButtonModal}>ยกเลิก</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+  
         <div style={styles.formContainer}>
           <h1 style={styles.title}>{editMode ? 'แก้ไขอาหาร' : 'เพิ่มอาหาร'}</h1>
           <input
@@ -691,6 +715,8 @@ const handleSaveCategory = async () => {
             }}
             maxLength={18} 
             style={styles.input}
+            onFocus={handleFocus}  // เปิดคีย์บอร์ดเมื่อคลิกที่ช่องกรอกข้อมูล
+            onBlur={handleBlur}   // ซ่อนคีย์บอร์ดเมื่อคลิกออกจากช่องกรอกข้อมูล
           />
           <select value={itemCategory} onChange={(e) => setItemCategory(e.target.value)} style={styles.dropdown_out}>
             <option>กรุณาเลือกหมวดหมู่</option>
@@ -698,7 +724,7 @@ const handleSaveCategory = async () => {
               <option key={category.id} value={category.id}>{category.c_name}</option>
             ))}
           </select>
-
+  
           <label htmlFor="file-upload" style={styles.imageUpload}>
             {itemImage ? (
               <img src={typeof itemImage === 'string' ? itemImage : URL.createObjectURL(itemImage)} alt="Preview" style={styles.imagePreview} />
@@ -711,7 +737,7 @@ const handleSaveCategory = async () => {
             <input id="file-upload" type="file" onChange={handleImageChange} style={styles.fileInput} />
           </label>
           <input type="number" placeholder="ราคา" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} style={styles.input} />
-
+  
           {/* แสดงหัวข้อสำหรับการเปิดปิดสถานะ */}
           <h3 style={{ margin: '10px 0' }}>สถานะอาหาร</h3>
           {/* ใช้ปุ่มเพื่อสลับสถานะ */}
@@ -732,10 +758,11 @@ const handleSaveCategory = async () => {
         </div>
       </div>
     </div>
-  );
+  );  
 }
+
 const styles = {
-  container: { display: 'flex', backgroundColor: '#ffffff' },
+  container: { display: 'flex', backgroundColor: '#fff', width: '100%', height: '780px' },  
   contentContainer: { display: 'flex', flex: 1, padding: '25px 0 20px 130px', fontFamily: 'Arial, sans-serif' },
   addCategoryButton: { backgroundColor: '#ccc', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', width: '40px', height: '42px', marginBottom: '1px' },
   dropdownContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '400px' },
