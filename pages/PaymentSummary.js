@@ -1,20 +1,18 @@
-    import React, { useState, useEffect } from 'react';
-    import axios from 'axios';
-    import BackendSidebar from './components/backendsidebar';
-    import { Line } from 'react-chartjs-2';  // เปลี่ยนจาก Bar เป็น Line
-    import Chart from 'chart.js/auto';
-    import { FiTrendingUp, FiBarChart, FiShoppingCart, FiPackage, FiDownload  } from 'react-icons/fi';
-    import Swal from 'sweetalert2';
-    import { Bar, Pie } from 'react-chartjs-2';
-    import { Chart as ChartJS, LineElement } from 'chart.js';
-    import { FaChartBar, FaList, FaChartPie } from "react-icons/fa"; 
-    import { Doughnut } from 'react-chartjs-2';
-    import html2canvas from 'html2canvas';
-    import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
-
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import BackendSidebar from './components/backendsidebar';
+import { Line } from 'react-chartjs-2';  // เปลี่ยนจาก Bar เป็น Line
+import Chart from 'chart.js/auto';
+import { FiTrendingUp, FiBarChart, FiShoppingCart, FiPackage, FiDownload  } from 'react-icons/fi';
+import Swal from 'sweetalert2';
+import { Bar, Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, LineElement } from 'chart.js';
+import { FaChartBar, FaList, FaChartPie } from "react-icons/fa"; 
+import { Doughnut } from 'react-chartjs-2';
+import html2canvas from 'html2canvas';
+import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
 
     ChartJS.register(LineElement);
-
 
     export default function PaymentSummary() {
         const [salesData, setSalesData] = useState([]);
@@ -152,8 +150,6 @@
         }, [displayMode]);
         
         
-        
-        
         const handleItemClick = (item) => {
             setSelectedItem(item);
         };
@@ -260,8 +256,6 @@
             setTotalSales(totalMonthlySales);
         };
         
-        
-        
         const calculateTotalTransactions = (data) => {
             const total = data.length;
             setTotalTransactions(total);
@@ -343,7 +337,6 @@
                 </div>
             );
         };
-        
 
         const prepareDailyChartData = (chartType) => {
             const dailySales = salesData.reduce((acc, item) => {
@@ -693,7 +686,7 @@
                             <h3 style={styles.summaryTitle}>สรุปยอดขาย</h3>
                             <div style={styles.totalSalesValueContainer}>
                                 <p style={styles.totalSalesValue}>
-                                    {totalSales.toLocaleString()} ฿
+                                {totalSales ? totalSales.toLocaleString() : 0}
                                     {viewType === 'monthly'
                                         ? (parseInt(startDate.split('-')[1]) === new Date().getMonth() + 1
                                             ? ' (ล่าสุด)'
@@ -784,7 +777,7 @@
                                                                 let value = tooltipItem.raw;
                                                                 let total = tooltipItem.dataset.data.reduce((a, b) => a + b, 0);
                                                                 let percentage = ((value / total) * 100).toFixed(1);
-                                                                return `${value} ชิ้น (${percentage}%)`; // ✅ แสดง % ใน tooltip
+                                                                return `${value} ชิ้น (${percentage}%)`; // แสดง % ใน tooltip
                                                             }
                                                         }
                                                     }
@@ -795,30 +788,38 @@
                                 ) : (
                                     <div style={styles.listWrapper}>
                                         <ul style={styles.listContainer}>
-                                            {topSellingItems.slice(0, 10).map((item, index) => (
-                                                <li
-                                                    key={index}
-                                                    style={{
-                                                        ...styles.listItem,
-                                                        ...(hoverIndex === index ? styles.listItemHover : {}),
-                                                    }}
-                                                    onMouseEnter={() => setHoverIndex(index)}
-                                                    onMouseLeave={() => setHoverIndex(null)}
-                                                >
-                                                    <span style={styles.itemIndex}>{index + 1}.</span>
-                                                    <span
+                                            {/* ตรวจสอบก่อนว่ามีข้อมูลใน topSellingItems หรือไม่ */}
+                                            {Array.isArray(topSellingItems) && topSellingItems.length > 0 ? (
+                                                topSellingItems.slice(0, 10).map((item, index) => (
+                                                    <li
+                                                        key={index}
                                                         style={{
-                                                            ...styles.itemName,
-                                                            ...(hoverIndex === index ? styles.itemNameHover : {}),
+                                                            ...styles.listItem,
+                                                            ...(hoverIndex === index ? styles.listItemHover : {}),
                                                         }}
+                                                        onMouseEnter={() => setHoverIndex(index)}
+                                                        onMouseLeave={() => setHoverIndex(null)}
                                                     >
-                                                        {item.p_name}
-                                                    </span>
-                                                    <span style={styles.itemSales}>
-                                                        {item.sale_total.toLocaleString()} / {item.sales.toLocaleString()} ชิ้น
-                                                    </span>
-                                                </li>
-                                            ))}
+                                                        <span style={styles.itemIndex}>{index + 1}.</span>
+                                                        <span
+                                                            style={{
+                                                                ...styles.itemName,
+                                                                ...(hoverIndex === index ? styles.itemNameHover : {}),
+                                                            }}
+                                                        >
+                                                            {/* ตรวจสอบว่า p_name มีค่าหรือไม่ก่อนการแสดง */}
+                                                            {item.p_name || 'ไม่พบชื่อสินค้า'}
+                                                        </span>
+                                                        <span style={styles.itemSales}>
+                                                            {/* ตรวจสอบว่า sale_total และ sales มีค่าหรือไม่ */}
+                                                            {item.sale_total ? item.sale_total.toLocaleString() : '0'} / 
+                                                            {item.sales ? item.sales.toLocaleString() : '0'} ชิ้น
+                                                        </span>
+                                                    </li>
+                                                ))
+                                            ) : (
+                                                <p>ไม่พบข้อมูลสินค้าขายดี</p>
+                                            )}
                                         </ul>
                                     </div>
                                 )}
