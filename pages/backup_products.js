@@ -6,17 +6,15 @@ import Sidebar from './components/sidebar';
 import Image from 'next/image';
 import { FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-import 'sweetalert2/dist/sweetalert2.min.css'; // โหลด CSS ของ SweetAlert2
+import 'sweetalert2/dist/sweetalert2.min.css'; 
 import { useRouter } from 'next/router';
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa"; // ✅ เพิ่มไอคอน
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa"; 
 import Keyboard from './keyboard'; 
-
-
 
 export default function SalesPage() {
     const [products, setProducts] = useState([]);
     const router = useRouter();
-    const [showPopup, setShowPopup] = useState(false); // สำหรับแสดงป๊อบอัพ
+    const [showPopup, setShowPopup] = useState(false); 
     const { tableCode } = router.query;
     const [cart, setCart] = useState([]);
     const [order, setOrder] = useState(null); // เก็บข้อมูลออเดอร์
@@ -3692,9 +3690,7 @@ h3 {
     background-color: #c0392b;
 }
 
-
-
-    .pulse-effect {animation: pulse 0.5s ease-out;background-color: #d9f7be !important;}
-    `;
-        document.head.appendChild(styleSheet);
-    }
+.pulse-effect {animation: pulse 0.5s ease-out;background-color: #d9f7be !important;}
+`;
+    document.head.appendChild(styleSheet);
+}
