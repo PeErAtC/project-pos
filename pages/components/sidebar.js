@@ -88,7 +88,6 @@
             text: 'คุณได้ออกจากระบบเรียบร้อยแล้ว',
             icon: 'success',
             confirmButtonText: 'ตกลง',
-            confirmButtonColor: '#3085d6',
           }).then(() => {
             router.push('/login');
           });
@@ -121,8 +120,6 @@
             <path d="M9 18l6-6-6-6" />
           </svg>
         </div>
-
-
         <div style={iconContainerStyle}>
         <div style={styles.iconWrapper}>
     <div style={styles.storeInfo}>
@@ -184,11 +181,13 @@
     storeInfo: { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' },
     marqueeContainer: { display: 'flex', overflow: 'hidden', width: '120px', whiteSpace: 'nowrap', position: 'relative' },
     marqueeContent: { display: 'inline-block', whiteSpace: 'nowrap', animation: 'marquee 5s linear infinite', color: '#499cae', fontSize: '16px', fontWeight: 'bold' },
+    storeNameContainer: { display: 'flex', flexDirection: 'column', color: '#499cae', fontWeight: 'bold', fontSize: '14px' },
     storeNameContainer: { display: 'flex', flexDirection: 'column', color: '#499cae', fontWeight: 'bold', fontSize: '16px' },
     storeName: { fontSize: '18px', fontWeight: 'bold', color: '#499cae', padding: '5px' },
     userContainer: { textAlign: 'center', marginLeft: '20px' },
     userName: { fontSize: '14px', fontWeight: 'normal', color: '#444' },
     icon: { display: 'flex', alignItems: 'center', gap: '10px', padding: '13px', cursor: 'pointer', transition: 'all 0.3s ease', color: '#fff', fontSize: '16px', fontWeight: 'normal', borderRadius: '10px' },
+    activeIcon: { backgroundColor: 'rgb(12, 62, 95)', color: '#ffffff', borderRadius: '10px', padding: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', },
     activeIcon: { backgroundColor: 'rgb(12, 62, 95)', color: '#ffffff', borderRadius: '10px', padding: '15px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)' },
     focusedIcon: { animation: 'pulsing 1s infinite', boxShadow: '0px 0px 18px 5px rgba(0, 123, 255, 0.8)', transform: 'scale(1.1)' },
     iconLabel: { fontSize: '16px', fontWeight: 'normal', color: '#ffffff' }
