@@ -334,7 +334,6 @@ export default function EmployeeManagement() {
                     style={{ ...styles.input, paddingRight: '40px' }}
                 />
             </div>
-
             {/* แสดงข้อความเตือนหากรหัสผ่านไม่ตรงกัน */}
             {formData.password !== formData.confirmPassword && formData.confirmPassword && (
                 <p style={{ color: 'red', textAlign: 'center'}}>รหัสผ่านไม่ตรงกัน</p>
