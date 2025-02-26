@@ -1,5 +1,7 @@
 // api.js
 import axios from 'axios';
+import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+
 
 const API_HEADERS = {
   'Accept': 'application/json',
