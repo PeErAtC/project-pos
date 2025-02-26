@@ -88,10 +88,6 @@ export default function BackendSidebar() {
         <Image src="/images/folder.png" alt="Store" width={40} height={40} />
         {isExpanded && (
 
-<<<<<<< HEAD
-=======
-
->>>>>>> e9d1c757fb1b0db91d3863a464e3f66c9d150d5a
           <div style={styles.storeInfo}>
         <div style={styles.marqueeContainer}>
           <div style={styles.marqueeContent}>
@@ -171,13 +167,10 @@ const styles = {
   iconWrapper: { backgroundColor: '#fff', borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '10px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)', flexDirection: 'row', marginTop: '30px', marginBottom: '20px', width: '100%' },
   storeInfo: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' },
   marqueeContainer: { display: 'flex', overflow: 'hidden', width: '120px', whiteSpace: 'nowrap', position: 'relative' },
-<<<<<<< HEAD
   marqueeContent: { display: 'inline-block', whiteSpace: 'nowrap', animation: 'marquee 5s linear infinite', color: '#499cae', fontSize: '14px', fontWeight: 'bold' },
   storeName: { fontSize: '14px', fontWeight: 'bold', color: '#499cae', padding: '5px', display: 'flex', flexDirection: 'column' },
-=======
   marqueeContent: { display: 'inline-block', whiteSpace: 'nowrap', animation: 'marquee 5s linear infinite', color: '#499cae', fontSize: '16px', fontWeight: 'bold' },
   storeName: { fontSize: '18px', fontWeight: 'bold', color: '#499cae', padding: '5px', display: 'flex', flexDirection: 'column' },
->>>>>>> e9d1c757fb1b0db91d3863a464e3f66c9d150d5a
   userName: { fontSize: '14px', fontWeight: 'bold', color: '#444' },
   iconContainer: (isExpanded) => ({ display: 'flex', flexDirection: 'column', alignItems: isExpanded ? 'flex-start' : 'center', gap: '20px', width: '100%', paddingLeft: isExpanded ? '20px' : '0' }),
   icon: { display: 'flex', alignItems: 'center', gap: '10px', padding: '13px', cursor: 'pointer', transition: 'background 0.3s ease', color: '#fff', fontSize: '16px', fontWeight: 'normal' },
