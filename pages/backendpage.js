@@ -4,6 +4,7 @@ import Sidebar from './components/backendsidebar';
 import { FaCheckCircle, FaExclamationCircle, FaImage, FaPlusCircle, FaEllipsisH, FaEdit, FaTrashAlt  } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
+//import './styles.css';  // เพิ่มไฟล์ CSS ที่คุณสร้างใหม่เข้ามา
 import './styles.css';  // เพิ่มไฟล์ CSS ที่คุณสร้างใหม่เข้ามา
 import html2canvas from 'html2canvas';
 
@@ -140,6 +141,10 @@ export default function BackendPage() {
   
   const handleAddOrUpdateItem = async () => {
     if (!itemName || !itemCategory || !itemPrice) {
+      await Swal.fire({
+        title: "กรุณากรอกข้อมูลให้ครบถ้วน!!",
+        icon: 'warning',
+      });
       showNotification("กรุณากรอกข้อมูลให้ครบถ้วน!", "error");
       return;
     }
