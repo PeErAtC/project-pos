@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { FaEye, FaEyeSlash, FaUser, FaLock, FaUtensils } from 'react-icons/fa';
 import Keyboard from './keyboard';
-import config from '../lib/config';  // ใช้ config ในไฟล์ที่ต้องการ
 import config from './config';  // ใช้ config ในไฟล์ที่ต้องการ
+
+
 
 export default function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -17,6 +18,7 @@ export default function LoginPage({ onLogin }) {
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [activeField, setActiveField] = useState('');
   const router = useRouter();
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -62,6 +64,7 @@ export default function LoginPage({ onLogin }) {
           timer: 2000,
           showConfirmButton: false,
         });
+
         localStorage.setItem('token', result.data.token);
         localStorage.setItem('username', result.data.username);
         localStorage.setItem('name', result.data.name);
@@ -74,6 +77,8 @@ export default function LoginPage({ onLogin }) {
         localStorage.setItem('package', result.data.package);
         localStorage.setItem('live_date', result.data.live_date);
         localStorage.setItem('expiry_date', result.data.expiry_date);
+        localStorage.setItem('password', password);  
+
         router.push('/');
       } else {
         Swal.fire({
@@ -247,4 +252,3 @@ const styles = {
     `;
     document.head.appendChild(styleSheet);
   }
-
