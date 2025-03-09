@@ -129,5 +129,3 @@ const styles = {
     card: { width: '90%', height: '250px' }
   }
 };
-
-
