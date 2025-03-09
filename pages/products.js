@@ -2231,147 +2231,142 @@ useEffect(() => {
                             )}
                         </div>
                     </div>
-
-
-
-            {/* ✅ ฝั่งขวา: รายการที่เลือก และปุ่ม */}
-            <div style={{
-                flex: 1, 
-                backgroundColor: '#f9f9f9', 
-                boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)', 
-                height: '100%', 
-                maxHeight: '80vh', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                overflowY: 'auto', 
-                gap: '10px', 
-                overflowX: 'hidden'
-            }}>
-                <h3 style={{
-                    fontSize: '20px', 
-                    fontWeight: 'bold', 
-                    color: '#333', 
-                    marginBottom: '10px', 
-                    textAlign: 'center', 
-                    position: 'sticky', 
-                    top: '1px', 
-                    backgroundColor: '#ffffff',
-                }}>รายการที่เลือก</h3>
-
-                {selectedItems.length > 0 ? (
+                    {/* ✅ ฝั่งขวา: รายการที่เลือก และปุ่ม */}
                     <div style={{
-                        height: '700px', 
+                        flex: 1, 
+                        backgroundColor: '#f9f9f9', 
+                        boxShadow: '0px 15px 30px rgba(0, 0, 0, 0.1)', 
+                        height: '100%', 
+                        maxHeight: '80vh', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
                         overflowY: 'auto', 
-                        paddingRight: '10px', 
+                        gap: '10px', 
+                        overflowX: 'hidden'
                     }}>
-                        {selectedItems.map((item) => (
-                            <div key={item.id} style={{
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between',
-                                borderBottom: '5px solid #ffffff',
-                                width: '100%', 
-                                backgroundColor: '#ececec4b', 
-                                transition: 'all 0.3s ease'
-                            }}>
-                                <div style={{ 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    alignItems: 'flex-start' 
-                                }}>
-                                    <p style={{ 
-                                        fontSize: '16px', 
-                                        color: '#000000', 
-                                        marginBottom: '5px' 
-                                    }}>{item.p_name}</p>
-                                    <p style={{ 
-                                        fontSize: '0.9em', 
-                                        color: '#555', 
-                                        marginTop: '0',
-                                        marginRight: '230px' 
-                                    }}>x {item.quantity} ชิ้น</p>
-                                </div>
-                                <p style={{ 
-                                    fontSize: '16px', 
-                                    color: '#333', 
-                                }}>{item.price} บาท</p>
-                                <button
-                                    onClick={() => handleRemoveItem(item.id)}
-                                    style={{
-                                        backgroundColor: '#e30d0d', 
-                                        color: 'white', 
-                                        padding: '10px 10px', 
-                                        border: 'none', 
-                                        borderRadius: '7px',
-                                        marginLeft:'10px',
-                                        cursor: 'pointer', 
-                                        transition: 'background-color 0.3s ease',
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
-                                >
-                                    ลบ
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p style={{ fontSize: '16px', color: '#777', textAlign: 'center' }}>ยังไม่มีรายการที่เลือก</p>
-                )}
+                        <h3 style={{
+                            fontSize: '20px', 
+                            fontWeight: 'bold', 
+                            color: '#333', 
+                            marginBottom: '10px', 
+                            textAlign: 'center', 
+                            position: 'sticky', 
+                            top: '1px', 
+                            backgroundColor: '#ffffff',
+                        }}>รายการที่เลือก</h3>
 
-                <div style={{
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    gap: '20px', 
-                    marginTop: '20px', 
-                    width: '100%'
-                }}>
-                    <button
-                        onClick={handleConfirm}
-                        style={{
-                            backgroundColor: '#0c9fa9', 
-                            color: 'white', 
-                            padding: '12px 24px', 
-                            border: 'none', 
-                            borderRadius: '5px', 
-                            cursor: 'pointer',
-                            fontSize: '16px', 
-                            transition: 'background-color 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
-                    >
-                        ยืนยัน
-                    </button>
-                    <button
-                        onClick={() => {
-                            handleCancel();
-                            setShowAddItemPopup(false);
-                        }}
-                        style={{
-                            backgroundColor: '#f39c12', 
-                            color: 'white', 
-                            padding: '12px 24px', 
-                            border: 'none', 
-                            borderRadius: '5px', 
-                            cursor: 'pointer',
-                            fontSize: '16px', 
-                            transition: 'background-color 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
-                    >
-                        ยกเลิก
-                    </button>
+                        {selectedItems.length > 0 ? (
+                            <div style={{
+                                height: '700px', 
+                                overflowY: 'auto', 
+                                paddingRight: '10px', 
+                            }}>
+                                {selectedItems.map((item) => (
+                                    <div key={item.id} style={{
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'space-between',
+                                        borderBottom: '5px solid #ffffff',
+                                        width: '100%', 
+                                        backgroundColor: '#ececec4b', 
+                                        transition: 'all 0.3s ease'
+                                    }}>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            alignItems: 'flex-start' 
+                                        }}>
+                                            <p style={{ 
+                                                fontSize: '16px', 
+                                                color: '#000000', 
+                                                marginBottom: '5px' 
+                                            }}>{item.p_name}</p>
+                                            <p style={{ 
+                                                fontSize: '0.9em', 
+                                                color: '#555', 
+                                                marginTop: '0',
+                                                marginRight: '230px' 
+                                            }}>x {item.quantity} ชิ้น</p>
+                                        </div>
+                                        <p style={{ 
+                                            fontSize: '16px', 
+                                            color: '#333', 
+                                        }}>{item.price} บาท</p>
+                                        <button
+                                            onClick={() => handleRemoveItem(item.id)}
+                                            style={{
+                                                backgroundColor: '#e30d0d', 
+                                                color: 'white', 
+                                                padding: '10px 10px', 
+                                                border: 'none', 
+                                                borderRadius: '7px',
+                                                marginLeft:'10px',
+                                                cursor: 'pointer', 
+                                                transition: 'background-color 0.3s ease',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#d3200c'}
+                                        >
+                                            ลบ
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: '16px', color: '#777', textAlign: 'center' }}>ยังไม่มีรายการที่เลือก</p>
+                        )}
+
+                        <div style={{
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            gap: '20px', 
+                            marginTop: '20px', 
+                            width: '100%'
+                        }}>
+                            <button
+                                onClick={handleConfirm}
+                                style={{
+                                    backgroundColor: '#0c9fa9', 
+                                    color: 'white', 
+                                    padding: '12px 24px', 
+                                    border: 'none', 
+                                    borderRadius: '5px', 
+                                    cursor: 'pointer',
+                                    fontSize: '16px', 
+                                    transition: 'background-color 0.3s ease',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#073278'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1388a9'}
+                            >
+                                ยืนยัน
+                            </button>
+                            <button
+                                onClick={() => {
+                                    handleCancel();
+                                    setShowAddItemPopup(false);
+                                }}
+                                style={{
+                                    backgroundColor: '#f39c12', 
+                                    color: 'white', 
+                                    padding: '12px 24px', 
+                                    border: 'none', 
+                                    borderRadius: '5px', 
+                                    cursor: 'pointer',
+                                    fontSize: '16px', 
+                                    transition: 'background-color 0.3s ease',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b46017'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea9205'}
+                            >
+                                ยกเลิก
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-
-        </div>
-    </div>
-)}
-
-
+        )}
 
             {showQRCode && (
                 <div style={{
@@ -2619,12 +2614,7 @@ useEffect(() => {
                             );
                         })}
                     </div>
-
-                    
                 </div>
-
-
-
                 </div>
                         <div style={styles.searchAndTableCodeContainer}>
                             <div style={styles.searchContainer}>
@@ -2706,7 +2696,6 @@ useEffect(() => {
                         </div>
                     ))}
                 </div>
-
                 </div>
             </div>
                 <div style={styles.cart}>
@@ -2815,10 +2804,6 @@ useEffect(() => {
                             <p>ไม่มีสินค้าในตะกร้า</p>
                         )}
                     </div>
-
-
-
-
                             {/* บล็อกรวมยอดรวม */}
                             <div
                     style={{
@@ -2889,230 +2874,223 @@ useEffect(() => {
                         </select> 
                     </div>
                 </div>
-
-    {orderReceived && (
-        <>
-            <div style={styles.discountAndReceivedAmountRow}>
-                {/* ปุ่มเลือก VAT */}
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                    }}
-                >
-                    <select
-                        value={vatType}
-                        onChange={(e) => setVatType(e.target.value)}
+        {orderReceived && (
+            <>
+                <div style={styles.discountAndReceivedAmountRow}>
+                    {/* ปุ่มเลือก VAT */}
+                    <div
                         style={{
-                            backgroundColor: 'white',
-                            border: '1px solid #cccccc',
-                            borderRadius: '4px',
-                            padding: '8px 12px',
-                            fontSize: '13px',
-                            color: '#333',
-                            outline: 'none',
-                            boxShadow: 'none',
-                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
                         }}
                     >
-                        <option value="noTax">ไม่มีภาษี</option>
-                        <option value="includeVat7">รวมภาษีมูลค่าเพิ่ม 7%</option>
-                        <option value="excludeVat7">ไม่รวมภาษีมูลค่าเพิ่ม 7%</option>
-                        <option value="includeVat3">รวมภาษีมูลค่าเพิ่ม 3%</option>
-                        <option value="excludeVat3">ไม่รวมภาษีมูลค่าเพิ่ม 3%</option>
-                    </select>
-
-                    <input
-                        type="number"
-                        placeholder="ส่วนลดรวม"
-                        value={billDiscount === 0 ? '' : billDiscount} // แก้ให้ช่องว่างเมื่อไม่มีส่วนลด
-                        onFocus={() => {
-                            setActiveField({ field: 'billDiscount' }); // ✅ กำหนดให้ Keyboard ใช้กับช่องส่วนลดรวม
-                            setShowKeyboard(true); // ✅ เปิด Keyboard เสมือน
-                        }}
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^\d*\.?\d*$/.test(value)) { // ✅ ตรวจสอบให้เป็นตัวเลขเท่านั้น
-                                setBillDiscount(parseFloat(value) || 0);
-                            }
-                        }}
-                        style={{
-                            backgroundColor: 'white',
-                            border: '1px solid #cccccc',
-                            borderRadius: '4px',
-                            padding: '8px 1px',
-                            fontSize: '13px',
-                            width: '75px',
-                            color: '#333',
-                            outline: 'none',
-                            flex: 1,
-                            textAlign: 'right', // ✅ จัดข้อความให้อยู่ด้านขวา
-                        }}
-                    />
-
-
-
-                    <select
-                        value={billDiscountType}
-                        onChange={(e) => setBillDiscountType(e.target.value)}
-                        style={{
-                            backgroundColor: 'white',
-                            border: '1px solid #cccccc',
-                            borderRadius: '4px',
-                            padding: '8px 12px',
-                            fontSize: '13px',
-                            color: '#333',
-                            outline: 'none',
-                            boxShadow: 'none',
-                            flex: 1,
-                        }}
-                    >
-                        <option value="THB">บาท (฿)</option>
-                        <option value="%">%</option>
-                    </select>
-                </div>
-            </div>
-
-            <div style={styles.amountButtons}>
-                {[1, 20, 50, 100, 500, 1000].map((amount) => (
-                    <button key={amount} onClick={() => handleAmountButton(amount)} style={styles.amountButton}>
-                        +{amount}.00
-                    </button>
-                ))}
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '3px',
-                    }}
-                >
-                   <input
-                        type="number"
-                        placeholder="รับเงิน"
-                        value={receivedAmount === 0 ? '' : receivedAmount} // ✅ ช่องว่างถ้าไม่มีค่า
-                        onFocus={() => {
-                            setActiveField({ field: 'receivedAmount' }); // ✅ กำหนดให้ Keyboard ใช้กับช่องรับเงิน
-                            setShowKeyboard(true); // ✅ เปิด Keyboard เสมือน
-                        }}
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^\d*\.?\d*$/.test(value)) { // ✅ ตรวจสอบให้เป็นตัวเลขเท่านั้น
-                                setReceivedAmount(parseFloat(value) || 0);
-                            }
-                        }}
-                        style={{
-                            ...styles.amountInputHalf,
-                            flex: 2,
-                            textAlign: 'right', // ✅ ตัวเลขจัดชิดขวา
-                        }}
-                    />
-                    <button
-                        onClick={handleFullAmount}
-                        style={{
-                            ...styles.amountButton,
-                            background: '#3cad13', // สีพื้นหลังแบบสีเขียวธรรมดา
-                            color: '#ffffff',
-                            fontWeight: 'bold',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            width: 'auto',
-                            padding: '8px 25px',
-                            whiteSpace: 'nowrap',
-                            textAlign: 'center',
-                        }}
-                    >
-                        รับเงินเต็มจำนวน
-                    </button>
-
-                    <button
-                        onClick={resetAmount}
-                        style={{
-                            ...styles.amountButton,
-                            background: '#e02214', // ใช้สีแดงธรรมดา
-                            color: '#ffffff',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-                            cursor: 'pointer',
-                            padding: '8px 20px',
-                            transition: 'all 0.3s ease',
-                            flex: 1,
-                        }}
-                    >
-                        C
-                    </button>
-                </div>
-            </div>
-
-            <div style={styles.changeDi}>
-                <p>ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท</p>
-            </div>
-
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '10px 0',
-                }}
-            >
-                <div
-                    style={{
-                        fontSize: '1rem',
-                        fontWeight: 'bold',
-                        color: '#0d1b13',
-                        marginRight: '10px',
-                    }}
-                >
-                    เงินทอน: {calculateChange()} บาท
-                </div>
-
-                <div style={{ position: 'relative', textAlign: 'right' }}>
-                    {splitPaymentCount > 0 && (
-                        <span
+                        <select
+                            value={vatType}
+                            onChange={(e) => setVatType(e.target.value)}
                             style={{
-                                position: 'absolute',
-                                top: '-5px',
-                                right: '-5px',
-                                backgroundColor: 'red',
-                                color: 'white',
-                                borderRadius: '50%',
-                                width: '20px',
-                                height: '20px',
-                                fontSize: '12px',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
+                                backgroundColor: 'white',
+                                border: '1px solid #cccccc',
+                                borderRadius: '4px',
+                                padding: '8px 12px',
+                                fontSize: '13px',
+                                color: '#333',
+                                outline: 'none',
+                                boxShadow: 'none',
+                                flex: 1,
                             }}
                         >
-                            {splitPaymentCount}
-                        </span>
-                    )}
-                    <button
-                        style={{
-                            padding: '10px',
-                            borderRadius: '5px',
-                            backgroundColor: '#c7a641',
-                            color: 'white',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            border: 'none',
-                            boxShadow: 'none',
-                        }}
-                        onClick={toggleSplitPaymentPopup}
-                    >
-                        ดูประวัติการชำระ
-                    </button>
+                            <option value="noTax">ไม่มีภาษี</option>
+                            <option value="includeVat7">รวมภาษีมูลค่าเพิ่ม 7%</option>
+                            <option value="excludeVat7">ไม่รวมภาษีมูลค่าเพิ่ม 7%</option>
+                            <option value="includeVat3">รวมภาษีมูลค่าเพิ่ม 3%</option>
+                            <option value="excludeVat3">ไม่รวมภาษีมูลค่าเพิ่ม 3%</option>
+                        </select>
 
+                        <input
+                            type="number"
+                            placeholder="ส่วนลดรวม"
+                            value={billDiscount === 0 ? '' : billDiscount} // แก้ให้ช่องว่างเมื่อไม่มีส่วนลด
+                            onFocus={() => {
+                                setActiveField({ field: 'billDiscount' }); // ✅ กำหนดให้ Keyboard ใช้กับช่องส่วนลดรวม
+                                setShowKeyboard(true); // ✅ เปิด Keyboard เสมือน
+                            }}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*\.?\d*$/.test(value)) { // ✅ ตรวจสอบให้เป็นตัวเลขเท่านั้น
+                                    setBillDiscount(parseFloat(value) || 0);
+                                }
+                            }}
+                            style={{
+                                backgroundColor: 'white',
+                                border: '1px solid #cccccc',
+                                borderRadius: '4px',
+                                padding: '8px 1px',
+                                fontSize: '13px',
+                                width: '75px',
+                                color: '#333',
+                                outline: 'none',
+                                flex: 1,
+                                textAlign: 'right', // ✅ จัดข้อความให้อยู่ด้านขวา
+                            }}
+                        />
+                        <select
+                            value={billDiscountType}
+                            onChange={(e) => setBillDiscountType(e.target.value)}
+                            style={{
+                                backgroundColor: 'white',
+                                border: '1px solid #cccccc',
+                                borderRadius: '4px',
+                                padding: '8px 12px',
+                                fontSize: '13px',
+                                color: '#333',
+                                outline: 'none',
+                                boxShadow: 'none',
+                                flex: 1,
+                            }}
+                        >
+                            <option value="THB">บาท (฿)</option>
+                            <option value="%">%</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-        </>
-    )}
+                <div style={styles.amountButtons}>
+                    {[1, 20, 50, 100, 500, 1000].map((amount) => (
+                        <button key={amount} onClick={() => handleAmountButton(amount)} style={styles.amountButton}>
+                            +{amount}.00
+                        </button>
+                    ))}
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '3px',
+                        }}
+                    >
+                    <input
+                            type="number"
+                            placeholder="รับเงิน"
+                            value={receivedAmount === 0 ? '' : receivedAmount} // ✅ ช่องว่างถ้าไม่มีค่า
+                            onFocus={() => {
+                                setActiveField({ field: 'receivedAmount' }); // ✅ กำหนดให้ Keyboard ใช้กับช่องรับเงิน
+                                setShowKeyboard(true); // ✅ เปิด Keyboard เสมือน
+                            }}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*\.?\d*$/.test(value)) { // ✅ ตรวจสอบให้เป็นตัวเลขเท่านั้น
+                                    setReceivedAmount(parseFloat(value) || 0);
+                                }
+                            }}
+                            style={{
+                                ...styles.amountInputHalf,
+                                flex: 2,
+                                textAlign: 'right', // ✅ ตัวเลขจัดชิดขวา
+                            }}
+                        />
+                        <button
+                            onClick={handleFullAmount}
+                            style={{
+                                ...styles.amountButton,
+                                background: '#3cad13', // สีพื้นหลังแบบสีเขียวธรรมดา
+                                color: '#ffffff',
+                                fontWeight: 'bold',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                width: 'auto',
+                                padding: '8px 25px',
+                                whiteSpace: 'nowrap',
+                                textAlign: 'center',
+                            }}
+                        >
+                            รับเงินเต็มจำนวน
+                        </button>
 
+                        <button
+                            onClick={resetAmount}
+                            style={{
+                                ...styles.amountButton,
+                                background: '#e02214', // ใช้สีแดงธรรมดา
+                                color: '#ffffff',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                                cursor: 'pointer',
+                                padding: '8px 20px',
+                                transition: 'all 0.3s ease',
+                                flex: 1,
+                            }}
+                        >
+                            C
+                        </button>
+                    </div>
+                </div>
 
+                <div style={styles.changeDi}>
+                    <p>ยอดคงเหลือ: {calculateRemainingDue().toFixed(2)} บาท</p>
+                </div>
+
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px 0',
+                    }}
+                >
+                    <div
+                        style={{
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            color: '#0d1b13',
+                            marginRight: '10px',
+                        }}
+                    >
+                        เงินทอน: {calculateChange()} บาท
+                    </div>
+
+                    <div style={{ position: 'relative', textAlign: 'right' }}>
+                        {splitPaymentCount > 0 && (
+                            <span
+                                style={{
+                                    position: 'absolute',
+                                    top: '-5px',
+                                    right: '-5px',
+                                    backgroundColor: 'red',
+                                    color: 'white',
+                                    borderRadius: '50%',
+                                    width: '20px',
+                                    height: '20px',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                }}
+                            >
+                                {splitPaymentCount}
+                            </span>
+                        )}
+                        <button
+                            style={{
+                                padding: '10px',
+                                borderRadius: '5px',
+                                backgroundColor: '#c7a641',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                border: 'none',
+                                boxShadow: 'none',
+                            }}
+                            onClick={toggleSplitPaymentPopup}
+                        >
+                            ดูประวัติการชำระ
+                        </button>
+
+                    </div>
+                </div>
+            </>
+        )}
         {/* ปุ่มการทำงาน */}
         <div style={styles.paymentRow}>
             {orderReceived ? (
@@ -3188,13 +3166,9 @@ useEffect(() => {
                     ? 'ชำระด้วยบัตรเครดิต'
                     : 'ชำระเงิน'}
             </button>
-
-
-
-
         </div>
     </div>
-            </div>
+    </div>
             {isSplitPaymentPopupOpen && (
                 <div
                     style={{
@@ -3260,209 +3234,206 @@ useEffect(() => {
                         marginBottom: '10px',
                     }}>
                        {payments && payments.length > 0 ? (
-    payments.map((payment, index) => {
-        // ✅ ตรวจสอบว่ามี `created_at` หรือไม่ และแปลงเป็นวันที่ที่อ่านง่าย
-        const paymentDate = payment.created_at ? new Date(payment.created_at) : null;
-        const formattedDate = paymentDate
-            ? paymentDate.toLocaleString('th-TH', {
-                timeZone: 'Asia/Bangkok',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-            })
-            : "ไม่พบวันที่"; // ถ้าไม่มีข้อมูล created_at
+                        payments.map((payment, index) => {
+                            // ✅ ตรวจสอบว่ามี `created_at` หรือไม่ และแปลงเป็นวันที่ที่อ่านง่าย
+                            const paymentDate = payment.created_at ? new Date(payment.created_at) : null;
+                            const formattedDate = paymentDate
+                                ? paymentDate.toLocaleString('th-TH', {
+                                    timeZone: 'Asia/Bangkok',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                })
+                                : "ไม่พบวันที่"; // ถ้าไม่มีข้อมูล created_at
 
-        return (
-            <div
-                key={index}
-                style={{
-                    marginBottom: '20px',
-                    padding: '20px',
-                    backgroundColor: '#ecf0f1',
-                    borderRadius: '12px',
-                    boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
-                    cursor: 'pointer',
-                    transition: 'transform 0.3s ease-in-out',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-                {/* ✅ แสดงวันที่จาก `created_at` ที่ถูกแปลงแล้ว */}
-                <div style={{
-                    fontSize: '16px',
-                    color: '#2c3e50',
-                    fontWeight: '500',
-                    marginBottom: '10px',
-                }}>
-                    {formattedDate}
-                </div>
-                <div style={{
-                    fontSize: '18px',
-                    color: '#16a085',
-                    fontWeight: '600',
-                    marginBottom: '5px',
-                }}>
-                    จำนวนเงิน: {payment.amount ? payment.amount.toFixed(2) : "0.00"} บาท
-                </div>
-                <div style={{
-                    fontSize: '16px',
-                    color: '#2980b9',
-                    fontWeight: '500',
-                }}>
-                    ช่องทาง: {payment.pay_name ? payment.pay_name : "ไม่พบข้อมูลช่องทาง"}
-                </div>
-            </div>
-        );
-    })
-) : (
-    <p style={{
-        color: '#7f8c8d',
-        textAlign: 'center',
-        fontSize: '16px',
-        fontWeight: '400',
-    }}>
-        ไม่มีประวัติการชำระ
-    </p>
-)}
-
+                            return (
+                                <div
+                                    key={index}
+                                    style={{
+                                        marginBottom: '20px',
+                                        padding: '20px',
+                                        backgroundColor: '#ecf0f1',
+                                        borderRadius: '12px',
+                                        boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.3s ease-in-out',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                    {/* ✅ แสดงวันที่จาก `created_at` ที่ถูกแปลงแล้ว */}
+                                    <div style={{
+                                        fontSize: '16px',
+                                        color: '#2c3e50',
+                                        fontWeight: '500',
+                                        marginBottom: '10px',
+                                    }}>
+                                        {formattedDate}
+                                    </div>
+                                    <div style={{
+                                        fontSize: '18px',
+                                        color: '#16a085',
+                                        fontWeight: '600',
+                                        marginBottom: '5px',
+                                    }}>
+                                        จำนวนเงิน: {payment.amount ? payment.amount.toFixed(2) : "0.00"} บาท
+                                    </div>
+                                    <div style={{
+                                        fontSize: '16px',
+                                        color: '#2980b9',
+                                        fontWeight: '500',
+                                    }}>
+                                        ช่องทาง: {payment.pay_name ? payment.pay_name : "ไม่พบข้อมูลช่องทาง"}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <p style={{
+                            color: '#7f8c8d',
+                            textAlign: 'center',
+                            fontSize: '16px',
+                            fontWeight: '400',
+                        }}>
+                            ไม่มีประวัติการชำระ
+                        </p>
+                    )}
                     </div>
                 </div>
             )}
+            {showReceipt && (
+                <div style={styles.receiptOverlay}>
+                    <div style={styles.receiptContainer}>
+                        <div style={styles.header}>
+                            <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
+                            <h2 style={styles.shopName}>Easy POS</h2>
+                            <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
+                        </div>
 
-    {showReceipt && (
-        <div style={styles.receiptOverlay}>
-            <div style={styles.receiptContainer}>
-                <div style={styles.header}>
-                    <Image src="/images/POS SHOP.png" alt="POS SHOP" width={50} height={50} />
-                    <h2 style={styles.shopName}>Easy POS</h2>
-                    <p style={styles.receiptTitle}>บิลการชำระเงิน</p>
-                </div>
+                        <div style={styles.info}>
+                            <p style={styles.billId}>No: {orderNumber ?? "N/A"}</p>
+                            <p style={styles.date}>{new Date().toLocaleString()}</p>
+                        </div>
 
-                <div style={styles.info}>
-                    <p style={styles.billId}>No: {orderNumber ?? "N/A"}</p>
-                    <p style={styles.date}>{new Date().toLocaleString()}</p>
-                </div>
+                        <div style={styles.tableHeader}>
+                            <p style={styles.tableColumn}>รายการ</p>
+                            <p style={styles.tableColumn}>จำนวน</p>
+                            <p style={styles.tableColumn}>ราคา</p>
+                        </div>
 
-                <div style={styles.tableHeader}>
-                    <p style={styles.tableColumn}>รายการ</p>
-                    <p style={styles.tableColumn}>จำนวน</p>
-                    <p style={styles.tableColumn}>ราคา</p>
-                </div>
+                        <div className="receiptItems" style={styles.receiptItems}>
+                            {cart.map((item) => (
+                                <div key={String(item.product_id)} style={styles.receiptItem}>
+                                    <p style={styles.itemName}>{item.p_name ?? "ไม่มีชื่อสินค้า"}</p>
+                                    <p style={styles.itemQuantity}>{item.quantity ?? 1}</p>
+                                    <p style={styles.itemPrice}>
+                                        <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
+                                            {parseFloat(item.price || 0).toFixed(2)}
+                                        </span>
+                                        {item.discount > 0 && (
+                                            <>
+                                                <br />
+                                                <span>{`ลด ${item.discountType === 'THB' ? parseFloat(item.discount || 0).toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
+                                                <br />
+                                                <span>{`${calculateDiscountedPrice(parseFloat(item.price || 0), parseFloat(item.discount || 0), item.discountType).toFixed(2)} บาท`}</span>
+                                            </>
+                                        )}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
 
-                <div className="receiptItems" style={styles.receiptItems}>
-                    {cart.map((item) => (
-                        <div key={String(item.product_id)} style={styles.receiptItem}>
-                            <p style={styles.itemName}>{item.p_name ?? "ไม่มีชื่อสินค้า"}</p>
-                            <p style={styles.itemQuantity}>{item.quantity ?? 1}</p>
+                        <div style={styles.receiptItem}>
+                            <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
+                            <p style={styles.itemQuantity}></p>
                             <p style={styles.itemPrice}>
-                                <span style={{ textDecoration: item.discount > 0 ? 'line-through' : 'none' }}>
-                                    {parseFloat(item.price || 0).toFixed(2)}
-                                </span>
-                                {item.discount > 0 && (
-                                    <>
-                                        <br />
-                                        <span>{`ลด ${item.discountType === 'THB' ? parseFloat(item.discount || 0).toFixed(2) + ' บาท' : item.discount + '%'}`}</span>
-                                        <br />
-                                        <span>{`${calculateDiscountedPrice(parseFloat(item.price || 0), parseFloat(item.discount || 0), item.discountType).toFixed(2)} บาท`}</span>
-                                    </>
-                                )}
+                                <strong>
+                                    {billDiscountType === 'THB' ? `${parseFloat(billDiscount || 0).toFixed(2)} บาท` : `${billDiscount}%`}
+                                </strong>
                             </p>
                         </div>
-                    ))}
-                </div>
 
-                <div style={styles.receiptItem}>
-                    <p style={styles.itemName}><strong>ส่วนลดรวมของบิล</strong></p>
-                    <p style={styles.itemQuantity}></p>
-                    <p style={styles.itemPrice}>
-                        <strong>
-                            {billDiscountType === 'THB' ? `${parseFloat(billDiscount || 0).toFixed(2)} บาท` : `${billDiscount}%`}
-                        </strong>
-                    </p>
-                </div>
+                        <div style={styles.receiptSummary}>
+                        <p>โต๊ะ: {tableCode.startsWith("T") ? tableCode : `T${String(tableCode ?? "000").padStart(3, '0')}`}</p>
+                        <p>
+                                ยอดบิล: 
+                                <span style={styles.summaryValue}>
+                                    {parseFloat(calculateTotalWithBillDiscountAndVAT() || 0).toFixed(2)} บาท
+                                </span>
+                            </p>
+                            <p>
+                                ยอดภาษีมูลค่าเพิ่ม ({vatType?.includes('7') ? '7%' : vatType?.includes('3') ? '3%' : '0%'} 
+                                {vatType?.includes('include') ? ' รวม' : vatType?.includes('exclude') ? ' ไม่รวม' : ''}): 
+                                <span style={styles.summaryValue}>
+                                    {parseFloat(calculateVAT() || 0).toFixed(2)} บาท
+                                </span>
+                            </p>
+                            <p>
+                                รับเงิน: 
+                                <span style={styles.summaryValue}>
+                                    {parseFloat(receivedAmount + calculateTotalPaid() || 0).toFixed(2)} บาท
+                                </span>
+                            </p>
+                            <p>
+                                เงินทอน: 
+                                <span style={styles.summaryValue}>
+                                    {parseFloat(calculateTotalPaidWithChange()?.change || 0).toFixed(2)} บาท
+                                </span>
+                            </p>
+                        </div>
 
-                <div style={styles.receiptSummary}>
-                <p>โต๊ะ: {tableCode.startsWith("T") ? tableCode : `T${String(tableCode ?? "000").padStart(3, '0')}`}</p>
-                <p>
-                        ยอดบิล: 
-                        <span style={styles.summaryValue}>
-                            {parseFloat(calculateTotalWithBillDiscountAndVAT() || 0).toFixed(2)} บาท
-                        </span>
-                    </p>
-                    <p>
-                        ยอดภาษีมูลค่าเพิ่ม ({vatType?.includes('7') ? '7%' : vatType?.includes('3') ? '3%' : '0%'} 
-                        {vatType?.includes('include') ? ' รวม' : vatType?.includes('exclude') ? ' ไม่รวม' : ''}): 
-                        <span style={styles.summaryValue}>
-                            {parseFloat(calculateVAT() || 0).toFixed(2)} บาท
-                        </span>
-                    </p>
-                    <p>
-                        รับเงิน: 
-                        <span style={styles.summaryValue}>
-                            {parseFloat(receivedAmount + calculateTotalPaid() || 0).toFixed(2)} บาท
-                        </span>
-                    </p>
-                    <p>
-                        เงินทอน: 
-                        <span style={styles.summaryValue}>
-                            {parseFloat(calculateTotalPaidWithChange()?.change || 0).toFixed(2)} บาท
-                        </span>
-                    </p>
-                </div>
+                        <div style={styles.receiptItem}>
+                            <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
+                            <p style={styles.itemQuantity}></p>
+                            <p style={styles.itemPrice}>
+                                <strong>
+                                    {payments?.length > 0 
+                                        ? payments.length > 1 
+                                            ? 'ชำระหลายวิธี'  
+                                            : payments.map(payment => payment.pay_name).join(', ') || 'ไม่พบข้อมูลช่องทาง'
+                                        : 'ยังไม่ได้เลือก' 
+                                    }
+                                </strong>
+                            </p>
+                        </div>
 
-                <div style={styles.receiptItem}>
-                    <p style={styles.itemName}><strong>วิธีการชำระเงิน</strong></p>
-                    <p style={styles.itemQuantity}></p>
-                    <p style={styles.itemPrice}>
-                        <strong>
-                            {payments?.length > 0 
-                                ? payments.length > 1 
-                                    ? 'ชำระหลายวิธี'  
-                                    : payments.map(payment => payment.pay_name).join(', ') || 'ไม่พบข้อมูลช่องทาง'
-                                : 'ยังไม่ได้เลือก' 
-                            }
-                        </strong>
-                    </p>
+                        <div style={styles.buttonContainer}>
+                            {calculateTotalWithBillDiscount() === 0 ? (
+                                <button
+                                    style={styles.actionButton}
+                                    onClick={() => {
+                                        setShowReceipt(false);
+                                        setOrderReceived(false);
+                                        setOrderId(null);
+                                        setCart([]);
+                                        setReceivedAmount(0);
+                                        setBillDiscount(0);
+                                        setBillDiscountType("THB");
+                                        setIsBillPaused(false);
+                                    }}
+                                >
+                                    ตกลง
+                                </button>
+                            ) : (
+                                <>
+                                    <button
+                                        style={styles.actionButton}
+                                        onClick={closeReceipt} 
+                                    >
+                                        บันทึกบิล
+                                    </button>
+                                    <button style={styles.pauseButton} onClick={handlePauseBill}>
+                                        พักบิล
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </div>
-
-                <div style={styles.buttonContainer}>
-                    {calculateTotalWithBillDiscount() === 0 ? (
-                        <button
-                            style={styles.actionButton}
-                            onClick={() => {
-                                setShowReceipt(false);
-                                setOrderReceived(false);
-                                setOrderId(null);
-                                setCart([]);
-                                setReceivedAmount(0);
-                                setBillDiscount(0);
-                                setBillDiscountType("THB");
-                                setIsBillPaused(false);
-                            }}
-                        >
-                            ตกลง
-                        </button>
-                    ) : (
-                        <>
-                            <button
-                                style={styles.actionButton}
-                                onClick={closeReceipt} 
-                            >
-                                บันทึกบิล
-                            </button>
-                            <button style={styles.pauseButton} onClick={handlePauseBill}>
-                                พักบิล
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-        </div>
-    )}
-
+            )}
         </div>
     );
 } 
